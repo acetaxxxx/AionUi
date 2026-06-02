@@ -143,11 +143,13 @@ const AcpSendBox: React.FC<{
     conversation_id,
     backend,
     prepareRuntime: prepareRuntimeSync,
+    enabled: isMobile,
   });
   const availableAgentModes = useAgentModesForBackend(backend);
 
   // Mirror AgentModeSelector's getMode sync so the sheet shows the live mode label.
   useEffect(() => {
+    if (!isMobile || !isMobileSheetOpen) return;
     if (!conversation_id) return;
     let cancelled = false;
     void prepareRuntimeSync()
@@ -162,7 +164,7 @@ const AcpSendBox: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [conversation_id, prepareRuntimeSync]);
+  }, [conversation_id, isMobile, isMobileSheetOpen, prepareRuntimeSync]);
 
   const handleSheetModeChange = useCallback(
     async (mode: string) => {

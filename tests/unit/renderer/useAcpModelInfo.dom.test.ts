@@ -210,6 +210,31 @@ describe('useAcpModelInfo', () => {
     expect(result.current.model_info).toBeNull();
   });
 
+  it('does not prepare or request model info while disabled', async () => {
+    const prepareRuntime = vi.fn().mockResolvedValue(undefined);
+    getModelInvokeMock.mockResolvedValue({ model_info: buildModelInfo({ current_model_id: 'opus-4' }) });
+
+    const { result } = renderUseAcpModelInfo({
+      conversation_id: 'conv-1',
+      backend: 'claude',
+      prepareRuntime,
+      enabled: false,
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(prepareRuntime).not.toHaveBeenCalled();
+    expect(getModelInvokeMock).not.toHaveBeenCalled();
+    expect(result.current.model_info).toBeNull();
+    expect(result.current.canSwitch).toBe(false);
+
+    act(() => {
+      result.current.selectModel('opus-4');
+    });
+    expect(setModelInvokeMock).not.toHaveBeenCalled();
+  });
+
   it('persists preferred model and conversation extra only after backend accepts selectModel', async () => {
     const setModelDeferred = deferred<void>();
     getModelInvokeMock
