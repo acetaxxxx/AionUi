@@ -101,10 +101,12 @@ export const useAcpModelInfo = ({
   conversation_id,
   backend,
   initialModelId,
+  prepareRuntime,
 }: {
   conversation_id: string;
   backend?: string;
   initialModelId?: string;
+  prepareRuntime?: () => Promise<void>;
 }): UseAcpModelInfoResult => {
   const hasUserChangedModel = useRef(false);
   const prevConversationIdRef = useRef(conversation_id);
@@ -116,7 +118,7 @@ export const useAcpModelInfo = ({
     data: cachedModelInfo,
     isLoading: isModelInfoLoading,
     mutate: mutateModelInfo,
-  } = useSWR<AcpModelInfo | null>(modelInfoKey, fetchAcpModelInfo);
+  } = useSWR<AcpModelInfo | null>(modelInfoKey, fetchAcpModelInfo, { revalidateOnMount: false });
   const model_info = cachedModelInfo ?? null;
 
   useEffect(() => {
@@ -176,6 +178,17 @@ export const useAcpModelInfo = ({
 
   const reloadModelInfo = useCallback(
     async (options?: { preserveInitialModel?: boolean }): Promise<boolean> => {
+      try {
+        await prepareRuntime?.();
+      } catch (error) {
+        logAcpModelInfo('prepare_runtime_failed_before_model_reload', {
+          conversation_id,
+          backend,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return false;
+      }
+
       const { model_info: info, missing_active_session: missingActiveSession } =
         await fetchAcpModelInfoResult(modelInfoKey);
 
@@ -224,7 +237,7 @@ export const useAcpModelInfo = ({
       }
       return false;
     },
-    [backend, initialModelId, loadFallbackModelInfo, modelInfoKey, updateModelInfo]
+    [backend, conversation_id, initialModelId, loadFallbackModelInfo, modelInfoKey, prepareRuntime, updateModelInfo]
   );
 
   const clearScheduledReloads = useCallback(() => {
@@ -350,6 +363,7 @@ export const useAcpModelInfo = ({
 
       void (async () => {
         try {
+          await prepareRuntime?.();
           await ipcBridge.acpConversation.setModel.invoke({ conversation_id, model_id });
         } catch (error) {
           hasUserChangedModel.current = false;
@@ -432,7 +446,7 @@ export const useAcpModelInfo = ({
         console.error('[useAcpModelInfo] Failed to persist current_model_id:', error);
       });
     },
-    [backend, conversation_id, model_info, mutateModelInfo, reloadModelInfo, updateModelInfo]
+    [backend, conversation_id, model_info, mutateModelInfo, prepareRuntime, reloadModelInfo, updateModelInfo]
   );
 
   const canSwitch = Boolean(model_info && model_info.available_models.length > 0);

@@ -127,17 +127,31 @@ const AcpSendBox: React.FC<{
     }));
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   const [currentMode, setCurrentMode] = useState<string | undefined>(session_mode);
+  const prepareRuntimeSync = useCallback(async () => {
+    if (teamPermission) {
+      await teamPermission.warmupSession();
+    }
+    await warmupConversation(conversation_id);
+  }, [conversation_id, teamPermission]);
 
   // Drive the mobile sheet's model entry off the same source AcpModelSelector uses
-  const { model_info, canSwitch: canSwitchModel, selectModel } = useAcpModelInfo({ conversation_id, backend });
+  const {
+    model_info,
+    canSwitch: canSwitchModel,
+    selectModel,
+  } = useAcpModelInfo({
+    conversation_id,
+    backend,
+    prepareRuntime: prepareRuntimeSync,
+  });
   const availableAgentModes = useAgentModesForBackend(backend);
 
   // Mirror AgentModeSelector's getMode sync so the sheet shows the live mode label.
   useEffect(() => {
     if (!conversation_id) return;
     let cancelled = false;
-    void ipcBridge.acpConversation.getMode
-      .invoke({ conversation_id })
+    void prepareRuntimeSync()
+      .then(() => ipcBridge.acpConversation.getMode.invoke({ conversation_id }))
       .then((result) => {
         if (cancelled || !result) return;
         if (result.initialized !== false) {
@@ -148,12 +162,13 @@ const AcpSendBox: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [conversation_id]);
+  }, [conversation_id, prepareRuntimeSync]);
 
   const handleSheetModeChange = useCallback(
     async (mode: string) => {
       if (mode === currentMode) return;
       try {
+        await prepareRuntimeSync();
         await ipcBridge.acpConversation.setMode.invoke({ conversation_id, mode });
         setCurrentMode(mode);
         if (backend) void savePreferredMode(backend, mode);
@@ -164,7 +179,7 @@ const AcpSendBox: React.FC<{
         Message.error('Switch failed');
       }
     },
-    [backend, conversation_id, currentMode, isLeaderInTeam, teamPermission]
+    [backend, conversation_id, currentMode, isLeaderInTeam, prepareRuntimeSync, teamPermission]
   );
 
   // In team mode, warmup the agent then fetch slash commands
@@ -608,6 +623,7 @@ Please check your local CLI tool authentication status`,
               compactLabelPrefix={t('agentMode.permission')}
               hideCompactLabelPrefixOnMobile
               onModeChanged={isLeaderInTeam ? teamPermission?.propagateMode : undefined}
+              beforeRuntimeSync={prepareRuntimeSync}
             />
           ) : undefined
         }

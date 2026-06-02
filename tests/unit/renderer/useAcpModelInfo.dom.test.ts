@@ -161,6 +161,55 @@ describe('useAcpModelInfo', () => {
     });
   });
 
+  it('waits for runtime preparation before loading model info', async () => {
+    const prepareRuntimeDeferred = deferred<void>();
+    const prepareRuntime = vi.fn().mockReturnValue(prepareRuntimeDeferred.promise);
+    getModelInvokeMock.mockResolvedValue({ model_info: buildModelInfo({ current_model_id: 'opus-4' }) });
+
+    const { result } = renderUseAcpModelInfo({
+      conversation_id: 'conv-1',
+      backend: 'claude',
+      prepareRuntime,
+    });
+
+    await waitFor(() => {
+      expect(prepareRuntime).toHaveBeenCalledTimes(1);
+    });
+    expect(getModelInvokeMock).not.toHaveBeenCalled();
+
+    prepareRuntimeDeferred.resolve(undefined);
+
+    await waitFor(() => {
+      expect(result.current.model_info?.current_model_id).toBe('opus-4');
+    });
+    expect(getModelInvokeMock).toHaveBeenCalledWith({ conversation_id: 'conv-1' });
+  });
+
+  it('does not request model info when runtime preparation fails', async () => {
+    const prepareRuntime = vi.fn().mockRejectedValue(new Error('warmup failed'));
+
+    const { result } = renderUseAcpModelInfo({
+      conversation_id: 'conv-1',
+      backend: 'claude',
+      prepareRuntime,
+    });
+
+    await waitFor(() => {
+      expect(prepareRuntime).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(writeRendererLogInvokeMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          level: 'info',
+          tag: 'useAcpModelInfo',
+          message: 'prepare_runtime_failed_before_model_reload',
+        })
+      );
+    });
+    expect(getModelInvokeMock).not.toHaveBeenCalled();
+    expect(result.current.model_info).toBeNull();
+  });
+
   it('persists preferred model and conversation extra only after backend accepts selectModel', async () => {
     const setModelDeferred = deferred<void>();
     getModelInvokeMock
@@ -345,7 +394,7 @@ describe('useAcpModelInfo', () => {
       await Promise.resolve();
     });
 
-    expect(getModelInvokeMock.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(getModelInvokeMock.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(result.current.model_info?.current_model_id).toBe('opus-4');
     vi.clearAllTimers();
   });
