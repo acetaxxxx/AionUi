@@ -345,6 +345,7 @@ const ChatConversation: React.FC<{
           conversation_id={conversation.id}
           backend={extra.backend}
           initialModelId={extra.current_model_id}
+          waitForWarmup
         />
       );
     }

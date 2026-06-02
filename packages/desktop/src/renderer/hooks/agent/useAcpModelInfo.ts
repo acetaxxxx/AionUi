@@ -101,10 +101,18 @@ export const useAcpModelInfo = ({
   conversation_id,
   backend,
   initialModelId,
+  prepareRuntime,
+  enabled = true,
+  onSelectModelSuccess,
+  onSelectModelFailed,
 }: {
   conversation_id: string;
   backend?: string;
   initialModelId?: string;
+  prepareRuntime?: () => Promise<void>;
+  enabled?: boolean;
+  onSelectModelSuccess?: (model_id: string) => void;
+  onSelectModelFailed?: (model_id: string, error: unknown) => void;
 }): UseAcpModelInfoResult => {
   const hasUserChangedModel = useRef(false);
   const prevConversationIdRef = useRef(conversation_id);
@@ -116,8 +124,8 @@ export const useAcpModelInfo = ({
     data: cachedModelInfo,
     isLoading: isModelInfoLoading,
     mutate: mutateModelInfo,
-  } = useSWR<AcpModelInfo | null>(modelInfoKey, fetchAcpModelInfo);
-  const model_info = cachedModelInfo ?? null;
+  } = useSWR<AcpModelInfo | null>(enabled ? modelInfoKey : null, fetchAcpModelInfo, { revalidateOnMount: false });
+  const model_info = enabled ? (cachedModelInfo ?? null) : null;
 
   useEffect(() => {
     modelInfoRef.current = model_info;
@@ -132,7 +140,7 @@ export const useAcpModelInfo = ({
     [mutateModelInfo]
   );
 
-  const { data: agentsData } = useSWR<AgentMetadata[]>(DETECTED_AGENTS_SWR_KEY, fetchDetectedAgents);
+  const { data: agentsData } = useSWR<AgentMetadata[]>(enabled ? DETECTED_AGENTS_SWR_KEY : null, fetchDetectedAgents);
   const handshakeModelInfo = useMemo<AcpModelInfo | null>(() => {
     if (!backend || !agentsData?.length) return null;
     const matched = agentsData.find((a) => (a.backend ?? a.agent_type) === backend);
@@ -147,6 +155,7 @@ export const useAcpModelInfo = ({
 
   const loadFallbackModelInfo = useCallback(
     (options?: { preserveInitialModel?: boolean }) => {
+      if (!enabled) return false;
       const source = handshakeModelInfoRef.current;
       if (!source || source.available_models.length === 0) return false;
 
@@ -171,11 +180,23 @@ export const useAcpModelInfo = ({
       });
       return true;
     },
-    [backend, conversation_id, initialModelId, updateModelInfo]
+    [backend, conversation_id, enabled, initialModelId, updateModelInfo]
   );
 
   const reloadModelInfo = useCallback(
     async (options?: { preserveInitialModel?: boolean }): Promise<boolean> => {
+      if (!enabled) return false;
+      try {
+        await prepareRuntime?.();
+      } catch (error) {
+        logAcpModelInfo('prepare_runtime_failed_before_model_reload', {
+          conversation_id,
+          backend,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return false;
+      }
+
       const { model_info: info, missing_active_session: missingActiveSession } =
         await fetchAcpModelInfoResult(modelInfoKey);
 
@@ -224,7 +245,16 @@ export const useAcpModelInfo = ({
       }
       return false;
     },
-    [backend, initialModelId, loadFallbackModelInfo, modelInfoKey, updateModelInfo]
+    [
+      backend,
+      conversation_id,
+      enabled,
+      initialModelId,
+      loadFallbackModelInfo,
+      modelInfoKey,
+      prepareRuntime,
+      updateModelInfo,
+    ]
   );
 
   const clearScheduledReloads = useCallback(() => {
@@ -251,6 +281,10 @@ export const useAcpModelInfo = ({
   }, [clearScheduledReloads, conversation_id]);
 
   useEffect(() => {
+    if (!enabled) {
+      clearScheduledReloads();
+      return;
+    }
     if (prevConversationIdRef.current !== conversation_id) {
       // Resetting on conversation change is intentional; the in-flight
       // model selection belongs to the previous conversation, not this one.
@@ -258,18 +292,20 @@ export const useAcpModelInfo = ({
       prevConversationIdRef.current = conversation_id;
     }
     void reloadModelInfo({ preserveInitialModel: true }).catch(() => {});
-  }, [conversation_id, backend, initialModelId, reloadModelInfo]);
+  }, [conversation_id, backend, enabled, initialModelId, reloadModelInfo, clearScheduledReloads]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (!backend || !handshakeModelInfo) return;
     if (model_info && model_info.available_models.length > 0) return;
     if (isModelInfoLoading) return;
     if (hasUserChangedModel.current) return;
     loadFallbackModelInfo({ preserveInitialModel: true });
-  }, [backend, handshakeModelInfo, isModelInfoLoading, model_info, loadFallbackModelInfo]);
+  }, [backend, enabled, handshakeModelInfo, isModelInfoLoading, model_info, loadFallbackModelInfo]);
 
   // Claude doesn't push acp_model_info on warmup; poll while window has focus.
   useEffect(() => {
+    if (!enabled) return;
     if (backend !== 'claude') return;
     if (model_info) return;
     const refresh = () => {
@@ -286,9 +322,10 @@ export const useAcpModelInfo = ({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.clearInterval(intervalId);
     };
-  }, [backend, model_info, reloadModelInfo]);
+  }, [backend, enabled, model_info, reloadModelInfo]);
 
   useEffect(() => {
+    if (!enabled) return;
     const handler = (message: IResponseMessage) => {
       if (message.conversation_id !== conversation_id) return;
       if (message.type === 'start') {
@@ -335,10 +372,11 @@ export const useAcpModelInfo = ({
       }
     };
     return ipcBridge.acpConversation.responseStream.on(handler);
-  }, [conversation_id, initialModelId, scheduleModelInfoReload, updateModelInfo]);
+  }, [conversation_id, enabled, initialModelId, scheduleModelInfoReload, updateModelInfo]);
 
   const selectModel = useCallback(
     (model_id: string) => {
+      if (!enabled) return;
       hasUserChangedModel.current = true;
       const previousModelInfo = model_info;
       logAcpModelInfo('select_model_requested', {
@@ -350,6 +388,7 @@ export const useAcpModelInfo = ({
 
       void (async () => {
         try {
+          await prepareRuntime?.();
           await ipcBridge.acpConversation.setModel.invoke({ conversation_id, model_id });
         } catch (error) {
           hasUserChangedModel.current = false;
@@ -365,6 +404,7 @@ export const useAcpModelInfo = ({
           } else {
             void mutateModelInfo(null, false);
           }
+          onSelectModelFailed?.(model_id, error);
           void reloadModelInfo().catch(() => {});
           return;
         }
@@ -399,6 +439,7 @@ export const useAcpModelInfo = ({
             };
           }, false);
         }
+        onSelectModelSuccess?.(model_id);
 
         // Persist only after the active ACP session accepts the model switch.
         if (backend) {
@@ -432,10 +473,21 @@ export const useAcpModelInfo = ({
         console.error('[useAcpModelInfo] Failed to persist current_model_id:', error);
       });
     },
-    [backend, conversation_id, model_info, mutateModelInfo, reloadModelInfo, updateModelInfo]
+    [
+      backend,
+      conversation_id,
+      enabled,
+      model_info,
+      mutateModelInfo,
+      onSelectModelFailed,
+      onSelectModelSuccess,
+      prepareRuntime,
+      reloadModelInfo,
+      updateModelInfo,
+    ]
   );
 
-  const canSwitch = Boolean(model_info && model_info.available_models.length > 0);
+  const canSwitch = enabled && Boolean(model_info && model_info.available_models.length > 0);
 
   return { model_info, canSwitch, selectModel };
 };
