@@ -222,15 +222,15 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
           // conversation also becomes the next-session default.
           void savePreferredMode(backend, mode);
         }
-        Message.success('Mode switched');
+        Message.success(t('agentMode.switchSuccess'));
       } catch (error) {
         console.error('[AgentModeSelector] Failed to switch mode:', error);
-        Message.error('Switch failed');
+        Message.error(t('agentMode.switchFailed'));
       } finally {
         setIsLoading(false);
       }
     },
-    [backend, beforeRuntimeSync, conversation_id, current_mode, onModeChanged, onModeSelect]
+    [backend, beforeRuntimeSync, conversation_id, current_mode, onModeChanged, onModeSelect, t]
   );
 
   const renderLogo = () => (

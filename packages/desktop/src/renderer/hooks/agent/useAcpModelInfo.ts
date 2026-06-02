@@ -103,12 +103,16 @@ export const useAcpModelInfo = ({
   initialModelId,
   prepareRuntime,
   enabled = true,
+  onSelectModelSuccess,
+  onSelectModelFailed,
 }: {
   conversation_id: string;
   backend?: string;
   initialModelId?: string;
   prepareRuntime?: () => Promise<void>;
   enabled?: boolean;
+  onSelectModelSuccess?: (model_id: string) => void;
+  onSelectModelFailed?: (model_id: string, error: unknown) => void;
 }): UseAcpModelInfoResult => {
   const hasUserChangedModel = useRef(false);
   const prevConversationIdRef = useRef(conversation_id);
@@ -400,6 +404,7 @@ export const useAcpModelInfo = ({
           } else {
             void mutateModelInfo(null, false);
           }
+          onSelectModelFailed?.(model_id, error);
           void reloadModelInfo().catch(() => {});
           return;
         }
@@ -434,6 +439,7 @@ export const useAcpModelInfo = ({
             };
           }, false);
         }
+        onSelectModelSuccess?.(model_id);
 
         // Persist only after the active ACP session accepts the model switch.
         if (backend) {
@@ -467,7 +473,18 @@ export const useAcpModelInfo = ({
         console.error('[useAcpModelInfo] Failed to persist current_model_id:', error);
       });
     },
-    [backend, conversation_id, enabled, model_info, mutateModelInfo, prepareRuntime, reloadModelInfo, updateModelInfo]
+    [
+      backend,
+      conversation_id,
+      enabled,
+      model_info,
+      mutateModelInfo,
+      onSelectModelFailed,
+      onSelectModelSuccess,
+      prepareRuntime,
+      reloadModelInfo,
+      updateModelInfo,
+    ]
   );
 
   const canSwitch = enabled && Boolean(model_info && model_info.available_models.length > 0);

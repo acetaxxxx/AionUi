@@ -237,6 +237,8 @@ describe('useAcpModelInfo', () => {
 
   it('persists preferred model and conversation extra only after backend accepts selectModel', async () => {
     const setModelDeferred = deferred<void>();
+    const onSelectModelSuccess = vi.fn();
+    const onSelectModelFailed = vi.fn();
     getModelInvokeMock
       .mockResolvedValueOnce({ model_info: buildModelInfo() })
       .mockResolvedValue({ model_info: buildModelInfo({ current_model_id: 'opus-4' }) });
@@ -246,6 +248,8 @@ describe('useAcpModelInfo', () => {
       conversation_id: 'conv-1',
       backend: 'claude',
       initialModelId: 'sonnet-4',
+      onSelectModelSuccess,
+      onSelectModelFailed,
     });
 
     await waitFor(() => {
@@ -267,6 +271,8 @@ describe('useAcpModelInfo', () => {
     await waitFor(() => {
       expect(result.current.model_info?.current_model_id).toBe('opus-4');
     });
+    expect(onSelectModelSuccess).toHaveBeenCalledWith('opus-4');
+    expect(onSelectModelFailed).not.toHaveBeenCalled();
     await waitFor(() => {
       expect(configServiceSetMock).toHaveBeenCalled();
     });
@@ -283,13 +289,18 @@ describe('useAcpModelInfo', () => {
 
   it('rolls back to backend model info and does not persist when selectModel fails', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onSelectModelSuccess = vi.fn();
+    const onSelectModelFailed = vi.fn();
+    const setModelError = new Error('model unavailable');
     getModelInvokeMock.mockResolvedValue({ model_info: buildModelInfo() });
-    setModelInvokeMock.mockRejectedValue(new Error('model unavailable'));
+    setModelInvokeMock.mockRejectedValue(setModelError);
 
     const { result } = renderUseAcpModelInfo({
       conversation_id: 'conv-1',
       backend: 'claude',
       initialModelId: 'sonnet-4',
+      onSelectModelSuccess,
+      onSelectModelFailed,
     });
 
     await waitFor(() => {
@@ -309,6 +320,8 @@ describe('useAcpModelInfo', () => {
 
     expect(configServiceSetMock).not.toHaveBeenCalled();
     expect(conversationUpdateInvokeMock).not.toHaveBeenCalled();
+    expect(onSelectModelFailed).toHaveBeenCalledWith('opus-4', setModelError);
+    expect(onSelectModelSuccess).not.toHaveBeenCalled();
 
     consoleErrorSpy.mockRestore();
   });

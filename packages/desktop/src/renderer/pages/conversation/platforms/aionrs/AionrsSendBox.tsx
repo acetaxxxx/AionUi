@@ -377,13 +377,13 @@ const AionrsSendBox: React.FC<{
         setCurrentMode(mode);
         void savePreferredMode('aionrs', mode);
         propagateMode?.(mode);
-        Message.success('Mode switched');
+        Message.success(t('agentMode.switchSuccess'));
       } catch (error) {
         console.error('[AionrsSendBox] Failed to switch mode via sheet:', error);
-        Message.error('Switch failed');
+        Message.error(t('agentMode.switchFailed'));
       }
     },
-    [conversation_id, currentMode, prepareRuntimeSync, propagateMode]
+    [conversation_id, currentMode, prepareRuntimeSync, propagateMode, t]
   );
 
   // Sync currentMode from backend when the sheet first opens / conversation switches

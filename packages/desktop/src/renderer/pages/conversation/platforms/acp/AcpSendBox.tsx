@@ -144,6 +144,8 @@ const AcpSendBox: React.FC<{
     backend,
     prepareRuntime: prepareRuntimeSync,
     enabled: isMobile,
+    onSelectModelSuccess: () => Message.success(t('agent.model.switchSuccess')),
+    onSelectModelFailed: () => Message.error(t('agent.model.switchFailed')),
   });
   const availableAgentModes = useAgentModesForBackend(backend);
 
@@ -175,13 +177,13 @@ const AcpSendBox: React.FC<{
         setCurrentMode(mode);
         if (backend) void savePreferredMode(backend, mode);
         if (isLeaderInTeam) teamPermission?.propagateMode?.(mode);
-        Message.success('Mode switched');
+        Message.success(t('agentMode.switchSuccess'));
       } catch (error) {
         console.error('[AcpSendBox] Failed to switch mode via sheet:', error);
-        Message.error('Switch failed');
+        Message.error(t('agentMode.switchFailed'));
       }
     },
-    [backend, conversation_id, currentMode, isLeaderInTeam, prepareRuntimeSync, teamPermission]
+    [backend, conversation_id, currentMode, isLeaderInTeam, prepareRuntimeSync, t, teamPermission]
   );
 
   // In team mode, warmup the agent then fetch slash commands
