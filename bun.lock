@@ -23,6 +23,8 @@
         "@google/genai": "^1.16.0",
         "@grammyjs/transformer-throttler": "^1.2.1",
         "@icon-park/react": "^1.4.2",
+        "@iconify-json/vscode-icons": "^1.2.53",
+        "@iconify/react": "^6.0.2",
         "@larksuiteoapi/node-sdk": "^1.58.0",
         "@modelcontextprotocol/sdk": "^1.20.0",
         "@monaco-editor/react": "^4.7.0",
@@ -606,6 +608,10 @@
     "@iarna/toml": ["@iarna/toml@2.2.5", "", {}, "sha512-trnsAYxU3xnS1gPHPyU961coFyLkh4gAD/0zQ5mymY4yOZ+CYvsPqUbOFSw0aDM4y0tV7tiFxL/1XfXPNC6IPg=="],
 
     "@icon-park/react": ["@icon-park/react@1.4.2", "", { "peerDependencies": { "react": ">=16.9", "react-dom": ">=16.9" } }, "sha512-+MtQLjNiRuia3fC/NfpSCTIy5KH5b+NkMB9zYd7p3R4aAIK61AjK0OSraaICJdkKooU9jpzk8m0fY4g9A3JqhQ=="],
+
+    "@iconify-json/vscode-icons": ["@iconify-json/vscode-icons@1.2.53", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-l7EU0XxVXufefqYg8gaBgsmM0Bk6Sg5EbF6JTnJ15YkRbC9eiDn5dtyV41IRpV/dabveEAl0iD7dQjv+A7fNLA=="],
+
+    "@iconify/react": ["@iconify/react@6.0.2", "", { "dependencies": { "@iconify/types": "^2.0.0" }, "peerDependencies": { "react": ">=16" } }, "sha512-SMmC2sactfpJD427WJEDN6PMyznTFMhByK9yLW0gOTtnjzzbsi/Ke/XqsumsavFPwNiXs8jSiYeZTmLCLwO+Fg=="],
 
     "@iconify/types": ["@iconify/types@2.0.0", "", {}, "sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg=="],
 
