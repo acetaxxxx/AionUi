@@ -476,6 +476,9 @@
       "unsupported": "Desteklenmiyor"
     }
   },
+  "runtimePreparing": {
+    "sendboxHint": "Çalışma ortamı hazırlanıyor. İlk başlatma biraz daha uzun sürebilir."
+  },
   "sendbox": {
     "hint": "Komutlar için /, dosya için @ yazın"
   },

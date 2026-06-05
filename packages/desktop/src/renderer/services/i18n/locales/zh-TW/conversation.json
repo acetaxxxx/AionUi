@@ -474,6 +474,9 @@
       "unsupported": "不支援"
     }
   },
+  "runtimePreparing": {
+    "sendboxHint": "正在準備執行環境。首次啟動可能會稍慢一些。"
+  },
   "sendbox": {
     "hint": "輸入 / 喚起命令，@ 引用檔案"
   },

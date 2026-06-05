@@ -87,6 +87,14 @@ function classifyIncompleteInstallation(details: ErrorWithDetails['details']): B
     missingResources.push(`bundled-aioncore/${details.runtimeKey}/`);
   }
   const runtimeDirEntries = getStringArray(details.runtimeDirEntries);
+  const missingManagedResourcesDir =
+    details.runtimeDirExists === true &&
+    typeof details.runtimeKey === 'string' &&
+    runtimeDirEntries !== undefined &&
+    !runtimeDirEntries.includes('managed-resources/');
+  if (missingManagedResourcesDir && typeof details.runtimeKey === 'string') {
+    missingResources.push(`bundled-aioncore/${details.runtimeKey}/managed-resources/`);
+  }
   const missingRuntimeBinary =
     details.runtimeDirExists === true &&
     typeof details.runtimeKey === 'string' &&
@@ -101,8 +109,11 @@ function classifyIncompleteInstallation(details: ErrorWithDetails['details']): B
 
   return {
     incompleteInstallationKind:
-      missingBundledAioncoreDir || missingRuntimeDir ? 'missing_directory_resources' : 'missing_backend_binary',
-    missingBackendBinary: missingBundledAioncoreDir || missingRuntimeDir || missingRuntimeBinary,
+      missingBundledAioncoreDir || missingRuntimeDir || missingManagedResourcesDir
+        ? 'missing_directory_resources'
+        : 'missing_backend_binary',
+    missingBackendBinary:
+      missingBundledAioncoreDir || missingRuntimeDir || missingManagedResourcesDir || missingRuntimeBinary,
     missingBundledAioncoreDir,
     missingHubDir: getMissingDirectoryFlag(resourcesDirEntries, 'hub/'),
     missingPetStatesDir: getMissingDirectoryFlag(resourcesDirEntries, 'pet-states/'),

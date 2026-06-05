@@ -98,13 +98,13 @@ describe('classifyBackendStartupFailure', () => {
 
     expect(classifyBackendStartupFailure(error)).toEqual({
       reason: 'backend_incomplete_installation',
-      incompleteInstallationKind: 'missing_backend_binary',
+      incompleteInstallationKind: 'missing_directory_resources',
       missingBackendBinary: true,
       missingBundledAioncoreDir: false,
       missingHubDir: false,
       missingPetStatesDir: false,
       missingPwaDir: false,
-      missingResources: ['bundled-aioncore/win32-x64/aioncore.exe'],
+      missingResources: ['bundled-aioncore/win32-x64/managed-resources/', 'bundled-aioncore/win32-x64/aioncore.exe'],
       missingRuntimeDir: false,
     });
   });
