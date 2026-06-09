@@ -256,7 +256,7 @@ export const useAcpMessage = (conversation_id: string, options?: { skipWarmup?: 
           break;
         case 'finish':
           {
-            logStreamTerminalObserved(conversation_id, 'acp', message.type);
+            logStreamTerminalObserved(conversation_id, message.turn_id, 'acp', message.type);
             // Mark turn as finished to prevent auto-recover from late messages
             turnFinishedRef.current = true;
             // Immediate state reset (notification is handled by centralized hook)
@@ -424,7 +424,7 @@ export const useAcpMessage = (conversation_id: string, options?: { skipWarmup?: 
           }
           break;
         case 'error':
-          logStreamTerminalObserved(conversation_id, 'acp', message.type);
+          logStreamTerminalObserved(conversation_id, message.turn_id, 'acp', message.type);
           // Stop all loading states when error occurs
           turnFinishedRef.current = true;
           setRunning(false);

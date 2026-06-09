@@ -22,9 +22,6 @@ import { emitter } from '../../../utils/emitter';
 import AcpChat from '../platforms/acp/AcpChat';
 import ChatLayout from './ChatLayout';
 import ChatSlider from './ChatSlider.tsx';
-import NanobotChat from '../platforms/nanobot/NanobotChat';
-import OpenClawChat from '../platforms/openclaw/OpenClawChat';
-import RemoteChat from '../platforms/remote/RemoteChat';
 import AcpModelSelector from '@/renderer/components/agent/AcpModelSelector';
 import { saveAionrsDefaultModel } from '@/renderer/pages/guid/hooks/agentSelectionUtils';
 import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
@@ -33,8 +30,9 @@ import GoogleModelSelector from '../platforms/gemini/GoogleModelSelector';
 import AionrsChat from '../platforms/aionrs/AionrsChat';
 import AionrsModelSelector from '../platforms/aionrs/AionrsModelSelector';
 import { useAionrsModelSelection } from '../platforms/aionrs/useAionrsModelSelection';
-import { usePreviewContext } from '../Preview';
-import StarOfficeMonitorCard from '../platforms/openclaw/StarOfficeMonitorCard.tsx';
+import { useConversationRuntimeView } from '../runtime/useConversationRuntimeView';
+import { isLegacyReadOnlyConversationType } from '../utils/conversationRuntime';
+import LegacyReadOnlyConversation from '../platforms/legacy/LegacyReadOnlyConversation';
 // import SkillRuleGenerator from './components/SkillRuleGenerator'; // Temporarily hidden
 
 /** Check whether a specific skill is mounted on the conversation. */
@@ -142,16 +140,23 @@ const AionrsConversationPanel: React.FC<{ conversation: AionrsConversation; slid
   conversation,
   sliderTitle,
 }) => {
+  const runtimeView = useConversationRuntimeView(conversation.id);
   const onSelectModel = useCallback(
     async (_provider: IProvider, modelName: string) => {
       const selected = { ..._provider, use_model: modelName } as TProviderWithModel;
       // Kill running agent on model switch — will be rebuilt with new model on next message
-      await ipcBridge.conversation.stop.invoke({ conversation_id: conversation.id });
+      if (runtimeView.activeTurnId) {
+        const result = await ipcBridge.conversation.stop.invoke({
+          conversation_id: conversation.id,
+          turn_id: runtimeView.activeTurnId,
+        });
+        runtimeView.markStopAcknowledged(runtimeView.activeTurnId, result.runtime);
+      }
       const ok = await ipcBridge.conversation.update.invoke({ id: conversation.id, updates: { model: selected } });
       if (ok) void saveAionrsDefaultModel(_provider.id, modelName);
       return Boolean(ok);
     },
-    [conversation.id]
+    [conversation.id, runtimeView]
   );
 
   const modelSelection = useAionrsModelSelection({
@@ -212,12 +217,13 @@ const ChatConversation: React.FC<{
   hideSendBox?: boolean;
 }> = ({ conversation, hideSendBox }) => {
   const { t } = useTranslation();
-  const { openPreview } = usePreviewContext();
   const workspaceEnabled = Boolean(conversation?.extra?.workspace);
   const layout = useLayoutContext();
   const isMobile = Boolean(layout?.isMobile);
 
   const isAionrsConversation = conversation?.type === 'aionrs';
+  const isLegacyReadOnlyConversation = isLegacyReadOnlyConversationType(conversation?.type);
+  const resolvedHideSendBox = hideSendBox || isLegacyReadOnlyConversationType(conversation?.type);
 
   // 使用统一的 Hook 获取预设助手信息（ACP/Codex 会话）
   // Use unified hook for preset assistant info (ACP/Codex conversations)
@@ -230,6 +236,9 @@ const ChatConversation: React.FC<{
 
   const conversationNode = useMemo(() => {
     if (!conversation || isAionrsConversation) return null;
+    if (isLegacyReadOnlyConversation) {
+      return <LegacyReadOnlyConversation key={conversation.id} conversation={conversation} />;
+    }
     switch (conversation.type) {
       case 'acp':
         return (
@@ -241,7 +250,7 @@ const ChatConversation: React.FC<{
             session_mode={conversation.extra?.session_mode}
             agent_name={assistantDisplayName}
             cron_job_id={(conversation.extra as { cron_job_id?: string })?.cron_job_id}
-            hideSendBox={hideSendBox}
+            hideSendBox={resolvedHideSendBox}
             loadedSkills={(conversation.extra as { skills?: string[] } | undefined)?.skills}
             loadedMcpServers={(conversation.extra as { mcp_servers?: string[] } | undefined)?.mcp_servers}
             loadedMcpStatuses={
@@ -249,79 +258,10 @@ const ChatConversation: React.FC<{
             }
           ></AcpChat>
         );
-      case 'gemini':
-        // Legacy Gemini conversation: the dedicated Gemini runtime has been
-        // removed. The message history is still served by the shared messages
-        // table, so AcpChat renders it fine. The composer is left enabled —
-        // any send attempt will get a BadRequest from the factory branch in
-        // aionui-common/src/enums.rs → factory.rs, surfacing a clear error
-        // to the user.
-        return (
-          <AcpChat
-            key={conversation.id}
-            conversation_id={conversation.id}
-            workspace={conversation.extra?.workspace}
-            backend='gemini'
-            agent_name={assistantDisplayName}
-            cron_job_id={(conversation.extra as { cron_job_id?: string })?.cron_job_id}
-            hideSendBox={hideSendBox}
-            loadedSkills={(conversation.extra as { skills?: string[] } | undefined)?.skills}
-            loadedMcpServers={(conversation.extra as { mcp_servers?: string[] } | undefined)?.mcp_servers}
-            loadedMcpStatuses={
-              (conversation.extra as { mcp_statuses?: IConversationMcpStatus[] } | undefined)?.mcp_statuses
-            }
-          />
-        );
-      case 'codex': // Legacy: codex now uses ACP protocol
-        return (
-          <AcpChat
-            key={conversation.id}
-            conversation_id={conversation.id}
-            workspace={conversation.extra?.workspace}
-            backend='codex'
-            agent_name={assistantDisplayName}
-            hideSendBox={hideSendBox}
-            loadedSkills={(conversation.extra as { skills?: string[] } | undefined)?.skills}
-            loadedMcpServers={(conversation.extra as { mcp_servers?: string[] } | undefined)?.mcp_servers}
-            loadedMcpStatuses={
-              (conversation.extra as { mcp_statuses?: IConversationMcpStatus[] } | undefined)?.mcp_statuses
-            }
-          />
-        );
-      case 'openclaw-gateway':
-        return (
-          <OpenClawChat
-            key={conversation.id}
-            conversation_id={conversation.id}
-            workspace={conversation.extra?.workspace}
-            cron_job_id={(conversation.extra as { cron_job_id?: string })?.cron_job_id}
-            loadedSkills={(conversation.extra as { skills?: string[] } | undefined)?.skills}
-          />
-        );
-      case 'nanobot':
-        return (
-          <NanobotChat
-            key={conversation.id}
-            conversation_id={conversation.id}
-            workspace={conversation.extra?.workspace}
-            cron_job_id={(conversation.extra as { cron_job_id?: string })?.cron_job_id}
-            loadedSkills={(conversation.extra as { skills?: string[] } | undefined)?.skills}
-          />
-        );
-      case 'remote':
-        return (
-          <RemoteChat
-            key={conversation.id}
-            conversation_id={conversation.id}
-            workspace={conversation.extra?.workspace}
-            cron_job_id={(conversation.extra as { cron_job_id?: string })?.cron_job_id}
-            loadedSkills={(conversation.extra as { skills?: string[] } | undefined)?.skills}
-          />
-        );
       default:
         return null;
     }
-  }, [conversation, isAionrsConversation, assistantDisplayName, hideSendBox]);
+  }, [conversation, isAionrsConversation, isLegacyReadOnlyConversation, assistantDisplayName, resolvedHideSendBox]);
 
   const sliderTitle = useMemo(() => {
     return (
@@ -338,6 +278,7 @@ const ChatConversation: React.FC<{
   const modelSelector = useMemo(() => {
     if (!conversation || isAionrsConversation) return undefined;
     if (isMobile) return undefined;
+    if (isLegacyReadOnlyConversation) return undefined;
     if (conversation.type === 'acp') {
       const extra = conversation.extra as { backend?: string; current_model_id?: string };
       return (
@@ -350,7 +291,7 @@ const ChatConversation: React.FC<{
       );
     }
     return <GoogleModelSelector disabled={true} />;
-  }, [conversation, isAionrsConversation, isMobile]);
+  }, [conversation, isAionrsConversation, isMobile, isLegacyReadOnlyConversation]);
 
   if (conversation && conversation.type === 'aionrs') {
     return <AionrsConversationPanel key={conversation.id} conversation={conversation} sliderTitle={sliderTitle} />;
@@ -384,16 +325,6 @@ const ChatConversation: React.FC<{
 
   const headerExtraNode = (
     <div className='flex items-center gap-8px'>
-      {conversation?.type === 'openclaw-gateway' && (
-        <div className='shrink-0'>
-          <StarOfficeMonitorCard
-            conversation_id={conversation.id}
-            onOpenUrl={(url, metadata) => {
-              openPreview(url, 'url', metadata);
-            }}
-          />
-        </div>
-      )}
       {conversation && (
         <div className='shrink-0'>
           <CronJobManager
