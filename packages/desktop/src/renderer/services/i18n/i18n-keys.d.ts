@@ -1617,6 +1617,7 @@ export type I18nKey =
   | 'settings.model'
   | 'settings.modelCount'
   | 'settings.modelName'
+  | 'settings.modelNotFoundAfterUrlChange'
   | 'settings.modelPlatform'
   | 'settings.modelProtocol'
   | 'settings.modelProtocolTip'

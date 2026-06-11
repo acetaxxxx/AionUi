@@ -190,6 +190,7 @@
   "fullUrlMode": "URL Completa",
   "fullUrlHint": "Usa este endereço diretamente, nenhum caminho é adicionado",
   "baseUrlHint": "O sistema adicionará automaticamente o caminho da requisição",
+  "modelNotFoundAfterUrlChange": "O modelo {{model}} não foi encontrado no novo endereço; selecione-o novamente se não funcionar.",
   "apiKey": "Chave de API",
   "deleteModelConfirm": "Tem certeza de que deseja excluir este modelo?",
   "deleteAllModelConfirm": "Tem certeza de que deseja excluir todos os modelos?",

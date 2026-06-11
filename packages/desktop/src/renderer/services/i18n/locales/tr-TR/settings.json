@@ -190,6 +190,7 @@
   "fullUrlMode": "Tam URL",
   "fullUrlHint": "Bu adresi doğrudan kullan, yol ekleme",
   "baseUrlHint": "Sistem otomatik olarak istek yolunu ekleyecektir",
+  "modelNotFoundAfterUrlChange": "{{model}} modeli yeni adreste bulunamadı; çalışmazsa yeniden seçin.",
   "apiKey": "API Anahtarı",
   "deleteModelConfirm": "Bu modeli silmek istediğinizden emin misiniz?",
   "deleteAllModelConfirm": "Tüm modelleri silmek istediğinizden emin misiniz?",
