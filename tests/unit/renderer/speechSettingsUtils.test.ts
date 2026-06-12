@@ -9,10 +9,13 @@ import {
   DEEPGRAM_SPEECH_MODEL_PRESETS,
   DEFAULT_SPEECH_TO_TEXT_CONFIG,
   OPENAI_SPEECH_MODEL_PRESETS,
+  SPEECH_LANGUAGE_OPTIONS,
   applySpeechSource,
   buildModelOptions,
   deriveSpeechSource,
+  getAutoTranscriptionPrompt,
   isValidHttpUrl,
+  migrateSpeechLanguage,
   normalizeSpeechToTextConfig,
 } from '@renderer/components/settings/SettingsModal/contents/SystemModalContent/VoiceInputSection/speechSettingsUtils';
 
@@ -125,6 +128,78 @@ describe('isValidHttpUrl', () => {
     expect(isValidHttpUrl('wss://my-host')).toBe(false);
     expect(isValidHttpUrl('my-host/v1')).toBe(false);
     expect(isValidHttpUrl('')).toBe(false);
+  });
+});
+
+describe('Chinese language options', () => {
+  it('splits Chinese into Simplified and Traditional, with no ambiguous zh', () => {
+    const values = SPEECH_LANGUAGE_OPTIONS.map((option) => option.value);
+    expect(values).toContain('zh-CN');
+    expect(values).toContain('zh-TW');
+    expect(values).not.toContain('zh');
+  });
+});
+
+describe('getAutoTranscriptionPrompt', () => {
+  it('returns a Simplified-script prompt for zh-CN', () => {
+    expect(getAutoTranscriptionPrompt('zh-CN')).toBe('以下是普通话的句子。');
+  });
+
+  it('returns a Traditional-script prompt for zh-TW', () => {
+    expect(getAutoTranscriptionPrompt('zh-TW')).toBe('以下是普通話的句子。');
+  });
+
+  it('returns undefined for non-Chinese languages and auto detect', () => {
+    expect(getAutoTranscriptionPrompt('en')).toBeUndefined();
+    expect(getAutoTranscriptionPrompt('')).toBeUndefined();
+  });
+});
+
+describe('migrateSpeechLanguage', () => {
+  it('migrates stored openai zh to zh-CN and injects the Simplified prompt', () => {
+    const config = normalizeSpeechToTextConfig({
+      enabled: true,
+      provider: 'openai',
+      openai: { api_key: 'k', language: 'zh', model: 'whisper-1' },
+    });
+    const migrated = migrateSpeechLanguage(config);
+    expect(migrated.openai?.language).toBe('zh-CN');
+    expect(migrated.openai?.prompt).toBe('以下是普通话的句子。');
+  });
+
+  it('migrates stored deepgram zh to zh-CN without a prompt', () => {
+    const config = normalizeSpeechToTextConfig({
+      enabled: true,
+      provider: 'deepgram',
+      deepgram: { api_key: 'k', language: 'zh', model: 'nova-3' },
+    });
+    const migrated = migrateSpeechLanguage(config);
+    expect(migrated.deepgram?.language).toBe('zh-CN');
+    expect(migrated.openai?.language).toBe('');
+  });
+
+  it('migrates both sub-configs when both stored zh', () => {
+    const config = normalizeSpeechToTextConfig({
+      enabled: true,
+      provider: 'openai',
+      openai: { api_key: 'k', language: 'zh', model: 'whisper-1' },
+      deepgram: { api_key: 'k', language: 'zh', model: 'nova-3' },
+    });
+    const migrated = migrateSpeechLanguage(config);
+    expect(migrated.openai?.language).toBe('zh-CN');
+    expect(migrated.deepgram?.language).toBe('zh-CN');
+  });
+
+  it('leaves non-zh languages and existing prompts untouched', () => {
+    const config = normalizeSpeechToTextConfig({
+      enabled: true,
+      provider: 'openai',
+      openai: { api_key: 'k', language: 'zh-TW', model: 'whisper-1', prompt: '以下是普通話的句子。' },
+    });
+    const migrated = migrateSpeechLanguage(config);
+    expect(migrated).toBe(config);
+    expect(migrated.openai?.language).toBe('zh-TW');
+    expect(migrated.openai?.prompt).toBe('以下是普通話的句子。');
   });
 });
 

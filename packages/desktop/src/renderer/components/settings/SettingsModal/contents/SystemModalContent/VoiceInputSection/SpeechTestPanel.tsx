@@ -26,7 +26,7 @@ type TestResult = {
 };
 
 const SpeechTestPanel: React.FC<SpeechTestPanelProps> = ({ config, source }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const startedAtRef = useRef(0);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -48,7 +48,6 @@ const SpeechTestPanel: React.FC<SpeechTestPanelProps> = ({ config, source }) => 
     transcribeFile,
     recordingDurationMs,
   } = useSpeechInput({
-    locale: i18n.language,
     onTranscript: handleTranscript,
   });
 

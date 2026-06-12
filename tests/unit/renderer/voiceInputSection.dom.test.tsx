@@ -93,7 +93,42 @@ describe('VoiceInputSection', () => {
     await waitFor(() => expect(screen.getByText('settings.speechToTextBaseUrl')).toBeTruthy());
   });
 
-  it('deepgram mode shows formatting switches', async () => {
+  it('official openai mode shows streaming badge for gpt-4o-transcribe and batch badge for whisper-1', async () => {
+    configStore.value = {
+      enabled: true,
+      provider: 'openai',
+      openai: { api_key: 'k', base_url: '', model: 'gpt-4o-transcribe', language: '' },
+    };
+    render(<VoiceInputSection />);
+    await waitFor(() => expect(screen.getByText('settings.speechToTextSource')).toBeTruthy());
+
+    // Open the model Select (second .arco-select on the page — first is the source select).
+    const selects = document.querySelectorAll('.arco-select');
+    // source select is first; model select is second
+    expect(selects.length).toBeGreaterThanOrEqual(2);
+    fireEvent.click(selects[1] as Element);
+
+    // gpt-4o-transcribe option should carry the streaming badge (multiple elements ok — arco renders
+    // options in hidden + visible lists)
+    await waitFor(() => expect(screen.getAllByText('settings.speechToTextStreamingBadge').length).toBeGreaterThan(0));
+
+    // whisper-1 option should carry the batch badge
+    expect(screen.getAllByText('settings.speechToTextWholeBadge').length).toBeGreaterThan(0);
+  });
+
+  it('migrates a stored ambiguous zh language to Simplified Chinese on load', async () => {
+    configStore.value = {
+      enabled: true,
+      provider: 'openai',
+      openai: { api_key: 'k', base_url: '', model: 'whisper-1', language: 'zh' },
+    };
+    render(<VoiceInputSection />);
+    await waitFor(() => expect(screen.getByText('settings.speechToTextLanguage')).toBeTruthy());
+    // The language select displays the migrated zh-CN option label.
+    await waitFor(() => expect(screen.getByText('中文（简体）')).toBeTruthy());
+  });
+
+  it('deepgram mode hides the batch-only/always-on formatting switches', async () => {
     configStore.value = {
       enabled: true,
       provider: 'deepgram',
@@ -107,7 +142,11 @@ describe('VoiceInputSection', () => {
       },
     };
     render(<VoiceInputSection />);
-    await waitFor(() => expect(screen.getByText('settings.speechToTextPunctuate')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('settings.speechToTextLanguage')).toBeTruthy());
     expect(screen.queryByText('settings.speechToTextBaseUrl')).toBeNull();
+    // Stored values stay honored by the backend; only the toggles are gone.
+    expect(screen.queryByText('settings.speechToTextDetectLanguage')).toBeNull();
+    expect(screen.queryByText('settings.speechToTextPunctuate')).toBeNull();
+    expect(screen.queryByText('settings.speechToTextSmartFormat')).toBeNull();
   });
 });

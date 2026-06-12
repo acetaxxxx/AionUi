@@ -8,6 +8,7 @@ import { configService } from '@/common/config/configService';
 import type { SpeechToTextConfig } from '@/common/types/provider/speech';
 import AionSelect from '@/renderer/components/base/AionSelect';
 import { SPEECH_TO_TEXT_CONFIG_CHANGED_EVENT } from '@/renderer/services/SpeechToTextService';
+import { getModelStreamCapability } from '@/renderer/services/speech/speechStreamPolicy';
 import { Divider, Form, Input, Switch } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +21,9 @@ import {
   applySpeechSource,
   buildModelOptions,
   deriveSpeechSource,
+  getAutoTranscriptionPrompt,
   isValidHttpUrl,
+  migrateSpeechLanguage,
   normalizeSpeechToTextConfig,
   type SpeechSource,
 } from './speechSettingsUtils';
@@ -55,7 +58,7 @@ const VoiceInputSection: React.FC = () => {
   useEffect(() => {
     try {
       const stored = configService.get('tools.speechToText');
-      const normalized = normalizeSpeechToTextConfig(stored);
+      const normalized = migrateSpeechLanguage(normalizeSpeechToTextConfig(stored));
       setConfig(normalized);
       setSource(deriveSpeechSource(normalized));
       if (deriveSpeechSource(normalized) === 'custom') {
@@ -142,11 +145,24 @@ const VoiceInputSection: React.FC = () => {
     (value: string) => {
       if (isDeepgram) {
         handleDeepgramChange('language', value);
-      } else {
-        handleOpenAIChange('language', value);
+        return;
       }
+      // Whisper-family `zh` is script-ambiguous: pair the language with a
+      // same-script prompt (undefined clears it for non-Chinese languages).
+      updateConfig(
+        (current) =>
+          ({
+            ...current,
+            openai: {
+              ...DEFAULT_SPEECH_TO_TEXT_CONFIG.openai,
+              ...current.openai,
+              language: value,
+              prompt: getAutoTranscriptionPrompt(value),
+            },
+          }) as SpeechToTextConfig
+      );
     },
-    [handleDeepgramChange, handleOpenAIChange, isDeepgram]
+    [handleDeepgramChange, isDeepgram, updateConfig]
   );
 
   const handleApiKeyChange = useCallback(
@@ -216,11 +232,21 @@ const VoiceInputSection: React.FC = () => {
                 showSearch={isCustom}
                 placeholder={isCustom ? t('settings.speechToTextModelPlaceholder') : undefined}
               >
-                {buildModelOptions(modelPresets, activeModel).map((model) => (
-                  <AionSelect.Option key={model} value={model}>
-                    {model}
-                  </AionSelect.Option>
-                ))}
+                {buildModelOptions(modelPresets, activeModel).map((model) => {
+                  const capability = getModelStreamCapability(source, model);
+                  const badgeText =
+                    capability === 'supported'
+                      ? t('settings.speechToTextStreamingBadge')
+                      : capability === 'unsupported'
+                        ? t('settings.speechToTextWholeBadge')
+                        : null;
+                  return (
+                    <AionSelect.Option key={model} value={model}>
+                      {model}
+                      {badgeText !== null && <span className='text-12px text-t-tertiary ml-8px'>{badgeText}</span>}
+                    </AionSelect.Option>
+                  );
+                })}
               </AionSelect>
             </Form.Item>
 
@@ -233,29 +259,6 @@ const VoiceInputSection: React.FC = () => {
                 ))}
               </AionSelect>
             </Form.Item>
-
-            {isDeepgram && (
-              <>
-                <Form.Item label={<FieldLabel labelKey='settings.speechToTextDetectLanguage' requirement='optional' />}>
-                  <Switch
-                    checked={config.deepgram?.detectLanguage !== false}
-                    onChange={(checked) => handleDeepgramChange('detectLanguage', checked)}
-                  />
-                </Form.Item>
-                <Form.Item label={<FieldLabel labelKey='settings.speechToTextPunctuate' requirement='optional' />}>
-                  <Switch
-                    checked={config.deepgram?.punctuate !== false}
-                    onChange={(checked) => handleDeepgramChange('punctuate', checked)}
-                  />
-                </Form.Item>
-                <Form.Item label={<FieldLabel labelKey='settings.speechToTextSmartFormat' requirement='optional' />}>
-                  <Switch
-                    checked={config.deepgram?.smartFormat !== false}
-                    onChange={(checked) => handleDeepgramChange('smartFormat', checked)}
-                  />
-                </Form.Item>
-              </>
-            )}
           </Form>
           <SpeechTestPanel config={config} source={source} />
         </>

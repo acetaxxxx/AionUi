@@ -30,6 +30,7 @@ import { ensureBackendMcpCatalog } from '@/renderer/hooks/mcp/catalog';
 import { resolveAgentLogo } from '@/renderer/utils/model/agentLogo';
 import SpeechInputButton from '@/renderer/components/chat/SpeechInputButton';
 import { appendSpeechTranscript } from '@/renderer/hooks/system/useSpeechInput';
+import { useLiveTranscriptInsertion } from '@/renderer/hooks/system/useLiveTranscriptInsertion';
 import { Button, ConfigProvider, Dropdown, Menu, Message } from '@arco-design/web-react';
 import { Down, Left, Robot, Write } from '@icon-park/react';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -572,6 +573,7 @@ const GuidPage: React.FC = () => {
     },
     [guidInput.setInput]
   );
+  const { handleLiveTranscript } = useLiveTranscriptInsertion(guidInput.setInput);
 
   // Build the action row
   const actionRowNode = (
@@ -602,7 +604,11 @@ const GuidPage: React.FC = () => {
       onToggleMcpServer={handleToggleMcpServer}
       hidePresetTag
       speechInputNode={
-        <SpeechInputButton disabled={guidInput.loading} locale={i18n.language} onTranscript={handleSpeechTranscript} />
+        <SpeechInputButton
+          disabled={guidInput.loading}
+          onLiveTranscript={handleLiveTranscript}
+          onTranscript={handleSpeechTranscript}
+        />
       }
       loading={guidInput.loading}
       isButtonDisabled={send.isButtonDisabled}

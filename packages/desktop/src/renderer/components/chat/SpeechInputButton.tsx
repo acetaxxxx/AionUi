@@ -17,7 +17,8 @@ import {
 
 type SpeechInputButtonProps = {
   disabled?: boolean;
-  locale?: string;
+  /** Live transcript of the active streaming session; `null` clears it. */
+  onLiveTranscript?: (text: string | null) => void;
   onTranscript: (transcript: string) => void;
 };
 
@@ -69,7 +70,7 @@ const getTooltipKey = (availability: SpeechInputAvailability, isListening: boole
   return getAvailabilityMessageKey(availability);
 };
 
-const SpeechInputButton: React.FC<SpeechInputButtonProps> = ({ disabled, locale, onTranscript }) => {
+const SpeechInputButton: React.FC<SpeechInputButtonProps> = ({ disabled, onLiveTranscript, onTranscript }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isSpeechToTextEnabled, setIsSpeechToTextEnabled] = useState(false);
@@ -86,7 +87,7 @@ const SpeechInputButton: React.FC<SpeechInputButtonProps> = ({ disabled, locale,
     stopRecording,
     transcribeFile,
   } = useSpeechInput({
-    locale,
+    onLiveTranscript,
     onTranscript,
   });
 
