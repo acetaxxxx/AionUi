@@ -34,6 +34,7 @@ const AcpChat: React.FC<{
   loadedSkills?: string[];
   loadedMcpServers?: string[];
   loadedMcpStatuses?: IConversationMcpStatus[];
+  assistantId?: string;
 }> = ({
   conversation_id,
   workspace,
@@ -46,6 +47,7 @@ const AcpChat: React.FC<{
   loadedSkills,
   loadedMcpServers,
   loadedMcpStatuses,
+  assistantId,
 }) => {
   useMessageLstCache(conversation_id);
   usePendingConfirmationsRecovery(conversation_id);
@@ -63,6 +65,7 @@ const AcpChat: React.FC<{
         loadedSkills,
         loadedMcpServers,
         loadedMcpStatuses,
+        assistantId,
       }}
     >
       <ConversationArtifactProvider conversation_id={conversation_id}>

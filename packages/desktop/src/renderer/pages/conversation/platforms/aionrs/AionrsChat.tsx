@@ -33,6 +33,7 @@ const AionrsChat: React.FC<{
   loadedMcpServers?: string[];
   loadedMcpStatuses?: IConversationMcpStatus[];
   agent_name?: string;
+  assistantId?: string;
 }> = ({
   conversation_id,
   workspace,
@@ -44,6 +45,7 @@ const AionrsChat: React.FC<{
   loadedMcpServers,
   loadedMcpStatuses,
   agent_name,
+  assistantId,
 }) => {
   useMessageLstCache(conversation_id);
   usePendingConfirmationsRecovery(conversation_id);
@@ -60,8 +62,9 @@ const AionrsChat: React.FC<{
       loadedSkills,
       loadedMcpServers,
       loadedMcpStatuses,
+      assistantId,
     };
-  }, [conversation_id, workspace, cron_job_id, loadedSkills, loadedMcpServers, loadedMcpStatuses]);
+  }, [conversation_id, workspace, cron_job_id, loadedSkills, loadedMcpServers, loadedMcpStatuses, assistantId]);
 
   return (
     <ConversationProvider value={conversationValue}>
