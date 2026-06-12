@@ -49,8 +49,20 @@ import type {
   ITeamAgentRenamedEvent,
   ITeamAgentSpawnedEvent,
   ITeamAgentStatusEvent,
+  ITeamChildTurnEvent,
   ITeamCreatedEvent,
   ITeamListChangedEvent,
+  ITeamMcpStatusEvent,
+  ITeamRemovedEvent,
+  ITeamRenamedEvent,
+  ITeamRunAck,
+  ITeamRunEvent,
+  ITeamSessionChangedEvent,
+  ITeamTaskChangedEvent,
+  ICancelTeamChildTurnParams,
+  ICancelTeamRunParams,
+  ISendTeamAgentMessageParams,
+  ISendTeamMessageParams,
   ITeamTeammateMessageEvent,
   TTeam,
   TeamAgent,
@@ -1468,10 +1480,12 @@ export interface IResponseMessage {
   type: string;
   data: unknown;
   msg_id: string;
-  turn_id: string;
+  turn_id?: string;
   conversation_id: string;
   created_at?: number;
   hidden?: boolean;
+  position?: 'left' | 'right' | 'center' | 'pop';
+  status?: 'finish' | 'pending' | 'error' | 'work';
   /** Replace accumulated text for the same msg_id instead of appending. */
   replace?: boolean;
 }
@@ -1826,13 +1840,54 @@ export const team = {
   ),
   setSessionMode: httpPost<void, { team_id: string; session_mode: string }>(
     (p) => `/api/teams/${p.team_id}/session-mode`,
-    (p) => ({ session_mode: p.session_mode })
+    (p) => ({ mode: p.session_mode })
   ),
-  agentStatusChanged: wsEmitter<ITeamAgentStatusEvent>('team.agent.status'),
-  agentSpawned: wsEmitter<ITeamAgentSpawnedEvent>('team.agent.spawned'),
-  agentRemoved: wsEmitter<ITeamAgentRemovedEvent>('team.agent.removed'),
-  agentRenamed: wsEmitter<ITeamAgentRenamedEvent>('team.agent.renamed'),
-  listChanged: wsEmitter<ITeamListChangedEvent>('team.list-changed'),
+  sendMessage: httpPost<ITeamRunAck, ISendTeamMessageParams>(
+    (p) => `/api/teams/${p.team_id}/messages`,
+    (p) => ({
+      content: p.input,
+      files: p.files,
+    })
+  ),
+  sendMessageToAgent: httpPost<ITeamRunAck, ISendTeamAgentMessageParams>(
+    (p) => `/api/teams/${p.team_id}/agents/${p.slot_id}/messages`,
+    (p) => ({
+      content: p.input,
+      files: p.files,
+    })
+  ),
+  cancelRun: httpPost<void, ICancelTeamRunParams>(
+    (p) => `/api/teams/${p.team_id}/runs/${p.team_run_id}/cancel`,
+    (p) => ({
+      target_slot_id: p.target_slot_id,
+      reason: p.reason,
+    })
+  ),
+  cancelChildTurn: httpPost<void, ICancelTeamChildTurnParams>(
+    (p) => `/api/teams/${p.team_id}/runs/${p.team_run_id}/agents/${p.slot_id}/cancel`,
+    (p) => ({
+      reason: p.reason,
+    })
+  ),
+  agentStatusChanged: wsEmitter<ITeamAgentStatusEvent>('team.agentStatusChanged'),
+  agentSpawned: wsEmitter<ITeamAgentSpawnedEvent>('team.agentSpawned'),
+  agentRemoved: wsEmitter<ITeamAgentRemovedEvent>('team.agentRemoved'),
+  agentRenamed: wsEmitter<ITeamAgentRenamedEvent>('team.agentRenamed'),
+  listChanged: wsEmitter<ITeamListChangedEvent>('team.listChanged'),
   created: wsEmitter<ITeamCreatedEvent>('team.created'),
-  teammateMessage: wsEmitter<ITeamTeammateMessageEvent>('team.teammate.message'),
+  removed: wsEmitter<ITeamRemovedEvent>('team.removed'),
+  renamed: wsEmitter<ITeamRenamedEvent>('team.renamed'),
+  teammateMessage: wsEmitter<ITeamTeammateMessageEvent>('team.teammateMessage'),
+  mcpStatus: wsEmitter<ITeamMcpStatusEvent>('team.mcpStatus'),
+  taskChanged: wsEmitter<ITeamTaskChangedEvent>('team.taskChanged'),
+  sessionChanged: wsEmitter<ITeamSessionChangedEvent>('team.sessionChanged'),
+  runAccepted: wsEmitter<ITeamRunEvent>('team.runAccepted'),
+  runStarted: wsEmitter<ITeamRunEvent>('team.runStarted'),
+  runUpdated: wsEmitter<ITeamRunEvent>('team.runUpdated'),
+  runCompleted: wsEmitter<ITeamRunEvent>('team.runCompleted'),
+  runCancelled: wsEmitter<ITeamRunEvent>('team.runCancelled'),
+  runFailed: wsEmitter<ITeamRunEvent>('team.runFailed'),
+  childTurnStarted: wsEmitter<ITeamChildTurnEvent>('team.childTurnStarted'),
+  childTurnCompleted: wsEmitter<ITeamChildTurnEvent>('team.childTurnCompleted'),
+  childTurnCancelled: wsEmitter<ITeamChildTurnEvent>('team.childTurnCancelled'),
 };
