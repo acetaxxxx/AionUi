@@ -28,7 +28,7 @@ const createInitStyle = (
         .join('\n    ')
     : '';
 
-  const lineHeight = isMobile ? '19.6px' : '28px';
+  const lineHeight = isMobile ? '19.6px' : '24px';
   const fontSize = isMobile ? 'var(--chat-font-size, 14px)' : 'var(--chat-font-size, 16px)';
 
   style.innerHTML = `
