@@ -762,6 +762,14 @@ export const acpConversation = {
   sendMessage: conversation.sendMessage,
   responseStream: conversation.responseStream,
   getAvailableAgents: httpGet<AgentMetadata[], void>('/api/agents'),
+  /**
+   * Management view of `/api/agents` (`?include_disabled=true`). Returns the
+   * picker-safe list plus agents hidden solely because the user disabled
+   * them (still installed). Used only by the Agent settings screen so a
+   * disabled custom agent stays listed with a working re-enable toggle.
+   * Pickers must keep using `getAvailableAgents` (default filtered view).
+   */
+  getManagedAgents: httpGet<AgentMetadata[], void>('/api/agents?include_disabled=true'),
   refreshCustomAgents: httpPost<void, void>('/api/agents/refresh'),
   testCustomAgent: httpPost<
     { step: 'success' } | { step: 'fail_cli'; error: string } | { step: 'fail_acp'; error: string },
