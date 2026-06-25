@@ -8,15 +8,18 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TChatConversation } from '@/common/config/storage';
 import { ipcBridge } from '@/common';
-import type { Assistant } from '@/common/types/agent/assistantTypes';
-import CoworkLogo from '@/renderer/assets/icons/cowork.svg';
+import { assistantRuntimeKey, type Assistant } from '@/common/types/agent/assistantTypes';
+import { resolveLocaleKey } from '@/common/utils';
+import type { AgentLogoMap } from '@/renderer/utils/model/agentLogo';
+import { resolveAgentLogo, useAgentLogos } from '@/renderer/utils/model/agentLogo';
 import { resolveExtensionAssetUrl } from '@/renderer/utils/platform';
-import { DETECTED_AGENTS_SWR_KEY, fetchDetectedAgents, type AgentMetadata } from '@/renderer/utils/model/agentTypes';
 import useSWR from 'swr';
 export interface PresetAssistantInfo {
   name: string;
   logo: string;
   isEmoji: boolean;
+  backend?: string;
+  assistantId?: string;
 }
 
 /**
@@ -29,53 +32,99 @@ export interface PresetAssistantInfo {
  * - enabled_skills: Gemini Cowork 会话的旧格式
  */
 /**
- * Resolve the assistant config ID (preserving original prefix like 'builtin-').
- * Use this when matching against the backend assistant catalog
- * (`ipcBridge.assistants.list`).
+ * Resolve the explicit assistant identity stored on a conversation.
+ * Legacy `custom_agent_id` is excluded here because older ACP rows used it as
+ * a runtime row id, not an assistant id.
  */
 export function resolveAssistantConfigId(conversation: TChatConversation): string | null {
   const extra = conversation.extra as {
     assistant_id?: unknown;
     preset_assistant_id?: unknown;
-    custom_agent_id?: unknown;
   };
   const assistant_id = typeof extra?.assistant_id === 'string' ? extra.assistant_id.trim() : '';
   const preset_assistant_id = typeof extra?.preset_assistant_id === 'string' ? extra.preset_assistant_id.trim() : '';
-  const custom_agent_id = typeof extra?.custom_agent_id === 'string' ? extra.custom_agent_id.trim() : '';
-  return assistant_id || preset_assistant_id || custom_agent_id || null;
+  return assistant_id || preset_assistant_id || null;
 }
 
-export function resolvePresetId(conversation: TChatConversation): string | null {
+function collectExplicitAssistantIdentityCandidates(conversation: TChatConversation): string[] {
   const extra = conversation.extra as {
     assistant_id?: unknown;
     preset_assistant_id?: unknown;
-    custom_agent_id?: unknown;
-    enabled_skills?: unknown;
   };
   const assistant_id = typeof extra?.assistant_id === 'string' ? extra.assistant_id.trim() : '';
   const preset_assistant_id = typeof extra?.preset_assistant_id === 'string' ? extra.preset_assistant_id.trim() : '';
+  return [assistant_id, preset_assistant_id].filter(
+    (value, index, values) => Boolean(value) && values.indexOf(value) === index
+  );
+}
+
+function collectLegacyAssistantIdentityCandidates(conversation: TChatConversation): string[] {
+  const extra = conversation.extra as {
+    custom_agent_id?: unknown;
+    enabled_skills?: unknown;
+  };
   const custom_agent_id = typeof extra?.custom_agent_id === 'string' ? extra.custom_agent_id.trim() : '';
-  const enabled_skills = Array.isArray(extra?.enabled_skills) ? extra.enabled_skills : [];
+  return [custom_agent_id].filter(Boolean);
+}
 
-  if (assistant_id) {
-    return assistant_id.replace('builtin-', '');
+function normalizeAssistantIdentityCandidate(value: string): string {
+  return value.replace('builtin-', '');
+}
+
+function findAssistantByIdentityCandidates(
+  assistants: Assistant[] | null | undefined,
+  candidates: string[]
+): Assistant | undefined {
+  if (!assistants?.length || !candidates.length) return undefined;
+
+  for (const rawCandidate of candidates) {
+    const candidate = normalizeAssistantIdentityCandidate(rawCandidate);
+    const match = assistants.find((assistant) => {
+      const ids = new Set([assistant.id, `builtin-${assistant.id}`, `ext-${assistant.id}`]);
+      return ids.has(rawCandidate) || ids.has(candidate);
+    });
+    if (match) return match;
   }
 
-  // 1. 优先使用 preset_assistant_id（新会话）
-  // Priority: use preset_assistant_id (new conversations)
-  if (preset_assistant_id) {
-    const resolved = preset_assistant_id.replace('builtin-', '');
-    return resolved;
-  }
+  return undefined;
+}
 
-  // 2. 向后兼容：custom_agent_id（ACP/Codex 旧会话）
-  // Backward compatible: custom_agent_id (ACP/Codex old conversations)
-  if (custom_agent_id) {
-    const resolved = custom_agent_id.replace('builtin-', '');
-    return resolved;
-  }
+function hasExplicitAssistantIdentity(conversation: TChatConversation): boolean {
+  const extra = conversation.extra as {
+    assistant_id?: unknown;
+    preset_assistant_id?: unknown;
+  };
+  const assistant_id = typeof extra?.assistant_id === 'string' ? extra.assistant_id.trim() : '';
+  const preset_assistant_id = typeof extra?.preset_assistant_id === 'string' ? extra.preset_assistant_id.trim() : '';
+  return Boolean(assistant_id || preset_assistant_id);
+}
 
-  return null;
+function resolveLegacyRuntimeRowId(conversation: TChatConversation): string | null {
+  const extra = conversation.extra as {
+    agent_id?: unknown;
+    custom_agent_id?: unknown;
+  };
+  const agent_id = typeof extra?.agent_id === 'string' ? extra.agent_id.trim() : '';
+  const custom_agent_id = typeof extra?.custom_agent_id === 'string' ? extra.custom_agent_id.trim() : '';
+  return agent_id || custom_agent_id || null;
+}
+
+function resolveLegacyRuntimeDisplayName(conversation: TChatConversation): string | null {
+  const extra = conversation.extra as {
+    agent_name?: unknown;
+    backend?: unknown;
+  };
+  const agent_name = typeof extra?.agent_name === 'string' ? extra.agent_name.trim() : '';
+  if (agent_name) return agent_name;
+
+  const backend = typeof extra?.backend === 'string' ? extra.backend.trim() : '';
+  if (!backend) return null;
+
+  return backend
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
 }
 
 /**
@@ -85,10 +134,6 @@ export function resolvePresetId(conversation: TChatConversation): string | null 
 function normalizeAvatar(avatar: string | undefined): { logo: string; isEmoji: boolean } {
   const value = (avatar || '').trim();
   if (!value) return { logo: '🤖', isEmoji: true };
-
-  if (value === 'cowork.svg') {
-    return { logo: CoworkLogo, isEmoji: false };
-  }
 
   const resolved = resolveExtensionAssetUrl(value) || value;
   const isImage = /\.(svg|png|jpe?g|webp|gif)$/i.test(resolved) || /^(https?:|file:\/\/|data:|\/)/i.test(resolved);
@@ -171,11 +216,53 @@ function hasMatchingEnabledSkills(candidateSkills: string[] | undefined, enabled
  * Build assistant info from a backend-provided Assistant record.
  */
 function buildPresetInfoFromAssistant(assistant: Assistant, locale: string): PresetAssistantInfo {
-  const localeKey = locale.startsWith('zh') ? 'zh-CN' : 'en-US';
+  const localeKey = resolveLocaleKey(locale);
   const name = assistant.name_i18n?.[localeKey] || assistant.name_i18n?.[locale] || assistant.name || assistant.id;
   const avatar = typeof assistant.avatar === 'string' ? assistant.avatar : '';
   const normalized = normalizeAvatar(avatar);
-  return { name, logo: normalized.logo, isEmoji: normalized.isEmoji };
+  return {
+    name,
+    logo: normalized.logo,
+    isEmoji: normalized.isEmoji,
+    backend: assistantRuntimeKey(assistant) || undefined,
+    assistantId: assistant.id,
+  };
+}
+
+function buildPresetInfoFromConversationAssistant(
+  assistant: NonNullable<TChatConversation['assistant']>,
+  logos: AgentLogoMap
+): PresetAssistantInfo {
+  // Generated assistants (bare assistants reconciled from agent rows) get
+  // their avatar from the agent's `icon` field — typically a cli logo
+  // filename like `claude.svg` or `codex.svg`. `normalizeAvatar` cannot
+  // resolve those and would fall through to the default robot emoji. When
+  // that happens, look up the backend's logo so the row keeps its real icon.
+  const normalized = normalizeAvatar(assistant.avatar);
+  const isUnresolvedSvgFallback =
+    normalized.isEmoji &&
+    typeof assistant.avatar === 'string' &&
+    assistant.avatar.trim().toLowerCase().endsWith('.svg');
+  const isEmptyAvatarFallback = normalized.isEmoji && (!assistant.avatar || assistant.avatar.trim().length === 0);
+  if (isUnresolvedSvgFallback || isEmptyAvatarFallback) {
+    const backendLogo = resolveAgentLogo(logos, { backend: assistant.backend });
+    if (backendLogo) {
+      return {
+        name: assistant.name,
+        logo: backendLogo,
+        isEmoji: false,
+        backend: assistant.backend,
+        assistantId: assistant.id,
+      };
+    }
+  }
+  return {
+    name: assistant.name,
+    logo: normalized.logo,
+    isEmoji: normalized.isEmoji,
+    backend: assistant.backend,
+    assistantId: assistant.id,
+  };
 }
 
 function inferLegacyAssistantInfo(
@@ -216,6 +303,7 @@ export function usePresetAssistantInfo(conversation: TChatConversation | undefin
   isLoading: boolean;
 } {
   const { i18n } = useTranslation();
+  const logos = useAgentLogos();
 
   // Merged assistant catalog (builtin + user) from backend
   const { data: assistantsList, isLoading: isLoadingAssistants } = useSWR('assistants', () =>
@@ -235,13 +323,17 @@ export function usePresetAssistantInfo(conversation: TChatConversation | undefin
     () => (remoteAgentId ? ipcBridge.remoteAgent.get.invoke({ id: remoteAgentId }) : null)
   );
 
-  // Backend-registered agents (includes `agent_source === 'custom'` rows). Used
-  // to resolve the user-picked emoji/name for a custom ACP conversation where
-  // no preset assistant was attached.
-  const { data: detectedAgents } = useSWR<AgentMetadata[]>(DETECTED_AGENTS_SWR_KEY, fetchDetectedAgents);
-
   return useMemo(() => {
     if (!conversation) return { info: null, isLoading: false };
+
+    const locale = i18n.language || 'en-US';
+
+    if (conversation.assistant) {
+      return {
+        info: buildPresetInfoFromConversationAssistant(conversation.assistant, logos),
+        isLoading: false,
+      };
+    }
 
     // Remote agent conversations short-circuit to the remote record
     if (conversation.type === 'remote' && remoteAgentId) {
@@ -256,55 +348,59 @@ export function usePresetAssistantInfo(conversation: TChatConversation | undefin
       return { info: null, isLoading: false };
     }
 
-    const presetId = resolvePresetId(conversation);
+    const explicitAssistantCandidates = collectExplicitAssistantIdentityCandidates(conversation);
+    const legacyAssistantCandidates = collectLegacyAssistantIdentityCandidates(conversation);
+    const hasExplicitAssistantId = hasExplicitAssistantIdentity(conversation);
+    const assistantMatch = hasExplicitAssistantId
+      ? findAssistantByIdentityCandidates(assistantsList, explicitAssistantCandidates)
+      : findAssistantByIdentityCandidates(assistantsList, legacyAssistantCandidates);
+    const runtimeRowAgentId = resolveLegacyRuntimeRowId(conversation);
+    const adapterIdentity = (hasExplicitAssistantId ? explicitAssistantCandidates : legacyAssistantCandidates).find(
+      (candidate) => candidate.startsWith('ext:')
+    );
 
-    // Custom ACP row short-circuit: conversation.extra carries `agent_id`
-    // (written by buildAgentConversationParams) or the legacy `custom_agent_id`
-    // alias. Neither is a preset assistant id, so we resolve directly against
-    // the detected-agent catalog and trust the row's own icon/name.
-    if (!presetId) {
-      const extra = conversation.extra as { agent_id?: unknown; custom_agent_id?: unknown } | undefined;
-      const rowAgentId =
-        (typeof extra?.agent_id === 'string' && extra.agent_id.trim()) ||
-        (typeof extra?.custom_agent_id === 'string' && extra.custom_agent_id.trim()) ||
-        '';
-      if (rowAgentId && Array.isArray(detectedAgents)) {
-        const row = detectedAgents.find((a) => a.id === rowAgentId && a.agent_source === 'custom');
-        if (row) {
-          const normalized = normalizeAvatar(row.icon);
-          return { info: { name: row.name, logo: normalized.logo, isEmoji: normalized.isEmoji }, isLoading: false };
-        }
+    const resolveLegacyRuntimeInfo = (): { info: PresetAssistantInfo; isLoading: false } | null => {
+      if (!runtimeRowAgentId) return null;
+      const name = resolveLegacyRuntimeDisplayName(conversation);
+      if (!name) return null;
+      // Legacy ACP rows persist `backend` (e.g. "claude", "codex") without
+      // an assistant id or snapshot. Resolve the cli logo from the backend
+      // slug so upgraded conversations keep their real icon instead of the
+      // generic robot emoji.
+      const legacyBackend =
+        typeof (conversation.extra as { backend?: unknown })?.backend === 'string'
+          ? ((conversation.extra as { backend?: string }).backend ?? '').trim()
+          : '';
+      const backendLogo = resolveAgentLogo(logos, { backend: legacyBackend });
+      if (backendLogo) {
+        return {
+          info: { name, logo: backendLogo, isEmoji: false, backend: legacyBackend },
+          isLoading: false,
+        };
       }
-    }
-    const locale = i18n.language || 'en-US';
+      return { info: { name, logo: '🤖', isEmoji: true }, isLoading: false };
+    };
 
-    if (!presetId) {
-      const inferredInfo = inferLegacyAssistantInfo(conversation, locale, assistantsList);
-      if (inferredInfo) return { info: inferredInfo, isLoading: false };
-
-      const { hasPayload } = extractLegacyPresetPayload(conversation);
-      if (hasPayload && isLoadingAssistants) {
-        return { info: null, isLoading: true };
-      }
-      return { info: null, isLoading: false };
+    if (assistantMatch) {
+      return { info: buildPresetInfoFromAssistant(assistantMatch, locale), isLoading: false };
     }
 
-    // Assistant lookup: backend returns merged builtin + user list.
-    // Accept either the bare id or the legacy `builtin-` / `ext-` prefixed forms.
-    if (assistantsList && Array.isArray(assistantsList)) {
-      const assistantMatch = assistantsList.find(
-        (a) => a.id === presetId || a.id === `builtin-${presetId}` || a.id === `ext-${presetId}`
-      );
-      if (assistantMatch) return { info: buildPresetInfoFromAssistant(assistantMatch, locale), isLoading: false };
+    const inferredInfo = inferLegacyAssistantInfo(conversation, locale, assistantsList);
+    if (inferredInfo) return { info: inferredInfo, isLoading: false };
+
+    const { hasPayload } = extractLegacyPresetPayload(conversation);
+    if (
+      (hasPayload || explicitAssistantCandidates.length > 0 || legacyAssistantCandidates.length > 0) &&
+      isLoadingAssistants
+    ) {
+      return { info: null, isLoading: true };
     }
 
-    // Still loading — defer to avoid flickering fallback
-    if (isLoadingAssistants || isLoadingExtAdapters)
-      return { info: null as PresetAssistantInfo | null, isLoading: true };
+    if (adapterIdentity && isLoadingExtAdapters) return { info: null as PresetAssistantInfo | null, isLoading: true };
 
     // Extension ACP adapters (custom_agent_id like ext:{extensionName}:{adapterId})
-    if (presetId.startsWith('ext:') && extensionAcpAdapters && Array.isArray(extensionAcpAdapters)) {
-      const parts = presetId.split(':');
+    if (adapterIdentity && extensionAcpAdapters && Array.isArray(extensionAcpAdapters)) {
+      const parts = adapterIdentity.split(':');
       if (parts.length >= 3) {
         const extensionName = parts[1];
         const adapterId = parts.slice(2).join(':');
@@ -322,10 +418,22 @@ export function usePresetAssistantInfo(conversation: TChatConversation | undefin
       }
     }
 
+    // Custom ACP row short-circuit: only when there is no explicit assistant
+    // identity. Legacy `custom_agent_id` sometimes carries a runtime row id,
+    // not an assistant id, so let assistant-based restore win first.
+    if (!hasExplicitAssistantId) {
+      const runtimeInfo = resolveLegacyRuntimeInfo();
+      if (runtimeInfo) return runtimeInfo;
+    }
+
+    const runtimeInfo = resolveLegacyRuntimeInfo();
+    if (runtimeInfo) return runtimeInfo;
+
     return { info: null, isLoading: false };
   }, [
     conversation,
     i18n.language,
+    logos,
     assistantsList,
     isLoadingAssistants,
     extensionAcpAdapters,
@@ -333,6 +441,5 @@ export function usePresetAssistantInfo(conversation: TChatConversation | undefin
     remoteAgentId,
     remoteAgent,
     isLoadingRemoteAgent,
-    detectedAgents,
   ]);
 }

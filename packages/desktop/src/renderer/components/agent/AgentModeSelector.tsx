@@ -4,10 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { configService } from '@/common/config/configService';
-import type { AcpSessionConfigOption } from '@/common/types/platform/acpTypes';
 import { classifyConfigSetError, useAcpConfigOptions } from '@/renderer/hooks/agent/useAcpConfigOptions';
-import { savePreferredMode } from '@/renderer/pages/guid/hooks/agentSelectionUtils';
 import { getAgentModes, supportsModeSwitch, type AgentModeOption } from '@/renderer/utils/model/agentModes';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { AgentLogoIcon } from './AgentBadge';
@@ -24,20 +21,6 @@ const configErrorMessageKey = (error: unknown) => {
   if (errorKind === 'config_update_in_progress') return 'agent.config.busy';
   return 'agent.config.failed';
 };
-
-/**
- * Extract mode options from cached ACP config_options.
- * Looks for a select-type option with category === 'mode' and converts
- * its choices to AgentModeOption[] format.
- */
-function extractModesFromConfigOptions(config_options: AcpSessionConfigOption[]): AgentModeOption[] {
-  const modeOption = config_options.find((opt) => opt.category === 'mode' && opt.type === 'select' && opt.options);
-  if (!modeOption?.options || modeOption.options.length === 0) return [];
-  return modeOption.options.map((opt) => ({
-    value: opt.value,
-    label: opt.name || opt.label || opt.value,
-  }));
-}
 
 export interface AgentModeSelectorProps {
   /** Agent backend type / 代理后端类型 */
@@ -76,8 +59,6 @@ export interface AgentModeSelectorProps {
   dynamicModes?: AgentModeOption[];
   /** Optional runtime preparation before reading active-session mode. */
   beforeRuntimeSync?: () => Promise<void>;
-  /** Whether switching mode should persist into the backend-wide preference key. */
-  persistGlobalPreference?: boolean;
 }
 
 /**
@@ -106,12 +87,10 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
   onModeChanged,
   dynamicModes,
   beforeRuntimeSync,
-  persistGlobalPreference = true,
 }) => {
   const { t } = useTranslation();
   const layout = useLayoutContext();
   const isMobile = Boolean(layout?.isMobile);
-  const [cachedModes, setCachedModes] = useState<AgentModeOption[]>([]);
   const runtimeConfig = useAcpConfigOptions({
     conversation_id: conversation_id ?? '',
     prepareRuntime: beforeRuntimeSync,
@@ -128,40 +107,12 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
     [runtimeMode?.options]
   );
 
-  // Load modes from cache: try top-level `acp.cachedModes` first (qoder, opencode),
-  // then fall back to `acp.cached_config_options` category=mode (codex)
-  useEffect(() => {
-    if (!backend) return;
-
-    const cachedModeConfig = configService.get('acp.cachedModes');
-    const session_modes = cachedModeConfig?.[backend];
-    if (session_modes?.available_modes && session_modes.available_modes.length > 0) {
-      setCachedModes(
-        session_modes.available_modes.map((m) => ({
-          value: m.id,
-          label: m.name ?? m.id,
-        }))
-      );
-      return;
-    }
-
-    const cached = configService.get('acp.cached_config_options');
-    const options = cached?.[backend];
-    if (Array.isArray(options)) {
-      const modes = extractModesFromConfigOptions(options as AcpSessionConfigOption[]);
-      if (modes.length > 0) {
-        setCachedModes(modes);
-      }
-    }
-  }, [backend]);
-
-  // Priority: observed config_options > dynamicModes (runtime) > cachedModes (from cache) > static fallback
+  // Priority: observed config_options > dynamicModes (runtime) > static fallback
   const modes = useMemo(() => {
     if (runtimeModes && runtimeModes.length > 0) return runtimeModes;
     if (dynamicModes && dynamicModes.length > 0) return dynamicModes;
-    if (cachedModes.length > 0) return cachedModes;
     return getAgentModes(backend);
-  }, [runtimeModes, dynamicModes, cachedModes, backend]);
+  }, [runtimeModes, dynamicModes, backend]);
   const defaultMode = modes[0]?.value ?? 'default';
   // Validate initialMode against available modes; fall back to backend's default
   // when the provided value doesn't match (e.g. opencode has 'build'/'plan', not 'default')
@@ -223,11 +174,6 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
         await setActiveMode();
         setCurrentMode(mode);
         onModeChanged?.(mode);
-        if (backend && persistGlobalPreference) {
-          // Mirror Guid page behaviour so a switch made inside the
-          // conversation also becomes the next-session default.
-          void savePreferredMode(backend, mode);
-        }
         Message.success(t('agentMode.switchSuccess'));
       } catch (error) {
         console.error('[AgentModeSelector] Failed to switch mode:', error);
@@ -243,7 +189,6 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
       current_mode,
       onModeChanged,
       onModeSelect,
-      persistGlobalPreference,
       runtimeConfig,
       runtimeMode,
       t,

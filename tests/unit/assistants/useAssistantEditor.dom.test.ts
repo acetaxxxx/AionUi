@@ -75,7 +75,8 @@ describe('useAssistantEditor', () => {
       sort_order: 1,
     },
     engine: {
-      agent_backend: 'claude',
+      agent_id: 'agent-claude',
+      agent: { type: 'acp', source: 'builtin', acp_backend: 'claude' },
     },
     rules: {
       content: 'Rule content',
@@ -117,7 +118,6 @@ describe('useAssistantEditor', () => {
     activeAssistant: null,
     setActiveAssistantId: vi.fn(),
     loadAssistants: vi.fn(),
-    refreshAgentDetection: vi.fn(),
     message: mockMessage,
   };
 
@@ -151,7 +151,8 @@ describe('useAssistantEditor', () => {
       name: 'TestAssistant',
       description: 'Test desc',
       avatar: '🤖',
-      preset_agent_type: 'claude',
+      agent_id: 'agent-claude',
+      agent: { type: 'acp', source: 'builtin', acp_backend: 'claude' },
       sort_order: 1,
       source: 'user',
       enabled: true,
@@ -168,7 +169,7 @@ describe('useAssistantEditor', () => {
     expect(result.current.editName).toBe('TestAssistant');
     expect(result.current.editDescription).toBe('Test desc');
     expect(result.current.editAvatar).toBe('🤖');
-    expect(result.current.editAgent).toBe('claude');
+    expect(result.current.editAgent).toBe('agent-claude');
     expect(result.current.editRecommendedPromptsText).toBe('Prompt one\nPrompt two');
     expect(result.current.defaultModelMode).toBe('fixed');
     expect(result.current.defaultModelValue).toBe('gemini-2.5-pro');
@@ -188,7 +189,8 @@ describe('useAssistantEditor', () => {
       description: 'English description',
       description_i18n: { 'en-US': 'English description', 'zh-CN': '中文描述' },
       avatar: '📚',
-      preset_agent_type: 'claude',
+      agent_id: 'agent-claude',
+      agent: { type: 'acp', source: 'builtin', acp_backend: 'claude' },
       sort_order: 1,
       source: 'builtin',
       enabled: true,
@@ -266,7 +268,8 @@ describe('useAssistantEditor', () => {
       description: 'English description',
       description_i18n: { 'en-US': 'English description', 'zh-CN': '中文描述' },
       avatar: '📊',
-      preset_agent_type: 'claude',
+      agent_id: 'agent-claude',
+      agent: { type: 'acp', source: 'builtin', acp_backend: 'claude' },
       sort_order: 1,
       source: 'builtin',
       enabled: true,
@@ -415,7 +418,8 @@ describe('useAssistantEditor', () => {
       name: 'TestAssistant',
       description: 'Test desc',
       avatar: '🤖',
-      preset_agent_type: 'claude',
+      agent_id: 'agent-claude',
+      agent: { type: 'acp', source: 'builtin', acp_backend: 'claude' },
       sort_order: 1,
       source: 'user',
       enabled: true,
@@ -433,10 +437,10 @@ describe('useAssistantEditor', () => {
     expect(result.current.defaultPermissionValue).toBe('acceptEdits');
 
     act(() => {
-      result.current.setEditAgent('gemini');
+      result.current.setEditAgent('agent-gemini');
     });
 
-    expect(result.current.editAgent).toBe('gemini');
+    expect(result.current.editAgent).toBe('agent-gemini');
     expect(result.current.defaultModelMode).toBe('auto');
     expect(result.current.defaultModelValue).toBe('');
     expect(result.current.defaultPermissionMode).toBe('auto');
@@ -467,7 +471,8 @@ describe('useAssistantEditor', () => {
       sort_order: 1,
       source: 'builtin',
       enabled: true,
-      preset_agent_type: 'claude',
+      agent_id: 'agent-claude',
+      agent: { type: 'acp', source: 'builtin', acp_backend: 'claude' },
     };
 
     const { result } = renderHook(() =>
@@ -482,7 +487,7 @@ describe('useAssistantEditor', () => {
     });
 
     act(() => {
-      result.current.setEditAgent('gemini');
+      result.current.setEditAgent('agent-gemini');
       result.current.setDefaultModelMode('fixed');
       result.current.setDefaultModelValue('gemini-2.5-pro');
       result.current.setDefaultPermissionMode('fixed');
@@ -498,7 +503,7 @@ describe('useAssistantEditor', () => {
 
     expect(ipcBridge.assistants.update.invoke).toHaveBeenCalledWith({
       id: 'builtin-1',
-      preset_agent_type: 'gemini',
+      agent_id: 'agent-gemini',
       defaults: {
         model: { mode: 'fixed', value: 'gemini-2.5-pro' },
         permission: { mode: 'fixed', value: 'default' },
@@ -525,7 +530,8 @@ describe('useAssistantEditor', () => {
       sort_order: 1,
       source: 'builtin',
       enabled: true,
-      preset_agent_type: 'claude',
+      agent_id: 'agent-claude',
+      agent: { type: 'acp', source: 'builtin', acp_backend: 'claude' },
     };
 
     const { result } = renderHook(() =>
@@ -558,13 +564,10 @@ describe('useAssistantEditor', () => {
     (ipcBridge.assistants.setState.invoke as any).mockResolvedValue(undefined);
 
     const loadAssistantsMock = vi.fn();
-    const refreshAgentDetectionMock = vi.fn();
-
     const { result } = renderHook(() =>
       useAssistantEditor({
         ...defaultParams,
         loadAssistants: loadAssistantsMock,
-        refreshAgentDetection: refreshAgentDetectionMock,
       })
     );
 
@@ -575,7 +578,6 @@ describe('useAssistantEditor', () => {
     expect(swrMutate).toHaveBeenNthCalledWith(1, 'assistants.list', expect.any(Function), { revalidate: false });
     expect(ipcBridge.assistants.setState.invoke).toHaveBeenCalledWith({ id: 'builtin-1', enabled: false });
     expect(loadAssistantsMock).toHaveBeenCalled();
-    expect(refreshAgentDetectionMock).toHaveBeenCalled();
     expect(swrMutate).toHaveBeenCalledWith('assistants');
     expect(swrMutate).toHaveBeenCalledWith('guid.assistant.detail.builtin-1.en');
   });

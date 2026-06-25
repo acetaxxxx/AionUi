@@ -14,10 +14,11 @@ import { useAllCronJobs } from '@renderer/pages/cron/useCronJobs';
 import { formatSchedule, formatNextRun } from '@renderer/pages/cron/cronUtils';
 import { systemSettings, type ICronJob } from '@/common/adapter/ipcBridge';
 import { configService } from '@/common/config/configService';
-import { useConversationAgents } from '@renderer/pages/conversation/hooks/useConversationAgents';
+import { useConversationAssistants } from '@renderer/pages/conversation/hooks/useConversationAssistants';
 import CronStatusTag from './CronStatusTag';
 import CreateTaskDialog from './CreateTaskDialog';
 import { getJobAgentMeta } from './jobAgentMeta';
+import { useAgentLogos } from '@renderer/utils/model/agentLogo';
 
 const ScheduledTasksPage: React.FC = () => {
   const layout = useLayoutContext();
@@ -25,7 +26,8 @@ const ScheduledTasksPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { jobs, loading, pauseJob, resumeJob } = useAllCronJobs();
-  const { cliAgents, presetAssistants } = useConversationAgents();
+  const { presetAssistants } = useConversationAssistants();
+  const logos = useAgentLogos();
   const [createDialogVisible, setCreateDialogVisible] = useState(false);
   const [keepAwake, setKeepAwake] = useState(false);
 
@@ -141,7 +143,7 @@ const ScheduledTasksPage: React.FC = () => {
             )}
           >
             {jobs.map((job) => {
-              const agentMeta = getJobAgentMeta(job, cliAgents, presetAssistants);
+              const agentMeta = getJobAgentMeta(job, presetAssistants, logos);
               const isManualOnly = job.schedule.kind === 'cron' && !job.schedule.expr;
               const executionModeLabel =
                 job.target.execution_mode === 'new_conversation'

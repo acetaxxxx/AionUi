@@ -11,7 +11,7 @@ import addChatIcon from '@/renderer/assets/icons/add-chat.svg';
 import { CronJobManager } from '@/renderer/pages/cron';
 import { classifyConfigSetError, useAcpConfigOptions } from '@/renderer/hooks/agent/useAcpConfigOptions';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
-import { usePresetAssistantInfo, resolveAssistantConfigId } from '@/renderer/hooks/agent/usePresetAssistantInfo';
+import { usePresetAssistantInfo } from '@/renderer/hooks/agent/usePresetAssistantInfo';
 import { iconColors } from '@/renderer/styles/colors';
 import { Button, Dropdown, Menu, Message, Tooltip, Typography } from '@arco-design/web-react';
 import { History } from '@icon-park/react';
@@ -24,7 +24,6 @@ import AcpChat from '../platforms/acp/AcpChat';
 import ChatLayout from './ChatLayout';
 import ChatSlider from './ChatSlider.tsx';
 import AcpModelSelector from '@/renderer/components/agent/AcpModelSelector';
-import { saveAionrsDefaultModel } from '@/renderer/pages/guid/hooks/agentSelectionUtils';
 import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 import { getConversationCreateErrorMessage } from '@/renderer/pages/conversation/utils/conversationCreateError';
 import { warmupConversation } from '@/renderer/pages/conversation/utils/warmupConversation';
@@ -34,6 +33,7 @@ import AionrsModelSelector from '../platforms/aionrs/AionrsModelSelector';
 import { useAionrsModelSelection } from '../platforms/aionrs/useAionrsModelSelection';
 import { useConversationRuntimeView } from '../runtime/useConversationRuntimeView';
 import { isLegacyReadOnlyConversationType } from '../utils/conversationRuntime';
+import { resolveConversationBackend } from '../utils/conversationAssistantIdentity';
 import LegacyReadOnlyConversation from '../platforms/legacy/LegacyReadOnlyConversation';
 // import SkillRuleGenerator from './components/SkillRuleGenerator'; // Temporarily hidden
 
@@ -151,8 +151,6 @@ const AionrsConversationPanel: React.FC<{ conversation: AionrsConversation; slid
   sliderTitle,
 }) => {
   const runtimeView = useConversationRuntimeView(conversation.id);
-  const aionrsAssistantId = resolveAssistantConfigId(conversation) ?? undefined;
-  const persistGlobalPreference = !aionrsAssistantId;
   const onSelectModel = useCallback(
     async (_provider: IProvider, modelName: string) => {
       const selected = { ..._provider, use_model: modelName } as TProviderWithModel;
@@ -165,10 +163,9 @@ const AionrsConversationPanel: React.FC<{ conversation: AionrsConversation; slid
         runtimeView.markStopAcknowledged(runtimeView.activeTurnId, result.runtime);
       }
       const ok = await ipcBridge.conversation.update.invoke({ id: conversation.id, updates: { model: selected } });
-      if (ok && persistGlobalPreference) void saveAionrsDefaultModel(_provider.id, modelName);
       return Boolean(ok);
     },
-    [conversation.id, persistGlobalPreference, runtimeView]
+    [conversation.id, runtimeView]
   );
 
   const modelSelection = useAionrsModelSelection({
@@ -177,6 +174,7 @@ const AionrsConversationPanel: React.FC<{ conversation: AionrsConversation; slid
   });
   const workspaceEnabled = Boolean(conversation.extra?.workspace);
   const { info: presetAssistantInfo } = usePresetAssistantInfo(conversation);
+  const aionrsAssistantId = presetAssistantInfo?.assistantId;
   const layout = useLayoutContext();
   // Mobile: model selection moved into the sendbox `+` action sheet to free up
   // header space; the dropdown stays available on desktop and tablets ≥768px.
@@ -268,7 +266,8 @@ const ChatConversation: React.FC<{
   // Use unified hook for preset assistant info (ACP/Codex conversations)
   const acpConversation = isAionrsConversation ? undefined : conversation;
   const { info: presetAssistantInfo, isLoading: isLoadingPreset } = usePresetAssistantInfo(acpConversation);
-  const acpAssistantId = acpConversation ? (resolveAssistantConfigId(acpConversation) ?? undefined) : undefined;
+  const acpAssistantId = presetAssistantInfo?.assistantId;
+  const resolvedConversationBackend = resolveConversationBackend(conversation, presetAssistantInfo?.backend);
 
   const conversationAgentName = (conversation?.extra as { agent_name?: string } | undefined)?.agent_name;
   const assistantDisplayName = presetAssistantInfo?.name || conversationAgentName;
@@ -285,7 +284,7 @@ const ChatConversation: React.FC<{
             key={conversation.id}
             conversation_id={conversation.id}
             workspace={conversation.extra?.workspace}
-            backend={conversation.extra?.backend || 'claude'}
+            backend={resolvedConversationBackend || 'claude'}
             session_mode={conversation.extra?.session_mode}
             agent_name={assistantDisplayName}
             cron_job_id={(conversation.extra as { cron_job_id?: string })?.cron_job_id}
@@ -320,19 +319,18 @@ const ChatConversation: React.FC<{
     if (isMobile) return undefined;
     if (isLegacyReadOnlyConversation) return undefined;
     if (conversation.type === 'acp') {
-      const extra = conversation.extra as { backend?: string; current_model_id?: string };
+      const extra = conversation.extra as { current_model_id?: string };
       return (
         <AcpModelSelector
           conversation_id={conversation.id}
-          backend={extra.backend}
+          backend={resolvedConversationBackend}
           initialModelId={extra.current_model_id}
           waitForWarmup
-          persistGlobalPreference={!acpAssistantId}
         />
       );
     }
     return <GoogleModelSelector disabled={true} />;
-  }, [conversation, isAionrsConversation, isMobile, isLegacyReadOnlyConversation]);
+  }, [conversation, isAionrsConversation, isMobile, isLegacyReadOnlyConversation, resolvedConversationBackend]);
 
   if (conversation && conversation.type === 'aionrs') {
     return <AionrsConversationPanel key={conversation.id} conversation={conversation} sliderTitle={sliderTitle} />;
@@ -347,20 +345,7 @@ const ChatConversation: React.FC<{
     : isLoadingPreset
       ? {} // Still loading custom agents — avoid showing backend logo prematurely
       : {
-          backend:
-            conversation?.type === 'acp'
-              ? conversation?.extra?.backend
-              : conversation?.type === 'aionrs'
-                ? 'aionrs'
-                : conversation?.type === 'codex'
-                  ? 'codex'
-                  : conversation?.type === 'openclaw-gateway'
-                    ? 'openclaw-gateway'
-                    : conversation?.type === 'nanobot'
-                      ? 'nanobot'
-                      : conversation?.type === 'remote'
-                        ? 'remote'
-                        : undefined,
+          backend: resolvedConversationBackend,
           agent_name: conversationAgentName,
         };
 

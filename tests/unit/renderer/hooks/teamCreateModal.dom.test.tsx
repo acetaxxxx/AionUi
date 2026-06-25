@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Assistant } from '@/common/types/agent/assistantTypes';
 
 const createTeamInvokeMock = vi.fn();
+const resolveDefaultTeamAgentModelMock = vi.fn();
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -28,6 +29,7 @@ Object.defineProperty(window, 'matchMedia', {
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue || key,
+    i18n: { language: 'zh-CN' },
   }),
 }));
 
@@ -35,11 +37,8 @@ vi.mock('@renderer/hooks/context/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'user-1' } }),
 }));
 
-vi.mock('@renderer/pages/conversation/hooks/useConversationAgents', () => ({
-  useConversationAgents: () => ({
-    cliAgents: [
-      { id: 'aionrs-runtime', name: 'Aion CLI', backend: 'aionrs', agent_type: 'aionrs', team_capable: true },
-    ],
+vi.mock('@renderer/pages/conversation/hooks/useConversationAssistants', () => ({
+  useConversationAssistants: () => ({
     presetAssistants: assistants(),
   }),
 }));
@@ -70,7 +69,7 @@ vi.mock('@/common', () => ({
 }));
 
 vi.mock('@renderer/pages/team/components/teamCreateModelResolver', () => ({
-  resolveDefaultTeamAgentModel: vi.fn().mockResolvedValue(undefined),
+  resolveDefaultTeamAgentModel: (...args: unknown[]) => resolveDefaultTeamAgentModelMock(...args),
 }));
 
 import TeamCreateModal from '@/renderer/pages/team/components/TeamCreateModal';
@@ -78,7 +77,29 @@ import TeamCreateModal from '@/renderer/pages/team/components/TeamCreateModal';
 describe('TeamCreateModal', () => {
   beforeEach(() => {
     createTeamInvokeMock.mockReset();
-    createTeamInvokeMock.mockResolvedValue({ id: 'team-1', agents: [] });
+    createTeamInvokeMock.mockResolvedValue({ id: 'team-1', assistants: [], agents: [] });
+    resolveDefaultTeamAgentModelMock.mockReset();
+    resolveDefaultTeamAgentModelMock.mockResolvedValue(undefined);
+  });
+
+  it('keeps blocked assistants visible with a reason and prevents selecting them', () => {
+    render(<TeamCreateModal visible onClose={vi.fn()} onCreated={vi.fn()} />);
+
+    expect(screen.getByTestId('team-create-agent-option-bare-aionrs')).toBeInTheDocument();
+    expect(screen.getByText('Aion 命令行')).toBeInTheDocument();
+    expect(screen.queryByText('Aion CLI')).not.toBeInTheDocument();
+    expect(screen.getByTestId('team-create-agent-option-blocked-reviewer')).toBeInTheDocument();
+    expect(screen.getByTestId('team-create-agent-option-remote-runner')).toBeInTheDocument();
+    // The backend block reason is English; the UI shows a localized message instead.
+    expect(screen.getByText('This assistant cannot be used in team mode right now.')).toBeInTheDocument();
+
+    const createButton = screen.getByRole('button', { name: 'Create Team' });
+    fireEvent.change(screen.getByPlaceholderText('Team name'), {
+      target: { value: 'My Team' },
+    });
+    fireEvent.click(screen.getByTestId('team-create-agent-option-blocked-reviewer'));
+
+    expect(createButton).toBeDisabled();
   });
 
   it('passes assistant identity through when creating a team with an assistant leader', async () => {
@@ -93,11 +114,22 @@ describe('TeamCreateModal', () => {
     await waitFor(() => expect(createTeamInvokeMock).toHaveBeenCalledTimes(1));
 
     const payload = createTeamInvokeMock.mock.calls[0][0];
-    expect(payload.agents[0]).toMatchObject({
-      role: 'leader',
-      custom_agent_id: 'bare-aionrs',
-      agent_name: 'Aion CLI',
+    expect(resolveDefaultTeamAgentModelMock).toHaveBeenCalledWith({
+      assistant_id: 'bare-aionrs',
+      assistant_backend: 'aionrs',
     });
+    expect(payload.assistants[0]).toMatchObject({
+      role: 'leader',
+      assistant_id: 'bare-aionrs',
+      assistant_name: 'Aion 命令行',
+    });
+    // Runtime backend / conversation type are derived server-side from the
+    // assistant, so the create payload no longer carries legacy agent fields.
+    expect(payload.assistants[0]).not.toHaveProperty('assistant_backend');
+    expect(payload.assistants[0]).not.toHaveProperty('conversation_type');
+    expect(payload.assistants[0]).not.toHaveProperty('custom_agent_id');
+    expect(payload.assistants[0]).not.toHaveProperty('agent_name');
+    expect(payload.assistants[0]).not.toHaveProperty('agent_type');
   });
 });
 
@@ -106,16 +138,34 @@ function assistants(): Assistant[] {
     assistant({
       id: 'bare-aionrs',
       name: 'Aion CLI',
+      name_i18n: { 'zh-CN': 'Aion 命令行' },
       source: 'bare',
-      preset_agent_type: 'aionrs',
+      agent_id: 'agent-aionrs',
+      agent: { type: 'aionrs', source: 'internal' },
+      team_selectable: true,
+    }),
+    assistant({
+      id: 'blocked-reviewer',
+      name: 'Reviewer',
+      source: 'user',
+      agent_id: 'agent-claude',
+      agent: { type: 'acp', source: 'builtin', acp_backend: 'claude' },
+      team_selectable: false,
+      team_block_reason: 'Temporarily unavailable for team mode',
+      deletable: true,
+    }),
+    assistant({
+      id: 'remote-runner',
+      name: 'Remote Runner',
+      source: 'bare',
+      agent_id: 'agent-remote',
+      agent: { type: 'remote', source: 'custom' },
       team_selectable: true,
     }),
   ];
 }
 
-function assistant(
-  overrides: Partial<Assistant> & Pick<Assistant, 'id' | 'name' | 'source' | 'preset_agent_type'>
-): Assistant {
+function assistant(overrides: Partial<Assistant> & Pick<Assistant, 'id' | 'name' | 'source' | 'agent_id'>): Assistant {
   return {
     id: overrides.id,
     source: overrides.source,
@@ -124,7 +174,7 @@ function assistant(
     description_i18n: {},
     enabled: true,
     sort_order: 0,
-    preset_agent_type: overrides.preset_agent_type,
+    agent_id: overrides.agent_id,
     enabled_skills: [],
     custom_skill_names: [],
     disabled_builtin_skills: [],
@@ -132,7 +182,10 @@ function assistant(
     prompts: [],
     prompts_i18n: {},
     models: [],
+    avatar: undefined,
+    agent_status: 'online',
     team_selectable: true,
+    team_block_reason: undefined,
     deletable: false,
     ...overrides,
   };

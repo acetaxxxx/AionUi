@@ -7,11 +7,8 @@
 import { ipcBridge } from '@/common';
 import type { IResponseMessage } from '@/common/adapter/ipcBridge';
 import type { AcpConfigOptionDto, AcpModelInfo } from '@/common/types/platform/acpTypes';
-import { savePreferredModelId } from '@/renderer/pages/guid/hooks/agentSelectionUtils';
-import { DETECTED_AGENTS_SWR_KEY, fetchDetectedAgents, type AgentMetadata } from '@/renderer/utils/model/agentTypes';
 import { type AcpConfigSetStatus, type AcpDerivedOption, useAcpConfigOptions } from './useAcpConfigOptions';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import useSWR from 'swr';
 
 type UseAcpModelInfoArgs = {
   conversation_id: string;
@@ -19,7 +16,6 @@ type UseAcpModelInfoArgs = {
   initialModelId?: string;
   prepareRuntime?: () => Promise<void>;
   enabled?: boolean;
-  persistGlobalPreference?: boolean;
   onSelectModelSuccess?: (model_id: string) => void;
   onSelectModelFailed?: (model_id: string, error: unknown) => void;
 };
@@ -61,11 +57,10 @@ function normalizeInitialModel(info: AcpModelInfo, initialModelId?: string): Acp
 
 export const useAcpModelInfo = ({
   conversation_id,
-  backend,
+  backend: _backend,
   initialModelId,
   prepareRuntime,
   enabled = true,
-  persistGlobalPreference = true,
   onSelectModelSuccess,
   onSelectModelFailed,
 }: UseAcpModelInfoArgs): UseAcpModelInfoResult => {
@@ -75,7 +70,6 @@ export const useAcpModelInfo = ({
     enabled,
   });
   const [legacyModelInfo, setLegacyModelInfo] = useState<AcpModelInfo | null>(null);
-  const { data: agentsData } = useSWR<AgentMetadata[]>(enabled ? DETECTED_AGENTS_SWR_KEY : null, fetchDetectedAgents);
 
   const configModelInfo = useMemo<AcpModelInfo | null>(() => {
     if (!model) return null;
@@ -86,14 +80,6 @@ export const useAcpModelInfo = ({
       available_models: model.options.map((item) => ({ id: item.value, label: item.label })),
     };
   }, [initialModelId, model]);
-
-  const handshakeModelInfo = useMemo<AcpModelInfo | null>(() => {
-    if (!backend || !agentsData?.length) return null;
-    const matched = agentsData.find((agent) => (agent.backend ?? agent.agent_type) === backend);
-    const info = matched?.handshake?.available_models as AcpModelInfo | undefined;
-    if (!info || !Array.isArray(info.available_models) || info.available_models.length === 0) return null;
-    return normalizeInitialModel(info, initialModelId);
-  }, [agentsData, backend, initialModelId]);
 
   useEffect(() => {
     if (!enabled) {
@@ -122,7 +108,7 @@ export const useAcpModelInfo = ({
     return ipcBridge.acpConversation.responseStream.on(handler);
   }, [conversation_id, enabled, initialModelId]);
 
-  const model_info = configModelInfo ?? legacyModelInfo ?? handshakeModelInfo;
+  const model_info = configModelInfo ?? legacyModelInfo;
 
   const selectModel = useCallback(
     (model_id: string) => {
@@ -130,15 +116,12 @@ export const useAcpModelInfo = ({
       void setConfigOption(model.id, model_id)
         .then(async () => {
           onSelectModelSuccess?.(model_id);
-          if (backend && persistGlobalPreference) {
-            await savePreferredModelId(backend, model_id);
-          }
         })
         .catch((error) => {
           onSelectModelFailed?.(model_id, error);
         });
     },
-    [backend, enabled, model, onSelectModelFailed, onSelectModelSuccess, persistGlobalPreference, setConfigOption]
+    [enabled, model, onSelectModelFailed, onSelectModelSuccess, setConfigOption]
   );
 
   return {

@@ -12,12 +12,50 @@ const mockUseModelProviderList = vi.fn(() => ({
 }));
 const showOpenInvokeMock = vi.fn();
 const getImageBase64InvokeMock = vi.fn();
+let mockLanguage = 'en-US';
+let mockResolvedLanguage: string | undefined = 'en-US';
+
+const translateAgentMode = (key: string) => {
+  if (!key.startsWith('agentMode.')) return null;
+
+  const modeKey = key.replace('agentMode.', '');
+  const zhCN: Record<string, string> = {
+    auto: '自动',
+    default: '默认',
+    acceptEdits: '自动接受编辑',
+    auto_edit: '自动编辑',
+    'read-only': '只读',
+    'full-access': '完全访问',
+    yolo: 'YOLO',
+  };
+  const enUS: Record<string, string> = {
+    auto: 'Auto',
+    default: 'Default',
+    acceptEdits: 'Accept Edits',
+    auto_edit: 'Auto Edit',
+    'read-only': 'Read Only',
+    'full-access': 'Full Access',
+    yolo: 'YOLO',
+  };
+
+  return (mockLanguage === 'zh-CN' ? zhCN : enUS)[modeKey] ?? null;
+};
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, options?: { defaultValue?: string; count?: number }) => {
+      const translatedAgentMode = translateAgentMode(_key);
+      if (translatedAgentMode) return translatedAgentMode;
       if (options?.defaultValue) return options.defaultValue.replace('{{count}}', String(options.count ?? ''));
       return _key;
+    },
+    i18n: {
+      get language() {
+        return mockLanguage;
+      },
+      get resolvedLanguage() {
+        return mockResolvedLanguage;
+      },
     },
   }),
 }));
@@ -128,8 +166,18 @@ const createEditor = (overrides: Partial<AssistantEditorViewModel> = {}): Assist
   };
 };
 
+const backendOption = (id: string, runtimeKey: string, name = runtimeKey) => ({
+  id,
+  name,
+  runtimeKey,
+  isExtension: false,
+  modelOptions: [],
+});
+
 describe('AssistantEditorSections', () => {
   beforeEach(() => {
+    mockLanguage = 'en-US';
+    mockResolvedLanguage = 'en-US';
     showOpenInvokeMock.mockReset();
     getImageBase64InvokeMock.mockReset();
     getImageBase64InvokeMock.mockResolvedValue('data:image/png;base64,preview');
@@ -228,6 +276,124 @@ describe('AssistantEditorSections', () => {
     expect(screen.getByTestId('select-assistant-default-mcp').className).toMatch(/summarySelect/);
   });
 
+  it('refreshes default permission labels when the language changes', async () => {
+    const editor = createEditor({
+      agent: {
+        value: 'agent-codex',
+        setValue: vi.fn(),
+        availableBackends: [backendOption('agent-codex', 'codex', 'Codex')],
+      },
+    });
+
+    const { rerender } = renderWithProviders(<AssistantEditorSections editor={editor} activeAssistant={null} />);
+
+    fireEvent.click(screen.getByTestId('select-assistant-default-permission'));
+    expect(screen.getByText('Read Only')).toBeInTheDocument();
+    expect(screen.getByText('Auto')).toBeInTheDocument();
+    expect(screen.getByText('Full Access')).toBeInTheDocument();
+
+    mockLanguage = 'zh-CN';
+    rerender(
+      <MemoryRouter>
+        <ConfigProvider>
+          <AssistantEditorSections editor={editor} activeAssistant={null} />
+        </ConfigProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByTestId('select-assistant-default-permission'));
+    await waitFor(() => {
+      expect(screen.getByText('只读')).toBeInTheDocument();
+      expect(screen.getByText('自动')).toBeInTheDocument();
+      expect(screen.getByText('完全访问')).toBeInTheDocument();
+    });
+  });
+
+  it('renders localized default permission options on initial non-English render', async () => {
+    mockLanguage = 'zh-CN';
+    mockResolvedLanguage = 'zh-CN';
+
+    renderWithProviders(
+      <AssistantEditorSections
+        editor={createEditor({
+          agent: {
+            value: 'agent-codex',
+            setValue: vi.fn(),
+            availableBackends: [backendOption('agent-codex', 'codex', 'Codex')],
+          },
+        })}
+        activeAssistant={null}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('select-assistant-default-permission'));
+    await waitFor(() => {
+      expect(screen.getByText('只读')).toBeInTheDocument();
+      expect(screen.getByText('自动')).toBeInTheDocument();
+      expect(screen.getByText('完全访问')).toBeInTheDocument();
+    });
+  });
+
+  it('uses the active language even when resolvedLanguage still points to the fallback locale', async () => {
+    mockLanguage = 'zh-CN';
+    mockResolvedLanguage = 'en-US';
+
+    renderWithProviders(
+      <AssistantEditorSections
+        editor={createEditor({
+          agent: {
+            value: 'agent-codex',
+            setValue: vi.fn(),
+            availableBackends: [backendOption('agent-codex', 'codex', 'Codex')],
+          },
+        })}
+        activeAssistant={null}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('select-assistant-default-permission'));
+    await waitFor(() => {
+      expect(screen.getByText('只读')).toBeInTheDocument();
+      expect(screen.getByText('自动')).toBeInTheDocument();
+      expect(screen.getByText('完全访问')).toBeInTheDocument();
+    });
+  });
+
+  it('refreshes default permission labels when the active language changes before resolvedLanguage catches up', async () => {
+    const editor = createEditor({
+      agent: {
+        value: 'agent-codex',
+        setValue: vi.fn(),
+        availableBackends: [backendOption('agent-codex', 'codex', 'Codex')],
+      },
+    });
+
+    const { rerender } = renderWithProviders(<AssistantEditorSections editor={editor} activeAssistant={null} />);
+
+    fireEvent.click(screen.getByTestId('select-assistant-default-permission'));
+    expect(screen.getByText('Read Only')).toBeInTheDocument();
+    expect(screen.getByText('Auto')).toBeInTheDocument();
+    expect(screen.getByText('Full Access')).toBeInTheDocument();
+
+    mockLanguage = 'zh-CN';
+    mockResolvedLanguage = 'en-US';
+
+    rerender(
+      <MemoryRouter>
+        <ConfigProvider>
+          <AssistantEditorSections editor={editor} activeAssistant={null} />
+        </ConfigProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByTestId('select-assistant-default-permission'));
+    await waitFor(() => {
+      expect(screen.getByText('只读')).toBeInTheDocument();
+      expect(screen.getByText('自动')).toBeInTheDocument();
+      expect(screen.getByText('完全访问')).toBeInTheDocument();
+    });
+  });
+
   it('keeps builtin and disabled MCP servers in the default MCP summary', () => {
     renderWithProviders(
       <AssistantEditorSections
@@ -255,7 +421,8 @@ describe('AssistantEditorSections', () => {
           avatar: '🤖',
           enabled: true,
           sort_order: 1,
-          preset_agent_type: 'claude',
+          agent_id: 'agent-claude',
+          agent: { type: 'acp', source: 'builtin', acp_backend: 'claude' },
         }}
       />
     );
@@ -274,12 +441,14 @@ describe('AssistantEditorSections', () => {
       <AssistantEditorSections
         editor={createEditor({
           agent: {
-            value: 'aionrs',
+            value: 'agent-aionrs',
             setValue: vi.fn(),
             availableBackends: [
               {
-                id: 'aionrs',
+                id: 'agent-aionrs',
                 name: 'Aionrs',
+                runtimeKey: 'aionrs',
+                isExtension: false,
                 modelOptions: [{ value: 'handshake-model', label: 'Handshake Model' }],
               },
             ],
@@ -419,9 +588,9 @@ describe('AssistantEditorSections', () => {
             setDisabledBuiltinSkills: vi.fn(),
           },
           agent: {
-            value: 'claude',
+            value: 'agent-claude',
             setValue: vi.fn(),
-            availableBackends: [{ id: 'claude', name: 'Claude', isExtension: false, modelOptions: [] }],
+            availableBackends: [backendOption('agent-claude', 'claude', 'Claude')],
           },
         })}
         activeAssistant={{
@@ -430,7 +599,8 @@ describe('AssistantEditorSections', () => {
           sort_order: 1,
           source: 'builtin',
           enabled: true,
-          preset_agent_type: 'claude',
+          agent_id: 'agent-claude',
+          agent: { type: 'acp', source: 'builtin', acp_backend: 'claude' },
         }}
       />
     );
@@ -453,6 +623,81 @@ describe('AssistantEditorSections', () => {
     expect(promptScope.getByText('Prompt one')).toBeInTheDocument();
     expect(promptScope.getByText('Prompt two')).toBeInTheDocument();
     expect(promptScope.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument();
+  });
+
+  it('renders bare assistants as fully read-only in the editor', () => {
+    const { container } = renderWithProviders(
+      <AssistantEditorSections
+        editor={createEditor({
+          isCreating: false,
+          profile: {
+            name: 'Droid',
+            setName: vi.fn(),
+            description: 'Bare assistant',
+            setDescription: vi.fn(),
+            avatar: '🤖',
+            setAvatar: vi.fn(),
+            setAvatarPreview: vi.fn(),
+          },
+          prompts: { text: 'Prompt one\nPrompt two', setText: vi.fn() },
+          defaults: {
+            model: { mode: 'fixed', setMode: vi.fn(), value: 'gemini-2.5-pro', setValue: vi.fn() },
+            permission: { mode: 'fixed', setMode: vi.fn(), value: 'default', setValue: vi.fn() },
+            mcps: {
+              mode: 'fixed',
+              setMode: vi.fn(),
+              availableServers: [{ id: 'mcp-a', name: 'Server A', enabled: true } as any],
+              selectedIds: ['mcp-a'],
+              setSelectedIds: vi.fn(),
+            },
+          },
+          rules: { content: 'bare rules', setContent: vi.fn(), viewMode: 'preview', setViewMode: vi.fn() },
+          skills: {
+            availableSkills: [
+              { name: 'browse', description: 'Browse the web', location: '', is_custom: false, source: 'builtin' },
+            ],
+            selectedSkills: ['browse'],
+            setSelectedSkills: vi.fn(),
+            pendingSkills: [],
+            setDeletePendingSkillName: vi.fn(),
+            setDeleteCustomSkillName: vi.fn(),
+            builtinAutoSkills: [],
+            disabledBuiltinSkills: [],
+            setDisabledBuiltinSkills: vi.fn(),
+          },
+          agent: {
+            value: 'agent-droid',
+            setValue: vi.fn(),
+            availableBackends: [backendOption('agent-droid', 'droid', 'droid')],
+          },
+        })}
+        activeAssistant={{
+          id: 'bare-assistant',
+          name: 'Droid',
+          sort_order: 1,
+          source: 'bare',
+          enabled: true,
+          agent_id: 'agent-droid',
+          agent: { type: 'droid', source: 'custom' },
+        }}
+      />
+    );
+
+    expect(screen.queryByTestId('assistant-builtin-readonly-banner')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument();
+
+    expect(screen.getByTestId('input-assistant-name')).toBeDisabled();
+    expect(screen.getByTestId('input-assistant-desc')).toBeDisabled();
+
+    const agentSelect = container.querySelector('[data-testid="select-assistant-agent"]');
+    const modelSelect = container.querySelector('[data-testid="select-assistant-default-model"]');
+    const permissionSelect = container.querySelector('[data-testid="select-assistant-default-permission"]');
+
+    expect(agentSelect?.className).toContain('arco-select-disabled');
+    expect(modelSelect?.className).toContain('arco-select-disabled');
+    expect(permissionSelect?.className).toContain('arco-select-disabled');
+    expect(screen.queryByTestId('select-assistant-default-skills')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('select-assistant-default-mcp')).not.toBeInTheDocument();
   });
 
   it('renders single default-skill and default-mcp controls with hub links', () => {

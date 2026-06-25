@@ -1,8 +1,26 @@
+import { DEFAULT_CODEX_MODELS } from '@/common/types/codex/codexModels';
+import { assistantRuntimeKey } from '@/common/types/agent/assistantTypes';
 import { resolveExtensionAssetUrl } from '@/renderer/utils/platform';
-import type { AssistantListItem } from './types';
+import type { AssistantListItem, AvailableBackend } from './types';
 
 export type AssistantListFilter = 'all' | 'enabled' | 'disabled' | 'builtin' | 'user';
 export const ASSISTANT_SORT_ORDER_GAP = 1000;
+
+/**
+ * Source tag shown next to an assistant in the settings list.
+ *
+ * - `builtin` → "Built-in" tag
+ * - `user` → "Custom" tag
+ * - `bare` (agent-generated) → no tag, since it is neither built-in nor
+ *   user-authored; surfacing "Custom" for it is misleading.
+ */
+export type AssistantSourceTag = 'builtin' | 'custom' | null;
+
+export const resolveAssistantSourceTag = (source: string): AssistantSourceTag => {
+  if (source === 'builtin') return 'builtin';
+  if (source === 'bare') return null;
+  return 'custom';
+};
 
 /**
  * Check if a string is an emoji (simple check for common emoji patterns).
@@ -16,15 +34,9 @@ export const isEmoji = (str: string): boolean => {
 /**
  * Resolve an avatar string to an image src URL, or undefined if it is not an image.
  */
-export const resolveAvatarImageSrc = (
-  avatar: string | undefined,
-  avatarImageMap: Record<string, string>
-): string | undefined => {
+export const resolveAvatarImageSrc = (avatar: string | undefined): string | undefined => {
   const value = avatar?.trim();
   if (!value) return undefined;
-
-  const mapped = avatarImageMap[value];
-  if (mapped) return mapped;
 
   const isLocalAbsolutePath = isLikelyLocalFilePath(value);
   if (isLocalAbsolutePath) {
@@ -152,3 +164,39 @@ export const groupAssistantsByEnabled = (assistants: AssistantListItem[]) => ({
   enabledAssistants: assistants.filter((assistant) => assistant.enabled !== false),
   disabledAssistants: assistants.filter((assistant) => assistant.enabled === false),
 });
+
+export const buildAssistantEditorBackends = (
+  assistants: AssistantListItem[],
+  localeKey: string
+): AvailableBackend[] => {
+  const backendMap = new Map<string, AvailableBackend>();
+
+  for (const assistant of assistants) {
+    if (assistant.source !== 'bare') {
+      continue;
+    }
+
+    const runtimeKey = assistantRuntimeKey(assistant).trim();
+    const agentId = assistant.agent_id?.trim() || '';
+    if (!agentId || backendMap.has(agentId)) {
+      continue;
+    }
+
+    const models = Array.isArray(assistant.models) ? assistant.models : [];
+    const modelOptions =
+      models.length > 0
+        ? models.map((model) => ({ value: model, label: model }))
+        : runtimeKey === 'codex'
+          ? DEFAULT_CODEX_MODELS.map((model) => ({ value: model.id, label: model.label }))
+          : [];
+
+    backendMap.set(agentId, {
+      id: agentId,
+      name: assistant.name_i18n?.[localeKey] || assistant.name,
+      runtimeKey,
+      modelOptions,
+    });
+  }
+
+  return [...backendMap.values()];
+};

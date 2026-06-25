@@ -5,19 +5,19 @@
 import type { DragEndEvent } from '@dnd-kit/core';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import type { AssistantListItem } from './types';
+import { resolveAssistantSourceTag } from './assistantUtils';
 import AssistantAvatar from './AssistantAvatar';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Button, Switch, Tag } from '@arco-design/web-react';
-import { Drag, Plus } from '@icon-park/react';
+import { Button, Switch, Tag, Tooltip } from '@arco-design/web-react';
+import { Attention, Drag, Plus } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 type AssistantListPanelProps = {
   assistants: AssistantListItem[];
   localeKey: string;
-  avatarImageMap: Record<string, string>;
   onEdit: (assistant: AssistantListItem) => void;
   onDuplicate: (assistant: AssistantListItem) => void;
   onDelete: (assistant: AssistantListItem) => void;
@@ -34,7 +34,6 @@ type AssistantListPanelProps = {
 type SortableAssistantCardProps = {
   assistant: AssistantListItem;
   localeKey: string;
-  avatarImageMap: Record<string, string>;
   highlightedId: string | null;
   onEdit: (assistant: AssistantListItem) => void;
   onDuplicate: (assistant: AssistantListItem) => void;
@@ -49,7 +48,6 @@ type SortableAssistantCardProps = {
 const SortableAssistantCard: React.FC<SortableAssistantCardProps> = ({
   assistant,
   localeKey,
-  avatarImageMap,
   highlightedId,
   onEdit,
   onDuplicate,
@@ -104,10 +102,33 @@ const SortableAssistantCard: React.FC<SortableAssistantCardProps> = ({
         >
           <Drag size={16} fill='currentColor' />
         </Button>
-        <AssistantAvatar assistant={assistant} size={28} avatarImageMap={avatarImageMap} />
+        <AssistantAvatar assistant={assistant} size={28} />
         <div className='min-w-0 flex-1'>
           <div className='flex min-w-0 items-center gap-8px font-medium text-t-primary'>
             <span className='truncate'>{assistant.name_i18n?.[localeKey] || assistant.name}</span>
+            {/* F2-05: when the assistant's underlying agent is not online, flag it
+                with a warning icon + hover reason. The assistant is NOT disabled
+                or removed — it stays listed and toggleable. */}
+            {assistant.agent_status !== 'online' && (
+              <Tooltip
+                content={
+                  assistant.agent_status === 'missing'
+                    ? t('settings.assistantAgentMissing', {
+                        defaultValue: 'The required agent is not installed.',
+                      })
+                    : t('settings.assistantAgentUnavailable', {
+                        defaultValue: 'The required agent is currently unavailable.',
+                      })
+                }
+              >
+                <span
+                  className='flex flex-shrink-0 items-center text-warning-6'
+                  data-testid={`assistant-agent-unavailable-${assistant.id}`}
+                >
+                  <Attention size={15} fill='currentColor' />
+                </span>
+              </Tooltip>
+            )}
             <div className='flex flex-shrink-0 items-center gap-6px'>{renderSourceTag(assistant)}</div>
           </div>
           <div className='truncate text-12px text-t-secondary'>
@@ -173,7 +194,6 @@ const SortableAssistantCard: React.FC<SortableAssistantCardProps> = ({
 const AssistantListPanel: React.FC<AssistantListPanelProps> = ({
   assistants,
   localeKey,
-  avatarImageMap,
   onEdit,
   onDuplicate,
   onDelete,
@@ -226,7 +246,12 @@ const AssistantListPanel: React.FC<AssistantListPanelProps> = ({
   const sortingEnabled = true;
 
   const renderSourceTag = (assistant: AssistantListItem) => {
-    if (assistant.source === 'builtin') {
+    const tag = resolveAssistantSourceTag(assistant.source);
+    if (tag === null) {
+      // Bare assistants are system-generated from agents and carry no source tag.
+      return null;
+    }
+    if (tag === 'builtin') {
       return (
         <Tag
           size='small'
@@ -267,7 +292,6 @@ const AssistantListPanel: React.FC<AssistantListPanelProps> = ({
         key={assistant.id}
         assistant={assistant}
         localeKey={localeKey}
-        avatarImageMap={avatarImageMap}
         highlightedId={highlightedId}
         onEdit={onEdit}
         onDuplicate={onDuplicate}

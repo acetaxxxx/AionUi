@@ -984,7 +984,11 @@
     "customAgents": "Benutzerdefinierte Agenten",
     "custom": "Benutzerdefiniert",
     "addCustomAgent": "Benutzerdefinierten Agenten hinzufügen",
-    "customEmpty": "Keine benutzerdefinierten Agenten konfiguriert. Klicke auf \"Benutzerdefinierten Agenten hinzufügen\", um einen zu erstellen."
+    "customEmpty": "Noch keine benutzerdefinierten Agenten. Klicke oben rechts auf „Hinzufügen“, um einen zu erstellen.",
+    "boundAssistantsTitle": "Assistenten, die diesen Agenten verwenden",
+    "boundAssistantsCount": "{{count}} Assistent(en)",
+    "boundAssistantsEmpty": "Diesem Agenten sind noch keine Assistenten zugeordnet.",
+    "viewAssistant": "Anzeigen"
   },
   "remoteAgent": {
     "title": "Remote-Agenten",
@@ -1055,5 +1059,8 @@
     "mcp": "MCP",
     "customAgent": "Benutzerdefinierter Agent"
   },
-  "updateReadyInstall": "{{version}} ist bereit, jetzt installieren"
+  "updateReadyInstall": "{{version}} ist bereit, jetzt installieren",
+  "assistantAgentUnavailable": "Der benötigte Agent ist derzeit nicht verfügbar.",
+  "assistantAgentMissing": "Der benötigte Agent ist nicht installiert.",
+  "assistantTeamUnsupported": "Dieser Assistent kann derzeit nicht im Teammodus verwendet werden."
 }

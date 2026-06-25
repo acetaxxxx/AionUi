@@ -17,7 +17,8 @@ export type AssistantEditorSectionsProps = {
 };
 
 const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ editor, activeAssistant }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const localeKey = i18n.language;
   const { providers, getAvailableModels } = useModelProviderList();
   const [rulesExpanded, setRulesExpanded] = useState(false);
   const [addingPrompt, setAddingPrompt] = useState(false);
@@ -72,8 +73,11 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
     node.closest('[data-editor-popup-root]') ?? node.parentElement ?? document.body;
 
   const isBuiltin = activeAssistant?.source === 'builtin';
+  const isBare = activeAssistant?.source === 'bare';
+  const isReadOnlyAssistant = isBuiltin || isBare;
   const showSkills = isCreating || activeAssistant !== null;
   const currentBackend = availableBackends.find((option) => option.id === editAgent);
+  const editAgentRuntimeKey = currentBackend?.runtimeKey || '';
   const providerModelOptions = providers.flatMap((provider) =>
     getAvailableModels(provider).map((modelName) => ({
       key: `${provider.id}-${modelName}`,
@@ -82,12 +86,12 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
     }))
   );
   const modelOptions = useMemo(() => {
-    if (editAgent === 'aionrs') {
+    if (editAgentRuntimeKey === 'aionrs') {
       return providerModelOptions;
     }
 
     if (currentBackend && currentBackend.modelOptions.length > 0) {
-      return currentBackend.modelOptions.map((model) => ({
+      return currentBackend.modelOptions.map((model: { value: string; label: string }) => ({
         key: `${editAgent}-${model.value}`,
         value: model.value,
         label: model.label,
@@ -95,14 +99,14 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
     }
 
     return [];
-  }, [currentBackend, editAgent, providerModelOptions]);
+  }, [currentBackend, editAgent, editAgentRuntimeKey, providerModelOptions]);
   const permissionOptions = useMemo(
     () =>
-      getAgentModes(editAgent).map((option) => ({
+      getAgentModes(editAgentRuntimeKey).map((option) => ({
         ...option,
         label: t(`agentMode.${option.value}`, { defaultValue: option.label }),
       })),
-    [editAgent, t]
+    [editAgentRuntimeKey, localeKey, t]
   );
   const recommendedPromptItems = useMemo(
     () =>
@@ -281,7 +285,7 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
       ) : null}
 
       <IdentitySection
-        isBuiltin={isBuiltin}
+        isReadOnly={isReadOnlyAssistant}
         editAvatar={editAvatar}
         editName={editName}
         setEditName={setEditName}
@@ -296,7 +300,7 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
       />
 
       <PromptsSection
-        isBuiltin={isBuiltin}
+        isReadOnly={isReadOnlyAssistant}
         recommendedPromptItems={recommendedPromptItems}
         addingPrompt={addingPrompt}
         setAddingPrompt={setAddingPrompt}
@@ -335,6 +339,7 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
               getPopupContainer={getEditorSelectPopupContainer}
               value={editAgent}
               onChange={(value) => setEditAgent(value as string)}
+              disabled={isBare}
               data-testid='select-assistant-agent'
             >
               {availableBackends.map((option) => (
@@ -360,7 +365,10 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
       </div>
 
       <DefaultsSection
+        key={`assistant-defaults-${localeKey}-${editAgent}`}
+        localeKey={localeKey}
         isBuiltin={isBuiltin}
+        isReadOnlyAssistant={isReadOnlyAssistant}
         isCreating={isCreating}
         showSkills={showSkills}
         defaultModelMode={defaultModelMode}
@@ -389,7 +397,7 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
       />
 
       <RulesSection
-        isBuiltin={isBuiltin}
+        isReadOnly={isReadOnlyAssistant}
         promptViewMode={promptViewMode}
         setPromptViewMode={setPromptViewMode}
         rulesExpanded={rulesExpanded}

@@ -12,9 +12,6 @@ import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { getCleanFileNames, FileService } from '@/renderer/services/FileService';
 import { iconColors } from '@/renderer/styles/colors';
 import { isElectronDesktop } from '@/renderer/utils/platform';
-import type { AvailableAgent } from '../types';
-import type { Assistant } from '@/common/types/agent/assistantTypes';
-import PresetAgentTag, { type AgentSwitcherItem } from './PresetAgentTag';
 import { Button, Checkbox, Dropdown, Menu, Message, Tooltip } from '@arco-design/web-react';
 import { ArrowUp, Lightning, Plus, Shield, UploadOne } from '@icon-park/react';
 import React, { useCallback, useRef, useState } from 'react';
@@ -30,25 +27,9 @@ type GuidActionRowProps = {
   modelSelectorNode: React.ReactNode;
 
   // Agent mode
-  selectedAgent: string | 'custom';
-  effectiveModeAgent?: string;
+  modeBackend?: string;
   selectedMode: string;
   onModeSelect: (mode: string) => void;
-
-  // Preset agent tag
-  is_presetAgent: boolean;
-  selectedAgentInfo: AvailableAgent | undefined;
-  /**
-   * Backend-merged preset catalog — drives the preset tag label lookup. Not
-   * the ACP engine-config list (custom agents from the AgentRegistry).
-   */
-  assistants: Assistant[];
-  localeKey: string;
-  onClosePresetTag: () => void;
-  agentLogo?: string | null;
-  agentSwitcherItems?: AgentSwitcherItem[];
-  onAgentSwitch?: (key: string) => void;
-  hidePresetTag?: boolean;
 
   // Skills management
   allSkills: Array<{ name: string; description: string; isAuto: boolean }>;
@@ -70,18 +51,9 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
   files,
   onFilesUploaded,
   modelSelectorNode,
-  selectedAgent,
-  effectiveModeAgent,
+  modeBackend,
   selectedMode,
   onModeSelect,
-  is_presetAgent,
-  selectedAgentInfo,
-  assistants,
-  localeKey,
-  onClosePresetTag,
-  agentLogo,
-  agentSwitcherItems,
-  onAgentSwitch,
   allSkills,
   disabledBuiltinSkills,
   enabledSkills,
@@ -89,7 +61,6 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
   mcpServers,
   selectedMcpServerIds,
   onToggleMcpServer,
-  hidePresetTag = false,
   loading,
   isButtonDisabled,
   speechInputNode,
@@ -99,7 +70,6 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
   const [isPlusDropdownOpen, setIsPlusDropdownOpen] = useState(false);
-  const modeBackend = effectiveModeAgent || selectedAgent;
   const showModeSwitch = supportsModeSwitch(modeBackend);
   const configOptionCount = (modelSelectorNode ? 1 : 0) + (showModeSwitch ? 1 : 0);
 
@@ -315,20 +285,6 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
                 modeLabelFormatter={getModeDisplayLabel}
               />
             )}
-          </div>
-        )}
-
-        {!hidePresetTag && is_presetAgent && selectedAgentInfo && (
-          <div className={styles.actionPresetAgent}>
-            <PresetAgentTag
-              agentInfo={selectedAgentInfo}
-              assistants={assistants}
-              localeKey={localeKey}
-              onClose={onClosePresetTag}
-              agentLogo={agentLogo}
-              agentSwitcherItems={agentSwitcherItems}
-              onAgentSwitch={onAgentSwitch}
-            />
           </div>
         )}
 

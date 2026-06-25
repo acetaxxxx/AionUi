@@ -59,11 +59,24 @@ export const HTTP_ROUTES: Record<string, HttpRoute> = {
   'team.add-agent': {
     method: 'POST',
     path: (p) => `/api/teams/${encodeURIComponent(String(p.team_id))}/agents`,
-    mapBody: (p) => p.agent,
+    mapBody: (p) => ({ assistant: p.agent ?? p.assistant }),
   },
   'team.ensure-session': {
     method: 'POST',
     path: (p) => `/api/teams/${encodeURIComponent(String(p.team_id))}/session`,
+  },
+  'team.send-message': {
+    method: 'POST',
+    path: (p) => `/api/teams/${encodeURIComponent(String(p.team_id))}/messages`,
+    mapBody: (p) => ({
+      content: p.input,
+      files: p.files,
+    }),
+  },
+  'get-conversation': {
+    method: 'GET',
+    path: (p) => `/api/conversations/${encodeURIComponent(String(p.id))}`,
+    mapResponse: 'conversation',
   },
   'database.get-conversation-messages': {
     method: 'GET',
