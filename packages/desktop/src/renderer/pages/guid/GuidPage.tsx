@@ -379,9 +379,23 @@ const GuidPage: React.FC = () => {
   );
 
   // Reset guid-local UI state before paint so same-route navigations do not
-  // briefly show the previous draft or preset assistant layout.
+  // briefly show the previous draft or preset assistant layout. When a caller
+  // navigates here with a `prefillPrompt` (e.g. "Create via chat" from the
+  // scheduled tasks page), seed the input with it instead of clearing.
+  //
+  // The prefill is consumed once per navigation: a ref keyed on location.key
+  // guards against re-seeding if the user later clears the input and returns to
+  // this history entry (e.g. via back navigation), which would otherwise revive
+  // the prompt from the still-present location.state.
+  const consumedPrefillKeyRef = useRef<string | null>(null);
   useLayoutEffect(() => {
-    guidInput.setInput('');
+    const prefillPrompt = (location.state as { prefillPrompt?: string } | null)?.prefillPrompt;
+    if (prefillPrompt && consumedPrefillKeyRef.current !== location.key) {
+      consumedPrefillKeyRef.current = location.key;
+      guidInput.setInput(prefillPrompt);
+    } else {
+      guidInput.setInput('');
+    }
     guidInput.setFiles([]);
     guidInput.setLoading(false);
     if (!(location.state as { workspace?: string } | null)?.workspace) {
