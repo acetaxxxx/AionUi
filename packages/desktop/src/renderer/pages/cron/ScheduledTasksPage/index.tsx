@@ -8,7 +8,8 @@ import classNames from 'classnames';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Button, Switch, Message, Empty, Spin, Tooltip } from '@arco-design/web-react';
+import { Dropdown, Menu, Switch, Message, Empty, Spin, Tooltip } from '@arco-design/web-react';
+import { Down } from '@icon-park/react';
 import { useLayoutContext } from '@renderer/hooks/context/LayoutContext';
 import { useAllCronJobs } from '@renderer/pages/cron/useCronJobs';
 import { formatSchedule, formatNextRun } from '@renderer/pages/cron/cronUtils';
@@ -19,6 +20,7 @@ import CronStatusTag from './CronStatusTag';
 import CreateTaskDialog from './CreateTaskDialog';
 import { getJobAgentMeta } from './jobAgentMeta';
 import { useAgentLogos } from '@renderer/utils/model/agentLogo';
+import styles from './index.module.css';
 
 const ScheduledTasksPage: React.FC = () => {
   const layout = useLayoutContext();
@@ -53,6 +55,17 @@ const ScheduledTasksPage: React.FC = () => {
     },
     [navigate]
   );
+
+  // "Create via chat": jump to the home page with the default cron prompt
+  // pre-filled. The assistant selection is left to the home page's existing
+  // logic (it restores the user's last-used assistant).
+  const handleCreateViaChat = useCallback(() => {
+    navigate('/guid', { state: { prefillPrompt: t('cron.status.defaultPrompt') } });
+  }, [navigate, t]);
+
+  const handleCreateManually = useCallback(() => {
+    setCreateDialogVisible(true);
+  }, []);
 
   const handleToggleEnabled = useCallback(
     async (job: ICronJob) => {
@@ -94,9 +107,24 @@ const ScheduledTasksPage: React.FC = () => {
             >
               {t('cron.scheduledTasks')}
             </h1>
-            <Button type='primary' shape='round' className='shrink-0' onClick={() => setCreateDialogVisible(true)}>
-              {t('cron.page.newTask')}
-            </Button>
+            <Dropdown.Button
+              type='primary'
+              className={styles.createButton}
+              icon={<Down theme='outline' size={14} fill='currentColor' />}
+              onClick={handleCreateViaChat}
+              droplist={
+                <Menu>
+                  <Menu.Item key='via-chat' onClick={handleCreateViaChat}>
+                    {t('cron.page.createViaChat')}
+                  </Menu.Item>
+                  <Menu.Item key='manually' onClick={handleCreateManually}>
+                    {t('cron.page.createManually')}
+                  </Menu.Item>
+                </Menu>
+              }
+            >
+              {t('cron.page.createViaChat')}
+            </Dropdown.Button>
           </div>
           <p
             className={classNames(
