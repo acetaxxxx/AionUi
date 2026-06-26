@@ -34,7 +34,7 @@ export type GuidAssistantSelectionResult = {
   currentAgentModeOptions: AgentModeOption[];
 };
 
-export function resolveInitialAssistantModel(backend: string, models: string[]): string | null {
+export function resolveInitialAssistantModel(models: string[]): string | null {
   if (models.length > 0) {
     return models[0];
   }
@@ -42,7 +42,7 @@ export function resolveInitialAssistantModel(backend: string, models: string[]):
   return null;
 }
 
-export function buildAssistantModelInfo(backend: string, models: string[]): AcpModelInfo | null {
+export function buildAssistantModelInfo(models: string[]): AcpModelInfo | null {
   if (models.length > 0) {
     return {
       current_model_id: models[0],
@@ -192,7 +192,6 @@ export const useGuidAssistantSelection = ({
   }, [selectedAssistant]);
 
   useEffect(() => {
-    const backend = selectedAssistantBackend;
     const runtimeModelId =
       selectedAgentRuntimeModelInfo?.current_model_id || selectedAgentRuntimeModelInfo?.available_models[0]?.id;
     if (runtimeModelId) {
@@ -201,12 +200,12 @@ export const useGuidAssistantSelection = ({
     }
 
     if (selectedAssistantModels.length > 0) {
-      _setSelectedAcpModel(resolveInitialAssistantModel(backend, selectedAssistantModels));
+      _setSelectedAcpModel(resolveInitialAssistantModel(selectedAssistantModels));
       return;
     }
 
-    _setSelectedAcpModel(resolveInitialAssistantModel(backend, []));
-  }, [selectedAssistantBackend, selectedAssistantModels, selectedAgentRuntimeModelInfo]);
+    _setSelectedAcpModel(resolveInitialAssistantModel([]));
+  }, [selectedAssistantModels, selectedAgentRuntimeModelInfo]);
 
   useEffect(() => {
     const fallbackMode =
@@ -219,12 +218,8 @@ export const useGuidAssistantSelection = ({
       return selectedAgentRuntimeModelInfo;
     }
 
-    if (selectedAssistantModels.length > 0) {
-      return buildAssistantModelInfo(selectedAssistantBackend, selectedAssistantModels);
-    }
-
-    return buildAssistantModelInfo(selectedAssistantBackend, []);
-  }, [selectedAssistantBackend, selectedAssistantModels, selectedAgentRuntimeModelInfo]);
+    return buildAssistantModelInfo(selectedAssistantModels);
+  }, [selectedAssistantModels, selectedAgentRuntimeModelInfo]);
 
   const defaultAssistantId = useMemo(() => pickDefaultAssistantSelectionKey(assistants), [assistants]);
 

@@ -379,7 +379,7 @@ describe('assistant model helpers', () => {
   });
 
   it('builds ACP model info from assistant models', () => {
-    expect(buildAssistantModelInfo('claude', ['claude-opus', 'claude-sonnet'])).toEqual({
+    expect(buildAssistantModelInfo(['claude-opus', 'claude-sonnet'])).toEqual({
       current_model_id: 'claude-opus',
       current_model_label: 'claude-opus',
       available_models: [
@@ -389,7 +389,23 @@ describe('assistant model helpers', () => {
     });
   });
 
+  it('builds Codex ACP model info from assistant models', () => {
+    expect(buildAssistantModelInfo(['gpt-5.5', 'gpt-5.4'])).toEqual({
+      current_model_id: 'gpt-5.5',
+      current_model_label: 'gpt-5.5',
+      available_models: [
+        { id: 'gpt-5.5', label: 'gpt-5.5' },
+        { id: 'gpt-5.4', label: 'gpt-5.4' },
+      ],
+    });
+  });
+
   it('defaults to the first assistant model when no assistant preference has been applied yet', () => {
-    expect(resolveInitialAssistantModel('claude', ['claude-opus', 'claude-sonnet'])).toBe('claude-opus');
+    expect(resolveInitialAssistantModel(['claude-opus', 'claude-sonnet'])).toBe('claude-opus');
+  });
+
+  it('does not synthesize Codex models when the assistant catalog has none', () => {
+    expect(buildAssistantModelInfo([])).toBeNull();
+    expect(resolveInitialAssistantModel([])).toBeNull();
   });
 });

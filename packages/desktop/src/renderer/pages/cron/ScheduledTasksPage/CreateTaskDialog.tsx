@@ -291,7 +291,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
 
   const acpCachedModelInfo = useMemo<AcpModelInfo | null>(() => {
     if (!resolvedBackend || resolvedBackend === 'gemini' || resolvedBackend === 'aionrs') return null;
-    return buildAssistantModelInfo(resolvedBackend, selectedAssistantModels);
+    return buildAssistantModelInfo(selectedAssistantModels);
   }, [resolvedBackend, selectedAssistantModels]);
 
   // Auto-pick the first available model from /api/providers when aionrs is
