@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Assistant } from '@/common/types/agent/assistantTypes';
 import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
@@ -246,6 +246,71 @@ describe('useGuidAssistantSelection', () => {
     ]);
   });
 
+  it('keeps a guid-page model selection in memory across same-assistant runtime catalog refreshes', async () => {
+    mockAssistants = [
+      {
+        id: 'assistant-with-runtime-models',
+        source: 'user',
+        name: 'Runtime Model Assistant',
+        name_i18n: {},
+        description_i18n: {},
+        enabled: true,
+        sort_order: 1,
+        agent_id: 'agent-claude',
+        agent: {
+          type: 'acp',
+          source: 'builtin',
+          acp_backend: 'claude',
+        },
+        enabled_skills: [],
+        custom_skill_names: [],
+        disabled_builtin_skills: [],
+        context_i18n: {},
+        prompts: [],
+        prompts_i18n: {},
+        models: [],
+        agent_status: 'online',
+        team_selectable: true,
+        deletable: true,
+      } satisfies Assistant,
+    ];
+    const buildManagedAgent = () =>
+      ({
+        id: 'agent-claude',
+        backend: 'claude',
+        available_models: {
+          current_model_id: 'default',
+          current_model_label: 'Default',
+          available_models: [
+            { id: 'default', label: 'Default' },
+            { id: 'global.anthropic.claude-opus-4-8', label: 'Opus 4.8' },
+          ],
+        },
+      }) as unknown as ManagedAgent;
+    mockManagedAgents = [buildManagedAgent()];
+
+    const { result, rerender } = renderHook(() =>
+      useGuidAssistantSelection({
+        resetAssistant: false,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.selectedAcpModel).toBe('default');
+    });
+
+    act(() => {
+      result.current.setSelectedAcpModel('global.anthropic.claude-opus-4-8');
+    });
+
+    expect(result.current.selectedAcpModel).toBe('global.anthropic.claude-opus-4-8');
+
+    mockManagedAgents = [buildManagedAgent()];
+    rerender();
+
+    expect(result.current.selectedAcpModel).toBe('global.anthropic.claude-opus-4-8');
+  });
+
   it('does not fall back to historical static modes when managed agent catalog has no modes', async () => {
     mockAssistants = [
       {
@@ -374,6 +439,69 @@ describe('assistant model helpers', () => {
       options: [
         { value: 'default', label: 'Default', description: undefined },
         { value: 'bypassPermissions', label: 'Bypass Permissions', description: undefined },
+      ],
+    });
+  });
+
+  it('prefers model config_options before falling back to available_models', () => {
+    const agent = {
+      config_options: {
+        config_options: [
+          {
+            id: 'model',
+            category: 'model',
+            type: 'select',
+            currentValue: 'gpt-5.5',
+            options: [
+              { value: 'gpt-5.5', name: 'GPT-5.5' },
+              { value: 'gpt-5.2', name: 'gpt-5.2' },
+            ],
+          },
+        ],
+      },
+      available_models: {
+        current_model_id: 'legacy-model',
+        available_models: [{ id: 'legacy-model', label: 'Legacy Model' }],
+      },
+    };
+
+    expect(buildAgentRuntimeModelInfo(agent)).toEqual({
+      current_model_id: 'gpt-5.5',
+      current_model_label: 'GPT-5.5',
+      available_models: [
+        { id: 'gpt-5.5', label: 'GPT-5.5' },
+        { id: 'gpt-5.2', label: 'gpt-5.2' },
+      ],
+    });
+  });
+
+  it('prefers mode config_options before falling back to available_modes', () => {
+    const agent = {
+      config_options: {
+        config_options: [
+          {
+            id: 'mode',
+            category: 'mode',
+            type: 'select',
+            currentValue: 'full-access',
+            options: [
+              { value: 'read-only', name: 'Read Only' },
+              { value: 'full-access', name: 'Full Access' },
+            ],
+          },
+        ],
+      },
+      available_modes: {
+        current_mode_id: 'legacy-mode',
+        available_modes: [{ id: 'legacy-mode', name: 'Legacy Mode' }],
+      },
+    };
+
+    expect(buildAgentRuntimeModeState(agent)).toEqual({
+      currentMode: 'full-access',
+      options: [
+        { value: 'read-only', label: 'Read Only', description: undefined },
+        { value: 'full-access', label: 'Full Access', description: undefined },
       ],
     });
   });
