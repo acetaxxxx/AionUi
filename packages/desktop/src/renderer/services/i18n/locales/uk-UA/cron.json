@@ -77,8 +77,6 @@
       "name": "Назва",
       "nameRequired": "Назва обов'язкова",
       "namePlaceholder": "Введіть назву завдання",
-      "description": "Опис",
-      "descriptionPlaceholder": "Короткий опис завдання",
       "prompt": "Промпт",
       "promptRequired": "Промпт обов'язковий",
       "promptPlaceholder": "Інструкції для виконання агентом",
@@ -88,7 +86,6 @@
       "scheduleDesc": "Опис розкладу",
       "scheduleDescRequired": "Опис розкладу обов'язковий",
       "scheduleDescPlaceholder": "напр., Щопонеділка о 9:00",
-      "descriptionRequired": "Опис обов'язковий",
       "agent": "Асистент",
       "assistant": "Асистент",
       "agentRequired": "Будь ласка, виберіть асистента",
@@ -108,7 +105,8 @@
       "clearFolder": "Очистити",
       "model": "Модель",
       "aionrsModelRequired": "Виберіть модель для Aion CLI",
-      "aionrsNoProvider": "Немає доступних моделей"
+      "aionrsNoProvider": "Немає доступних моделей",
+      "assistantLockedExistingConversation": "Завдання поточного діалогу мають зберігати початкового помічника. Щоб використати іншого помічника, створіть нове завдання."
     },
     "freq": {
       "manual": "Вручну",

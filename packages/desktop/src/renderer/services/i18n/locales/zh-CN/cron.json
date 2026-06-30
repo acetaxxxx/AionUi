@@ -79,8 +79,6 @@
       "name": "名称",
       "nameRequired": "请输入任务名称",
       "namePlaceholder": "输入任务名称",
-      "description": "描述",
-      "descriptionPlaceholder": "简要描述任务用途",
       "prompt": "执行指令",
       "promptRequired": "请输入执行指令",
       "promptPlaceholder": "助手触发时执行的指令",
@@ -90,7 +88,6 @@
       "scheduleDesc": "调度描述",
       "scheduleDescRequired": "请输入调度描述",
       "scheduleDescPlaceholder": "例如：每周一上午 9:00",
-      "descriptionRequired": "请输入描述",
       "agent": "执行助手",
       "assistant": "执行助手",
       "agentRequired": "请选择执行助手",
@@ -110,7 +107,8 @@
       "clearFolder": "清除",
       "model": "模型",
       "aionrsModelRequired": "请为 Aion CLI 选择模型",
-      "aionrsNoProvider": "暂无可用模型"
+      "aionrsNoProvider": "暂无可用模型",
+      "assistantLockedExistingConversation": "持续会话任务必须保留原执行助手。如需更换助手，请新建任务。"
     },
     "freq": {
       "manual": "手动触发",
