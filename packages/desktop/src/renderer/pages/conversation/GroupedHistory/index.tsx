@@ -380,7 +380,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
       />
 
       {batchMode && !collapsed && (
-        <div className='px-12px pb-8px'>
+        <div className='px-12px pb-8px pt-2px sticky top-0 z-20 bg-[var(--bg-2)]'>
           <div className='rd-8px bg-fill-1 p-10px flex flex-col gap-8px border border-solid border-[rgba(var(--primary-6),0.08)]'>
             <div className='text-12px leading-18px text-t-secondary'>
               {t('conversation.history.selectedCount', { count: selectedCount })}
