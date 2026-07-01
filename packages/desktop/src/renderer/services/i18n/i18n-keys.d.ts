@@ -577,6 +577,7 @@ export type I18nKey =
   | 'conversation.skill_generator.type_rule'
   | 'conversation.skill_generator.type_skill'
   | 'conversation.skills.loaded'
+  | 'conversation.skills.slashHint'
   | 'conversation.thinking.complete'
   | 'conversation.thinking.label'
   | 'conversation.welcome.clearWorkspace'
