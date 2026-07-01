@@ -14,7 +14,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Button, Dropdown, Empty, Input, Menu, Modal, Tooltip } from '@arco-design/web-react';
 import { Delete, FolderOpen, MoreOne, Plus, Right } from '@icon-park/react';
 import classNames from 'classnames';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -44,31 +44,17 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
   const isMobile = layout?.isMobile ?? false;
   const { getJobStatus, markAsRead, setActiveConversation } = useCronJobsMap();
 
-  // Persist section collapsed state across reloads.
-  const COLLAPSED_SECTIONS_KEY = 'grouped-history-collapsed-sections';
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => {
-    try {
-      const raw = localStorage.getItem(COLLAPSED_SECTIONS_KEY);
-      if (!raw) return new Set();
-      const arr = JSON.parse(raw) as string[];
-      return new Set(Array.isArray(arr) ? arr : []);
-    } catch {
-      return new Set();
-    }
-  });
-  const toggleSection = useCallback((key: string) => {
-    setCollapsedSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      try {
-        localStorage.setItem(COLLAPSED_SECTIONS_KEY, JSON.stringify([...next]));
-      } catch {
-        // ignore storage errors
-      }
-      return next;
-    });
-  }, []);
+  const {
+    conversations,
+    isConversationGenerating,
+    hasCompletionUnread,
+    expandedWorkspaces,
+    pinnedConversations,
+    timelineSections,
+    handleToggleWorkspace,
+    collapsedSections,
+    toggleSection,
+  } = useConversations();
 
   const SectionLabel = useCallback(
     ({ sectionKey, label, trailing }: { sectionKey: string; label: string; trailing?: React.ReactNode }) => {
@@ -106,16 +92,6 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
       setActiveConversation(id);
     }
   }, [id, setActiveConversation]);
-
-  const {
-    conversations,
-    isConversationGenerating,
-    hasCompletionUnread,
-    expandedWorkspaces,
-    pinnedConversations,
-    timelineSections,
-    handleToggleWorkspace,
-  } = useConversations();
 
   const {
     selectedConversationIds,
