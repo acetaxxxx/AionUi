@@ -542,6 +542,8 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
                       expanded={expandedWorkspaces.includes(group.workspace)}
                       onToggle={() => handleToggleWorkspace(group.workspace)}
                       siderCollapsed={collapsed}
+                      stickyHeader
+                      stickyTop={28}
                       header={
                         <span className='text-14px font-[500] truncate flex-1 text-t-primary min-w-0'>
                           {group.displayName}
