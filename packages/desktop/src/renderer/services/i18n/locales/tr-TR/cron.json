@@ -91,8 +91,6 @@
       "name": "Ad",
       "nameRequired": "Ad gereklidir",
       "namePlaceholder": "Görev adı girin",
-      "description": "Açıklama",
-      "descriptionPlaceholder": "Görevin kısa açıklaması",
       "prompt": "Komut",
       "promptRequired": "Komut gereklidir",
       "promptPlaceholder": "Asistanın yürüteceği talimatlar",
@@ -102,7 +100,6 @@
       "scheduleDesc": "Zamanlama Açıklaması",
       "scheduleDescRequired": "Zamanlama açıklaması gereklidir",
       "scheduleDescPlaceholder": "Örn: Her Pazartesi saat 09:00",
-      "descriptionRequired": "Açıklama gereklidir",
       "agent": "Asistan",
       "assistant": "Asistan",
       "agentRequired": "Lütfen bir asistan seçin",
@@ -122,7 +119,8 @@
       "clearFolder": "Temizle",
       "model": "Model",
       "aionrsModelRequired": "Aion CLI için bir model seçin",
-      "aionrsNoProvider": "Kullanılabilir model yok"
+      "aionrsNoProvider": "Kullanılabilir model yok",
+      "assistantLockedExistingConversation": "Aynı konuşma görevleri özgün yürütme asistanını korumalıdır. Başka bir asistan kullanmak için yeni bir görev oluşturun."
     },
     "freq": {
       "manual": "Manuel",
