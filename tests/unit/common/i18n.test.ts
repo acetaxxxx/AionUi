@@ -29,6 +29,7 @@ describe('i18n', () => {
       expect(normalizeLanguageCode('uk')).toBe('uk-UA');
       expect(normalizeLanguageCode('pt')).toBe('pt-BR');
       expect(normalizeLanguageCode('de')).toBe('de-DE');
+      expect(normalizeLanguageCode('es')).toBe('es-ES');
     });
 
     it('resolves German regional variants to de-DE', () => {
@@ -38,7 +39,7 @@ describe('i18n', () => {
 
     it('falls back to the default language for unsupported codes', () => {
       expect(normalizeLanguageCode('fr')).toBe(DEFAULT_LANGUAGE);
-      expect(normalizeLanguageCode('es')).toBe(DEFAULT_LANGUAGE);
+      expect(normalizeLanguageCode('it')).toBe(DEFAULT_LANGUAGE);
       expect(normalizeLanguageCode('')).toBe(DEFAULT_LANGUAGE);
     });
   });
