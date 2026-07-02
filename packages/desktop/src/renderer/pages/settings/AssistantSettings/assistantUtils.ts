@@ -144,6 +144,38 @@ export const groupAssistantsByEnabled = (assistants: AssistantListItem[]) => ({
   disabledAssistants: assistants.filter((assistant) => assistant.enabled === false),
 });
 
+export type AssistantEnabledFilter = 'all' | 'enabled' | 'disabled';
+
+/** Apply the enabled/disabled dropdown filter used by the "My Assistants" tab. */
+export const filterByEnabled = (
+  assistants: AssistantListItem[],
+  filter: AssistantEnabledFilter
+): AssistantListItem[] => {
+  switch (filter) {
+    case 'enabled':
+      return assistants.filter((assistant) => assistant.enabled !== false);
+    case 'disabled':
+      return assistants.filter((assistant) => assistant.enabled === false);
+    default:
+      return assistants;
+  }
+};
+
+/**
+ * Split the user's own assistants into the two "My Assistants" groups, each
+ * sorted by sort_order. Bare CLI assistants come first (fixed), then
+ * user-created. Official (builtin) assistants live in the other tab and are
+ * excluded here.
+ */
+export const groupMyAssistants = (assistants: AssistantListItem[]) => {
+  const bySortOrder = (a: AssistantListItem, b: AssistantListItem) => a.sort_order - b.sort_order;
+  return {
+    // 'generated' == a bare CLI assistant auto-created from a local CLI tool.
+    cliAssistants: assistants.filter((a) => a.source === 'generated').toSorted(bySortOrder),
+    createdAssistants: assistants.filter((a) => a.source === 'user').toSorted(bySortOrder),
+  };
+};
+
 export const buildAssistantEditorBackends = (
   assistants: AssistantListItem[],
   localeKey: string
