@@ -27,7 +27,6 @@ import ChatSlider from './ChatSlider.tsx';
 import AcpModelSelector from '@/renderer/components/agent/AcpModelSelector';
 import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 import { getConversationCreateErrorMessage } from '@/renderer/pages/conversation/utils/conversationCreateError';
-import { warmupConversation } from '@/renderer/pages/conversation/utils/warmupConversation';
 import GoogleModelSelector from '../platforms/gemini/GoogleModelSelector';
 import AionrsChat from '../platforms/aionrs/AionrsChat';
 import AionrsModelSelector from '../platforms/aionrs/AionrsModelSelector';
@@ -36,6 +35,7 @@ import { useConversationRuntimeView } from '../runtime/useConversationRuntimeVie
 import { isLegacyReadOnlyConversationType } from '../utils/conversationRuntime';
 import { resolveConversationBackend } from '../utils/conversationAssistantIdentity';
 import LegacyReadOnlyConversation from '../platforms/legacy/LegacyReadOnlyConversation';
+import { useActiveLease } from '../hooks/useActiveLease';
 // import SkillRuleGenerator from './components/SkillRuleGenerator'; // Temporarily hidden
 
 const configErrorMessageKey = (error: unknown) => {
@@ -176,10 +176,8 @@ const AionrsConversationPanel: React.FC<{ conversation: AionrsConversation; slid
   // header space; the dropdown stays available on desktop and tablets ≥768px.
   const isMobile = Boolean(layout?.isMobile);
   const { t } = useTranslation();
-  const prepareRuntimeConfig = useCallback(() => warmupConversation(conversation.id), [conversation.id]);
   const runtimeConfig = useAcpConfigOptions({
     conversation_id: conversation.id,
-    prepareRuntime: prepareRuntimeConfig,
     enabled: !isMobile,
   });
   const handleThoughtLevelSetOption = useCallback(
@@ -246,6 +244,7 @@ const ChatConversation: React.FC<{
   hideSendBox?: boolean;
 }> = ({ conversation, hideSendBox }) => {
   const { t } = useTranslation();
+  useActiveLease({ type: 'conversation', id: conversation?.id });
   const workspaceEnabled = Boolean(conversation?.extra?.workspace);
   const cronJobId = resolveCronJobId(conversation?.extra);
   const layout = useLayoutContext();

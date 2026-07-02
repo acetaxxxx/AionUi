@@ -25,7 +25,7 @@ import { TeamPermissionProvider, useTeamPermission } from './hooks/TeamPermissio
 import { useTeamSession } from './hooks/useTeamSession';
 import { useTeamRunView, type TeamRunViewState } from './hooks/useTeamRunView';
 import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
-import { warmupConversation } from '@/renderer/pages/conversation/utils/warmupConversation';
+import { useActiveLease } from '@/renderer/pages/conversation/hooks/useActiveLease';
 import { resolveTeamWorkspaceView } from './utils/teamWorkspaceView';
 
 type Props = {
@@ -70,8 +70,7 @@ const AionrsHeaderModelSelector: React.FC<{ conversation_id: string; initialMode
   const modelSelection = useAionrsModelSelection({ initialModel, onSelectModel });
   const prepareRuntimeConfig = useCallback(async () => {
     await teamPermission?.warmupSession();
-    await warmupConversation(conversation_id);
-  }, [conversation_id, teamPermission]);
+  }, [teamPermission]);
   const runtimeConfig = useAcpConfigOptions({
     conversation_id,
     prepareRuntime: prepareRuntimeConfig,
@@ -227,6 +226,7 @@ const AssistantChatSlot: React.FC<{
 /** Inner component that reads active tab from context and renders the chat layout */
 const TeamPageContent: React.FC<TeamPageContentProps> = ({ team, onRenameTeam }) => {
   const { t } = useTranslation();
+  useActiveLease({ type: 'team', id: team.id });
   const { assistants, activeSlotId, statusMap, switchTab } = useTeamTabs();
   const [, messageContext] = Message.useMessage({ maxCount: 1 });
 

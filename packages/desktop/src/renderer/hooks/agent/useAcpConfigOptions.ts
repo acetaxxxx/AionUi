@@ -12,6 +12,7 @@ import type {
   AcpConfigSelectOptionDto,
   SetConfigOptionResponse,
 } from '@/common/types/platform/acpTypes';
+import { ensureConversationRuntime } from '@/renderer/pages/conversation/utils/ensureConversationRuntime';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
@@ -100,7 +101,7 @@ export function classifyConfigSetError(error: unknown): AcpConfigSetErrorKind {
 
 type AcpConfigOptionsKey = readonly ['acp-config-options', string];
 
-const getConfigOptionsKey = (conversation_id: string): AcpConfigOptionsKey =>
+const getRuntimeConfigOptionsKey = (conversation_id: string): AcpConfigOptionsKey =>
   ['acp-config-options', conversation_id] as const;
 
 const statusByConversation = new Map<string, AcpConfigSetStatus>();
@@ -128,24 +129,17 @@ function subscribeConversationSetStatus(
   };
 }
 
-const fetchConfigOptions = async ([, conversation_id]: AcpConfigOptionsKey): Promise<AcpConfigOptionDto[] | null> => {
-  try {
-    const result = await ipcBridge.acpConversation.getConfigOptions.invoke({ conversation_id });
-    return result.config_options;
-  } catch (error) {
-    if (isBackendHttpError(error) && error.status === 404) return null;
-    throw error;
-  }
-};
+const ensureRuntimeConfigOptions = async ([, conversation_id]: AcpConfigOptionsKey): Promise<AcpConfigOptionDto[]> =>
+  (await ensureConversationRuntime(conversation_id)).config_options;
 
-const configOptionsInFlight = new Map<string, Promise<AcpConfigOptionDto[] | null>>();
+const configOptionsInFlight = new Map<string, Promise<AcpConfigOptionDto[]>>();
 
-function fetchConfigOptionsOnce(key: AcpConfigOptionsKey): Promise<AcpConfigOptionDto[] | null> {
+function fetchConfigOptionsOnce(key: AcpConfigOptionsKey): Promise<AcpConfigOptionDto[]> {
   const [, conversation_id] = key;
   const existing = configOptionsInFlight.get(conversation_id);
   if (existing) return existing;
 
-  const promise = fetchConfigOptions(key).finally(() => {
+  const promise = ensureRuntimeConfigOptions(key).finally(() => {
     if (configOptionsInFlight.get(conversation_id) === promise) {
       configOptionsInFlight.delete(conversation_id);
     }
@@ -165,12 +159,12 @@ export function useAcpConfigOptions({
 }) {
   const [setStatus, setSetStatus] = useState<AcpConfigSetStatus>(() => getConversationSetStatus(conversation_id));
   const optionsRef = useRef<AcpConfigOptionDto[] | null>(null);
-  const key = useMemo(() => getConfigOptionsKey(conversation_id), [conversation_id]);
+  const key = useMemo(() => getRuntimeConfigOptionsKey(conversation_id), [conversation_id]);
   const {
     data: snapshotData,
     mutate,
     isLoading,
-  } = useSWR<AcpConfigOptionDto[] | null>(enabled ? key : null, fetchConfigOptions, {
+  } = useSWR<AcpConfigOptionDto[] | null>(enabled ? key : null, fetchConfigOptionsOnce, {
     revalidateOnMount: false,
   });
   const configOptions = enabled ? (snapshotData ?? null) : null;
@@ -195,7 +189,7 @@ export function useAcpConfigOptions({
   const reload = useCallback(async () => {
     await prepareRuntime?.();
     const next = await fetchConfigOptionsOnce(key);
-    if (next) replaceSnapshot(next);
+    replaceSnapshot(next);
     return next;
   }, [key, prepareRuntime, replaceSnapshot]);
 
@@ -207,6 +201,7 @@ export function useAcpConfigOptions({
       setConversationSetStatus(conversation_id, { state: 'setting', optionId, requestedValue: value });
       try {
         await prepareRuntime?.();
+        replaceSnapshot(await ensureRuntimeConfigOptions(key));
         const response = await ipcBridge.acpConversation.setConfigOption.invoke({
           conversation_id,
           option_id: optionId,
@@ -222,7 +217,7 @@ export function useAcpConfigOptions({
         setConversationSetStatus(conversation_id, { state: 'idle' });
       }
     },
-    [conversation_id, prepareRuntime, replaceSnapshot]
+    [conversation_id, key, prepareRuntime, replaceSnapshot]
   );
 
   useEffect(() => {
