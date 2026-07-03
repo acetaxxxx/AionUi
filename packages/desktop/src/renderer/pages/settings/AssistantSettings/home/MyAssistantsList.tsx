@@ -10,6 +10,7 @@ import { type AssistantEnabledFilter, filterByEnabled, groupMyAssistants } from 
 import MyAssistantRow from './MyAssistantRow';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useTalkToButler } from '@/renderer/hooks/assistant/useTalkToButler';
 import { Dropdown, Menu, Button } from '@arco-design/web-react';
 import { Down, SortTwo } from '@icon-park/react';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -23,6 +24,8 @@ type MyAssistantsListProps = {
   onToggleEnabled: (assistant: AssistantListItem, checked: boolean) => void;
   onReorder: (activeId: string, overId: string) => void | Promise<void>;
   onStartChat: (assistant: AssistantListItem) => void;
+  /** Switch to the Official tab (to duplicate an official assistant). */
+  onGoOfficial: () => void;
 };
 
 const FILTER_OPTIONS: AssistantEnabledFilter[] = ['all', 'enabled', 'disabled'];
@@ -35,9 +38,21 @@ const MyAssistantsList: React.FC<MyAssistantsListProps> = ({
   onToggleEnabled,
   onReorder,
   onStartChat,
+  onGoOfficial,
 }) => {
   const { t } = useTranslation();
+  const talkToButler = useTalkToButler();
   const [filter, setFilter] = useState<AssistantEnabledFilter>('all');
+
+  // "Create via chat": hand off to the AionUi Butler on the home page with a
+  // ready-made create-an-assistant prompt (same flow as the header action).
+  const handleCreateViaChat = () => {
+    void talkToButler({
+      prompt: t('settings.talkToButler.prompt.createAssistant', {
+        defaultValue: 'Help me create a new assistant and walk me through setting it up.',
+      }),
+    });
+  };
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   // Drag reorder is only meaningful in the unfiltered "all" view; a filtered
@@ -101,7 +116,34 @@ const MyAssistantsList: React.FC<MyAssistantsListProps> = ({
     );
   };
 
-  const isEmpty = cliAssistants.length === 0 && createdAssistants.length === 0;
+  // The "created by me" group shows a guiding empty state when the user has
+  // no custom assistants yet (only in the unfiltered view — a filtered empty
+  // just means "no matches", not "none exist").
+  const createdEmpty = createdAssistants.length === 0 && filter === 'all';
+
+  const renderCreatedEmpty = () => (
+    <div
+      className='flex flex-col items-center rounded-14px border border-dashed border-border-2 bg-fill-1/40 px-20px py-28px text-center'
+      data-testid='created-empty'
+    >
+      <div className='mb-6px text-13px font-600 text-t-primary'>
+        {t('settings.customEmptyTitle', { defaultValue: 'No custom assistants yet' })}
+      </div>
+      <p className='mb-16px max-w-360px text-12px leading-[1.6] text-t-secondary'>
+        {t('settings.customEmptyBody', {
+          defaultValue: 'Create one by chatting with the butler, or duplicate an official assistant into your own.',
+        })}
+      </p>
+      <div className='flex items-center gap-10px'>
+        <Button type='primary' size='small' className='!rounded-8px' onClick={handleCreateViaChat} data-testid='created-empty-create'>
+          {t('settings.customEmptyCreate', { defaultValue: 'Create via chat' })}
+        </Button>
+        <Button size='small' className='!rounded-8px' onClick={onGoOfficial} data-testid='created-empty-official'>
+          {t('settings.customEmptyBrowseOfficial', { defaultValue: 'Browse official' })}
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div data-testid='my-assistants-pane'>
@@ -128,23 +170,45 @@ const MyAssistantsList: React.FC<MyAssistantsListProps> = ({
         </Dropdown>
       </div>
 
-      {isEmpty ? (
-        <div className='py-40px text-center text-13px text-t-secondary' data-testid='my-assistants-empty'>
-          {t('settings.myAssistantsEmpty', {
-            defaultValue: 'No assistants here yet. Enable an official assistant, or connect a local CLI tool.',
-          })}
+      {renderGroup(t('settings.assistantGroupCli', { defaultValue: 'Your CLI' }), cliAssistants, 'group-cli', 'bg-warning-5')}
+
+      {/* Created-by-me group: show its rows, or a guiding empty state when the
+          user has no custom assistants yet. */}
+      <div className='mt-20px' data-testid='group-created-section'>
+        <div className='mb-10px flex items-center gap-8px px-2px'>
+          <span className='h-13px w-3px rounded-2px bg-primary-5' />
+          <span className='text-12px font-600 text-t-secondary'>
+            {t('settings.assistantGroupCreated', { defaultValue: 'Created by you' })}
+          </span>
+          {createdAssistants.length > 0 ? (
+            <span className='rounded-999px bg-fill-2 px-6px py-1px text-10px font-500 text-t-quaternary'>
+              {createdAssistants.length}
+            </span>
+          ) : null}
         </div>
-      ) : (
-        <>
-          {renderGroup(t('settings.assistantGroupCli', { defaultValue: 'Your CLI' }), cliAssistants, 'group-cli', 'bg-warning-5')}
-          {renderGroup(
-            t('settings.assistantGroupCreated', { defaultValue: 'Created by you' }),
-            createdAssistants,
-            'group-created',
-            'bg-primary-5'
-          )}
-        </>
-      )}
+        {createdEmpty ? (
+          renderCreatedEmpty()
+        ) : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={createdAssistants.map((a) => a.id)} strategy={verticalListSortingStrategy}>
+              <div className='space-y-8px'>
+                {createdAssistants.map((assistant) => (
+                  <MyAssistantRow
+                    key={assistant.id}
+                    assistant={assistant}
+                    localeKey={localeKey}
+                    draggable={draggable}
+                    onOpenDetail={onOpenDetail}
+                    onDelete={onDelete}
+                    onToggleEnabled={onToggleEnabled}
+                    onStartChat={onStartChat}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
     </div>
   );
 };

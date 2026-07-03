@@ -40,6 +40,10 @@ const AssistantSettings: React.FC = () => {
   const navigate = useNavigate();
   const navigationState = (location.state as AssistantNavigationState | null) ?? null;
 
+  // Which home tab to show when returning from the editor. Editing an official
+  // assistant should land back on the Official tab; everything else on Mine.
+  const [homeTab, setHomeTab] = React.useState<'mine' | 'official'>('mine');
+
   // "Chat" on an assistant → open a new conversation with it preselected.
   const handleStartChat = useCallback(
     (assistant: AssistantListItem) => {
@@ -210,11 +214,15 @@ const AssistantSettings: React.FC = () => {
             <AssistantHomeTabs
               assistants={assistants}
               localeKey={localeKey}
+              initialTab={homeTab}
+              onTabChange={setHomeTab}
               onOpenDetail={(assistant) => {
+                if (assistant.source === 'builtin') setHomeTab('official');
                 setActiveAssistantId(assistant.id);
                 void editor.handleEdit(assistant);
               }}
               onOpenSettings={(assistant) => {
+                if (assistant.source === 'builtin') setHomeTab('official');
                 setActiveAssistantId(assistant.id);
                 void editor.handleEdit(assistant);
               }}

@@ -9,9 +9,8 @@ import MyAssistantsList from './MyAssistantsList';
 import OfficialAssistantsGrid from './OfficialAssistantsGrid';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
-import { Button } from '@arco-design/web-react';
 import classNames from 'classnames';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 type AssistantHomeTabsProps = {
@@ -25,11 +24,13 @@ type AssistantHomeTabsProps = {
   onToggleEnabled: (assistant: AssistantListItem, checked: boolean) => void;
   onReorder: (activeId: string, overId: string) => void | Promise<void>;
   onStartChat: (assistant: AssistantListItem) => void;
+  /** Tab to show on mount (e.g. return to Official after editing a builtin). */
+  initialTab?: 'mine' | 'official';
+  /** Notified whenever the active tab changes, so the parent can remember it. */
+  onTabChange?: (tab: 'mine' | 'official') => void;
 };
 
 type HomeTab = 'mine' | 'official';
-
-const COACH_STORAGE_KEY = 'assistantHome.reorderCoachSeen';
 
 const AssistantHomeTabs: React.FC<AssistantHomeTabsProps> = ({
   assistants,
@@ -42,12 +43,18 @@ const AssistantHomeTabs: React.FC<AssistantHomeTabsProps> = ({
   onToggleEnabled,
   onReorder,
   onStartChat,
+  initialTab = 'mine',
+  onTabChange,
 }) => {
   const { t } = useTranslation();
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
-  const [tab, setTab] = useState<HomeTab>('mine');
-  const [showCoach, setShowCoach] = useState(false);
+  const [tab, setTab] = useState<HomeTab>(initialTab);
+
+  const selectTab = (next: HomeTab) => {
+    setTab(next);
+    onTabChange?.(next);
+  };
 
   const counts = useMemo(() => {
     let mine = 0;
@@ -59,32 +66,11 @@ const AssistantHomeTabs: React.FC<AssistantHomeTabsProps> = ({
     return { mine, official };
   }, [assistants]);
 
-  // First-visit coach mark for the reorder gesture (shown once).
-  useEffect(() => {
-    if (tab !== 'mine') return;
-    let seen = false;
-    try {
-      seen = localStorage.getItem(COACH_STORAGE_KEY) === '1';
-    } catch {
-      seen = false;
-    }
-    if (!seen) setShowCoach(true);
-  }, [tab]);
-
-  const dismissCoach = () => {
-    setShowCoach(false);
-    try {
-      localStorage.setItem(COACH_STORAGE_KEY, '1');
-    } catch {
-      // ignore storage failures — coach simply reappears next time
-    }
-  };
-
   const tabButton = (key: HomeTab, label: string, count: number) => (
     <button
       type='button'
       data-testid={`assistant-tab-${key}`}
-      onClick={() => setTab(key)}
+      onClick={() => selectTab(key)}
       className={`relative inline-flex cursor-pointer items-center border-none bg-transparent px-2px pb-12px text-14px leading-none transition-colors ${
         tab === key ? 'font-600 text-t-primary' : 'font-500 text-t-tertiary hover:text-t-secondary'
       }`}
@@ -145,7 +131,7 @@ const AssistantHomeTabs: React.FC<AssistantHomeTabsProps> = ({
 
       <div
         data-testid='assistant-home-body'
-        className={`relative min-h-0 flex-1 overflow-auto ${isMobile ? 'px-16px pb-14px pt-14px' : 'px-12px pb-24px pt-18px md:px-40px'}`}
+        className={`min-h-0 flex-1 overflow-auto ${isMobile ? 'px-16px pb-14px pt-14px' : 'px-12px pb-24px pt-18px md:px-40px'}`}
       >
         <div className='mx-auto w-full max-w-800px'>
           {tab === 'mine' ? (
@@ -157,6 +143,7 @@ const AssistantHomeTabs: React.FC<AssistantHomeTabsProps> = ({
               onToggleEnabled={onToggleEnabled}
               onReorder={onReorder}
               onStartChat={onStartChat}
+              onGoOfficial={() => selectTab('official')}
             />
           ) : (
             <OfficialAssistantsGrid
@@ -169,30 +156,6 @@ const AssistantHomeTabs: React.FC<AssistantHomeTabsProps> = ({
             />
           )}
         </div>
-
-        {showCoach ? (
-          <div className='absolute inset-0 z-50 bg-[rgba(20,23,40,0.28)]' onClick={dismissCoach} data-testid='reorder-coach-mask'>
-            <div
-              className='absolute left-24px top-96px w-320px rounded-14px bg-bg-0 p-18px shadow-lg'
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className='mb-8px text-14px font-700 text-t-primary'>
-                {t('settings.reorderCoachTitle', { defaultValue: 'Drag to reorder' })}
-              </div>
-              <p className='mb-14px text-12px leading-[1.65] text-t-secondary'>
-                {t('settings.reorderCoachBody', {
-                  defaultValue:
-                    'Drag your favorite assistants to the top — this order decides how they appear wherever you pick an assistant (home, teams, scheduled tasks).',
-                })}
-              </p>
-              <div className='flex justify-end'>
-                <Button type='primary' size='small' onClick={dismissCoach} data-testid='reorder-coach-dismiss'>
-                  {t('common.confirm', { defaultValue: 'Got it' })}
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : null}
       </div>
     </div>
   );

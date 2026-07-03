@@ -54,7 +54,7 @@ export const FieldLabel: React.FC<{ children: React.ReactNode; required?: boolea
   required = false,
 }) => {
   return (
-    <div className='w-86px flex-shrink-0 text-13px text-t-secondary'>
+    <div className='w-86px flex-shrink-0 pt-6px text-13px leading-20px text-t-secondary'>
       {required ? <span className='mr-4px text-[rgb(var(--danger-6))]'>*</span> : null}
       {children}
     </div>
