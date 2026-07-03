@@ -226,9 +226,17 @@ const AssistantSettings: React.FC = () => {
                 setActiveAssistantId(assistant.id);
                 void editor.handleEdit(assistant);
               }}
-              onDuplicate={(assistant) => void editor.handleDuplicate(assistant)}
+              onDuplicate={(assistant) => {
+                // A duplicate becomes a new user assistant, so return to My
+                // Assistants after saving — not the Official tab it came from.
+                setHomeTab('mine');
+                void editor.handleDuplicate(assistant);
+              }}
               onDelete={(assistant) => editor.handleDeleteRequest(assistant)}
-              onCreate={() => void editor.handleCreate()}
+              onCreate={() => {
+                setHomeTab('mine');
+                void editor.handleCreate();
+              }}
               onToggleEnabled={(assistant, checked) => void editor.handleToggleEnabled(assistant, checked)}
               onReorder={(activeId, overId) => void reorderAssistants(activeId, overId)}
               onStartChat={handleStartChat}
