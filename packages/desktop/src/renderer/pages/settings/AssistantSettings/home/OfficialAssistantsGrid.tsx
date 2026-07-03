@@ -61,7 +61,13 @@ const OfficialAssistantsGrid: React.FC<OfficialAssistantsGridProps> = ({
       {/* Compact toolbar: quiet one-line hint (full text on hover) + filter. */}
       <div className='mb-14px flex items-center justify-between gap-12px'>
         <span className='inline-flex min-w-0 items-center gap-6px text-12px text-t-tertiary'>
-          <AllApplication theme='outline' size={14} fill='currentColor' className='block shrink-0 leading-none text-t-quaternary' style={{ lineHeight: 0 }} />
+          <AllApplication
+            theme='outline'
+            size={14}
+            fill='currentColor'
+            className='block shrink-0 leading-none text-t-quaternary'
+            style={{ lineHeight: 0 }}
+          />
           <span className='truncate'>
             {t('settings.officialAssistantsHintShort', {
               defaultValue: 'Maintained by AionUi · enable to use, duplicate to customize',
@@ -69,7 +75,11 @@ const OfficialAssistantsGrid: React.FC<OfficialAssistantsGridProps> = ({
           </span>
         </span>
         <Dropdown droplist={filterMenu} trigger='click' position='br'>
-          <Button size='mini' data-testid='official-enabled-filter' className='!flex !shrink-0 !items-center !gap-4px !rounded-8px'>
+          <Button
+            size='mini'
+            data-testid='official-enabled-filter'
+            className='!flex !shrink-0 !items-center !gap-4px !rounded-8px'
+          >
             <span>
               {t(`settings.assistantFilter.${filter}`, {
                 defaultValue: filter === 'all' ? 'All' : filter === 'enabled' ? 'Enabled' : 'Disabled',
@@ -91,7 +101,9 @@ const OfficialAssistantsGrid: React.FC<OfficialAssistantsGridProps> = ({
               }}
             >
               <Menu.Item key='settings'>
-                <span data-testid={`menu-settings-${assistant.id}`}>{t('common.settings', { defaultValue: 'Settings' })}</span>
+                <span data-testid={`menu-settings-${assistant.id}`}>
+                  {t('common.settings', { defaultValue: 'Settings' })}
+                </span>
               </Menu.Item>
               <Menu.Item key='duplicate'>
                 <span data-testid={`menu-duplicate-${assistant.id}`}>
@@ -125,7 +137,9 @@ const OfficialAssistantsGrid: React.FC<OfficialAssistantsGridProps> = ({
               <div className={`mt-12px truncate text-14px font-600 text-t-primary ${enabled ? '' : 'opacity-70'}`}>
                 {assistant.name_i18n?.[localeKey] || assistant.name}
               </div>
-              <div className={`mt-6px line-clamp-2 text-12px leading-[1.5] text-t-secondary ${enabled ? '' : 'opacity-55'}`}>
+              <div
+                className={`mt-6px line-clamp-2 text-12px leading-[1.5] text-t-secondary ${enabled ? '' : 'opacity-55'}`}
+              >
                 {assistant.description_i18n?.[localeKey] || assistant.description || ''}
               </div>
               {/* Footer: runtime on the left, actions on the right — balanced. */}

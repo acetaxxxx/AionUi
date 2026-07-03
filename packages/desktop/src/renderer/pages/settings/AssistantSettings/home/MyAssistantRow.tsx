@@ -123,7 +123,10 @@ const MyAssistantRow: React.FC<MyAssistantRowProps> = ({
           </div>
         </div>
       </div>
-      <div className='ml-10px flex flex-shrink-0 items-center gap-8px text-t-secondary sm:gap-14px' onClick={(e) => e.stopPropagation()}>
+      <div
+        className='ml-10px flex flex-shrink-0 items-center gap-8px text-t-secondary sm:gap-14px'
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Chat reveals on row hover to stay quiet at rest. Hidden on narrow widths to give the name room. */}
         {enabled ? (
           <Button

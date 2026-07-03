@@ -92,7 +92,9 @@ const MyAssistantsList: React.FC<MyAssistantsListProps> = ({
         <div className='mb-10px flex items-center gap-8px px-2px'>
           <span className={`h-13px w-3px rounded-2px ${barClass}`} />
           <span className='text-12px font-600 text-t-secondary'>{title}</span>
-          <span className='rounded-999px bg-fill-2 px-6px py-1px text-10px font-500 text-t-quaternary'>{list.length}</span>
+          <span className='rounded-999px bg-fill-2 px-6px py-1px text-10px font-500 text-t-quaternary'>
+            {list.length}
+          </span>
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={list.map((a) => a.id)} strategy={verticalListSortingStrategy}>
@@ -135,7 +137,13 @@ const MyAssistantsList: React.FC<MyAssistantsListProps> = ({
         })}
       </p>
       <div className='flex items-center gap-10px'>
-        <Button type='primary' size='small' className='!rounded-8px' onClick={handleCreateViaChat} data-testid='created-empty-create'>
+        <Button
+          type='primary'
+          size='small'
+          className='!rounded-8px'
+          onClick={handleCreateViaChat}
+          data-testid='created-empty-create'
+        >
           {t('settings.customEmptyCreate', { defaultValue: 'Create via chat' })}
         </Button>
         <Button size='small' className='!rounded-8px' onClick={onGoOfficial} data-testid='created-empty-official'>
@@ -151,7 +159,13 @@ const MyAssistantsList: React.FC<MyAssistantsListProps> = ({
           enabled filter on the right — no full-width banner hogging a row. */}
       <div className='mb-4px flex items-center justify-between'>
         <span className='inline-flex min-w-0 items-center gap-6px text-12px text-t-tertiary'>
-          <SortTwo theme='outline' size={14} fill='currentColor' className='block shrink-0 leading-none text-t-quaternary' style={{ lineHeight: 0 }} />
+          <SortTwo
+            theme='outline'
+            size={14}
+            fill='currentColor'
+            className='block shrink-0 leading-none text-t-quaternary'
+            style={{ lineHeight: 0 }}
+          />
           <span className='truncate'>
             {t('settings.myAssistantsHintShort', {
               defaultValue: 'Your own assistants — used wherever you pick one. Drag to reorder.',
@@ -159,7 +173,11 @@ const MyAssistantsList: React.FC<MyAssistantsListProps> = ({
           </span>
         </span>
         <Dropdown droplist={filterMenu} trigger='click' position='br'>
-          <Button size='mini' data-testid='assistant-enabled-filter' className='!flex !items-center !gap-4px !rounded-8px'>
+          <Button
+            size='mini'
+            data-testid='assistant-enabled-filter'
+            className='!flex !items-center !gap-4px !rounded-8px'
+          >
             <span>
               {t(`settings.assistantFilter.${filter}`, {
                 defaultValue: filter === 'all' ? 'All' : filter === 'enabled' ? 'Enabled' : 'Disabled',
@@ -170,7 +188,12 @@ const MyAssistantsList: React.FC<MyAssistantsListProps> = ({
         </Dropdown>
       </div>
 
-      {renderGroup(t('settings.assistantGroupCli', { defaultValue: 'Your CLI' }), cliAssistants, 'group-cli', 'bg-warning-5')}
+      {renderGroup(
+        t('settings.assistantGroupCli', { defaultValue: 'Your CLI' }),
+        cliAssistants,
+        'group-cli',
+        'bg-warning-5'
+      )}
 
       {/* Created-by-me group: show its rows, or a guiding empty state when the
           user has no custom assistants yet. */}

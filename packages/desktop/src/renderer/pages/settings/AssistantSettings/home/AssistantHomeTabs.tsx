@@ -89,7 +89,9 @@ const AssistantHomeTabs: React.FC<AssistantHomeTabsProps> = ({
 
   return (
     <div data-testid='assistant-home-shell' className='flex h-full min-h-0 flex-col overflow-hidden bg-transparent'>
-      <div className={`border-b border-border-2 bg-bg-0 ${isMobile ? 'px-16px pt-14px' : 'px-12px pt-24px md:px-40px md:pt-32px'}`}>
+      <div
+        className={`border-b border-border-2 bg-bg-0 ${isMobile ? 'px-16px pt-14px' : 'px-12px pt-24px md:px-40px md:pt-32px'}`}
+      >
         <div className='mx-auto w-full max-w-800px'>
           <div className='flex w-full items-center justify-between gap-12px sm:gap-16px'>
             <h1
@@ -119,7 +121,8 @@ const AssistantHomeTabs: React.FC<AssistantHomeTabsProps> = ({
             )}
           >
             {t('settings.assistantHomeLeadShort', {
-              defaultValue: 'Ready-to-work AI experts, preloaded with skills. Enable one and it shows up wherever you pick an assistant.',
+              defaultValue:
+                'Ready-to-work AI experts, preloaded with skills. Enable one and it shows up wherever you pick an assistant.',
             })}
           </p>
           <div className='mt-18px flex gap-26px'>
