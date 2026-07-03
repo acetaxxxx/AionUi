@@ -4,7 +4,7 @@ import { useManagedAgentRuntimeCatalog } from '@/renderer/hooks/agent/useManaged
 import { useModelProviderList } from '@/renderer/hooks/agent/useModelProviderList';
 import { buildAgentRuntimeModeState, buildAgentRuntimeModelInfo } from '@/renderer/utils/model/agentRuntimeCatalog';
 import type { AgentModeOption } from '@/renderer/utils/model/agentTypes';
-import { Button, Select, Tag } from '@arco-design/web-react';
+import { Select, Tag } from '@arco-design/web-react';
 import { Info, Robot } from '@icon-park/react';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -292,18 +292,24 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
                     'This is a builtin assistant. You can change Main Agent, Default Model, and Default Permission. To customize other fields, ',
                 })}
               </span>
-              <Button
-                type='text'
-                size='mini'
-                className='!px-0 !text-primary-6 hover:!text-primary-5'
+              <span
+                role='button'
+                tabIndex={0}
+                className='cursor-pointer text-13px leading-20px text-t-secondary underline underline-offset-2 hover:text-t-primary'
                 onClick={(event) => {
                   event.preventDefault();
                   handleDuplicate(activeAssistant);
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleDuplicate(activeAssistant);
+                  }
+                }}
                 data-testid='link-duplicate-from-banner'
               >
                 {t('settings.assistantBuiltinReadonlyDuplicateLink', { defaultValue: 'duplicate it' })}
-              </Button>
+              </span>
               <span>{t('settings.assistantBuiltinReadonlyTipSuffix', { defaultValue: '.' })}</span>
             </div>
           </div>

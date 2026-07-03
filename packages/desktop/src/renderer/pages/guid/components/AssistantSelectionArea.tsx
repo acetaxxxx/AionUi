@@ -10,6 +10,7 @@ import { Down, Robot, Search } from '@icon-park/react';
 import { Button, Dropdown, Input } from '@arco-design/web-react';
 import React, { useMemo, useState } from 'react';
 import { resolveAssistantAvatar } from '@/renderer/utils/model/assistantAvatar';
+import { selectableAssistants } from '@/renderer/utils/model/assistantSelection';
 import { useTranslation } from 'react-i18next';
 
 type AssistantSelectionAreaProps = {
@@ -29,13 +30,7 @@ const AssistantSelectionArea: React.FC<AssistantSelectionAreaProps> = ({
   const [moreVisible, setMoreVisible] = useState(false);
   const [search, setSearch] = useState('');
   const selectedId = selectedAssistantId || undefined;
-  const enabledAssistants = useMemo(
-    () =>
-      [...assistants]
-        .filter((assistant) => assistant.enabled !== false)
-        .sort((left, right) => left.sort_order - right.sort_order),
-    [assistants]
-  );
+  const enabledAssistants = useMemo(() => selectableAssistants(assistants), [assistants]);
   const visibleAssistants = useMemo(() => {
     if (enabledAssistants.length <= 4 || !selectedId) {
       return enabledAssistants.slice(0, 4);

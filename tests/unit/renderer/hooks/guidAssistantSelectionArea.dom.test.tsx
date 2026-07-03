@@ -58,18 +58,21 @@ describe('AssistantSelectionArea', () => {
       />
     );
 
+    // Selection lists group by source: CLI (generated) → user → official
+    // (builtin). So the top row is [bare-aionrs, user-research, user-review,
+    // user-translate] and the official Writer + trailing user-finance overflow.
     expect(screen.getByTestId('preset-pill-bare-aionrs')).toBeInTheDocument();
-    expect(screen.getByTestId('preset-pill-builtin-writer')).toBeInTheDocument();
     expect(screen.getByTestId('preset-pill-user-research')).toBeInTheDocument();
     expect(screen.getByTestId('preset-pill-user-review')).toBeInTheDocument();
-    expect(screen.queryByTestId('preset-pill-user-translate')).not.toBeInTheDocument();
+    expect(screen.getByTestId('preset-pill-user-translate')).toBeInTheDocument();
+    expect(screen.queryByTestId('preset-pill-builtin-writer')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('assistant-more-btn'));
 
-    expect(await screen.findByTestId('assistant-overflow-user-translate')).toBeInTheDocument();
-    expect(screen.getByTestId('assistant-overflow-user-finance')).toBeInTheDocument();
+    expect(await screen.findByTestId('assistant-overflow-user-finance')).toBeInTheDocument();
+    expect(screen.getByTestId('assistant-overflow-builtin-writer')).toBeInTheDocument();
     expect(screen.queryByTestId('assistant-overflow-bare-aionrs')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('assistant-overflow-builtin-writer')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-overflow-user-research')).not.toBeInTheDocument();
   });
 
   it('reports the real assistant id when a pill is selected', () => {
@@ -89,7 +92,7 @@ describe('AssistantSelectionArea', () => {
     expect(onSelectAssistant).toHaveBeenCalledWith('builtin-writer');
   });
 
-  it('orders assistant pills by sort_order before applying overflow', () => {
+  it('orders assistant pills by group then sort_order before applying overflow', () => {
     render(
       <AssistantSelectionArea
         selectedAssistantId='bare-aionrs'
@@ -104,12 +107,14 @@ describe('AssistantSelectionArea', () => {
       />
     );
 
+    // CLI (generated) first, then user-created by sort_order (Early 5, Mid 15,
+    // Late 90); the official Writer sinks to the bottom group and overflows.
     expect(
       screen
         .getAllByRole('button')
         .slice(0, 4)
         .map((node) => node.textContent?.trim())
-    ).toEqual(['Early', 'Aion CLI', 'Mid', 'Writer']);
+    ).toEqual(['Aion CLI', 'Early', 'Mid', 'Late']);
   });
 
   it('keeps a selected overflow assistant visible in the top pill row', () => {
@@ -122,8 +127,10 @@ describe('AssistantSelectionArea', () => {
       />
     );
 
+    // The selected overflow assistant (finance) is pulled into the top row;
+    // translate (the last of the visible-4 before pull-in) drops to overflow.
     expect(screen.getByTestId('preset-pill-user-finance')).toBeInTheDocument();
-    expect(screen.queryByTestId('preset-pill-user-review')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('preset-pill-user-translate')).not.toBeInTheDocument();
   });
 
   it('can re-render from an empty assistant catalog without breaking hook order', () => {
