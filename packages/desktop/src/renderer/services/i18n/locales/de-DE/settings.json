@@ -2,7 +2,7 @@
   "title": "Einstellungen",
   "skillsHub": {
     "title": "Skills-Hub",
-    "description": "KI-Agenten-Skills zentral verwalten. Einmal installieren, bei allen Assistenten nutzen.",
+    "description": "AI-Skill-Pakete zentral verwalten – einmal installieren, in allen Assistenten nutzen. Importiere einen Skill-Ordner, übergeordneten Ordner oder eine Zip-Datei; max. {{maxFileSize}} pro Datei und {{maxTotalSize}} pro Skill; ein gleichnamiger Import überschreibt den vorhandenen Skill.",
     "mySkillsTitle": "Meine Skills",
     "noSkills": "Keine Skills gefunden. Importiere welche, um loszulegen.",
     "custom": "Benutzerdefiniert",
@@ -79,7 +79,11 @@
     "importHistorySizeLine": "Size: {{actual}}, limit: {{limit}}",
     "importHistoryLocationLine": "Location: line {{line}}, column {{column}}",
     "importHistorySourceLine": "Source: {{source}}",
-    "addSkill": "Skill hinzufügen"
+    "addSkill": "Skill hinzufügen",
+    "tabCustom": "Benutzerdefiniert",
+    "tabOfficial": "Offiziell",
+    "officialSkillsTitle": "Offizielle Skills",
+    "officialSkillsEmpty": "Keine offiziellen Skills verfügbar."
   },
   "authMethod": "Authentifizierung",
   "geminiApiKey": "Gemini-API-Schlüssel",
@@ -249,7 +253,7 @@
   "cssTheme": {
     "selectOrCustomize": "Voreingestelltes Theme auswählen oder benutzerdefiniertes CSS",
     "followSystem": "Systemeinstellung folgen",
-    "addManually": "Manuell hinzufügen",
+    "addManually": "Theme hinzufügen",
     "default": "Standard",
     "addToPreset": "Theme hinzufügen",
     "editTheme": "Theme bearbeiten",
@@ -378,7 +382,10 @@
   "lightMode": "Hell",
   "darkMode": "Dunkel",
   "agent": "Agent",
+  "skills": "Skills",
   "tools": "Tools",
+  "toolsDescription": "MCP-Server und integrierte Tools wie die Bildgenerierung konfigurieren. Die Bildgenerierung kann erst aktiviert werden, nachdem auf der Modellseite ein bildfähiges Modell konfiguriert wurde.",
+  "modelDescription": "LLM-Anbieter und API-Schlüssel für alle Assistenten konfigurieren. Nur Aion CLI unterstützt eigene Modelle; andere Agenten nutzen ihre integrierten Modelle.",
   "capabilities": "Fähigkeiten",
   "capabilitiesTab": {
     "skills": "Skills",
@@ -596,7 +603,7 @@
   "mcpSettings": "MCP-Tools-Konfiguration",
   "mcpServerList": "MCP-Server",
   "mcpStatus": "Status",
-  "mcpAddServer": "Manuell hinzufügen",
+  "mcpAddServer": "MCP hinzufügen",
   "mcpEditServer": "Bearbeiten",
   "mcpDeleteServer": "Löschen",
   "mcpDeleteConfirm": "Bist du sicher, dass du diesen MCP-Server löschen möchtest?",
@@ -1047,7 +1054,7 @@
   "agentManagement": {
     "localAgents": "Lokale Agenten",
     "remoteAgents": "Remote-Agenten",
-    "localAgentsDescription": "Gemini CLI ist eingebaut. Andere Agenten werden nach der lokalen Installation automatisch erkannt.",
+    "localAgentsDescription": "Verwalte die auf diesem Gerät verfügbaren KI-Coding-Agenten. Aion CLI ist integriert und wird mit der App geliefert – keine Installation nötig; andere Agenten werden erst nach lokaler CLI-Installation erkannt.",
     "localAgentsSetupLink": "Einrichtungsanleitung",
     "goToChat": "Chat starten",
     "remoteAgentsDescription": "Derzeit werden nur Remote-OpenClaw-Verbindungen unterstützt. Andere Agenten sind in Entwicklung.",

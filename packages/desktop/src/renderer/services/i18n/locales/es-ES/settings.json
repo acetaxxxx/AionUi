@@ -2,7 +2,7 @@
   "title": "Configuración",
   "skillsHub": {
     "title": "Centro de habilidades",
-    "description": "Administra centralmente las habilidades de los agentes de IA. Instala una vez, usa en todos los asistentes.",
+    "description": "Gestiona de forma centralizada los paquetes de habilidades de IA: instala una vez y úsalos en todos los asistentes. Importa una carpeta de habilidad, carpeta superior o zip; hasta {{maxFileSize}} por archivo y {{maxTotalSize}} por habilidad; importar el mismo nombre sobrescribe la habilidad existente.",
     "mySkillsTitle": "Mis habilidades",
     "noSkills": "No se encontraron habilidades. Importa algunas para comenzar.",
     "custom": "Personalizado",
@@ -79,7 +79,11 @@
     "importHistorySizeLine": "Size: {{actual}}, limit: {{limit}}",
     "importHistoryLocationLine": "Location: line {{line}}, column {{column}}",
     "importHistorySourceLine": "Source: {{source}}",
-    "addSkill": "Add Skill"
+    "addSkill": "Add Skill",
+    "tabCustom": "Personalizadas",
+    "tabOfficial": "Oficiales",
+    "officialSkillsTitle": "Habilidades oficiales",
+    "officialSkillsEmpty": "No hay habilidades oficiales disponibles."
   },
   "authMethod": "Autenticación",
   "geminiApiKey": "Clave API de Gemini",
@@ -222,7 +226,7 @@
   "cssTheme": {
     "selectOrCustomize": "Seleccionar o personalizar un tema",
     "followSystem": "Seguir al sistema",
-    "addManually": "Agregar manualmente",
+    "addManually": "Agregar tema",
     "default": "Predeterminado",
     "addToPreset": "Agregar tema",
     "editTheme": "Editar tema",
@@ -351,7 +355,10 @@
   "lightMode": "Claro",
   "darkMode": "Oscuro",
   "agent": "Agente",
+  "skills": "Habilidades",
   "tools": "Herramientas",
+  "toolsDescription": "Configura servidores MCP y herramientas integradas como la generación de imágenes. La generación de imágenes solo se puede activar tras configurar un modelo compatible con imágenes en la página de Modelos.",
+  "modelDescription": "Configura proveedores de LLM y claves de API para usar en todos los asistentes. Solo Aion CLI admite modelos personalizados; los demás agentes usan sus modelos integrados.",
   "capabilities": "Capacidades",
   "capabilitiesTab": {
     "skills": "Habilidades",
@@ -569,7 +576,7 @@
   "mcpSettings": "Configuración de herramientas MCP",
   "mcpServerList": "Servidores MCP",
   "mcpStatus": "Estado",
-  "mcpAddServer": "Agregar manualmente",
+  "mcpAddServer": "Agregar MCP",
   "mcpEditServer": "Editar",
   "mcpDeleteServer": "Eliminar",
   "mcpDeleteConfirm": "¿Estás seguro de que deseas eliminar este servidor MCP?",
@@ -1020,7 +1027,7 @@
   "agentManagement": {
     "localAgents": "Agentes locales",
     "remoteAgents": "Agentes remotos",
-    "localAgentsDescription": "Aion CLI es el agente integrado y viene con la aplicación — no se necesita instalación. Otros agentes se detectan solo después de instalar su CLI localmente.",
+    "localAgentsDescription": "Gestiona los agentes de programación con IA disponibles en este dispositivo. Aion CLI está integrado y viene con la app, sin instalación; los demás agentes solo se detectan tras instalar su CLI localmente.",
     "localAgentsSetupLink": "Guía de configuración",
     "goToChat": "Iniciar chat",
     "remoteAgentsDescription": "Solo se admiten conexiones remotas de OpenClaw por ahora. Otros agentes están en desarrollo.",

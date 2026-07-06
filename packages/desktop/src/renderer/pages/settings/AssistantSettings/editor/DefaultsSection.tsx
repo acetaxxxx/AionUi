@@ -191,7 +191,7 @@ const DefaultsSection: React.FC<DefaultsSectionProps> = ({
               <Button
                 type='text'
                 size='mini'
-                onClick={() => navigate('/settings/capabilities?tab=skills')}
+                onClick={() => navigate('/settings/skills')}
                 data-testid='btn-open-skills-settings'
                 className='!h-auto !px-0 !text-primary-6'
               >
@@ -300,7 +300,7 @@ const DefaultsSection: React.FC<DefaultsSectionProps> = ({
             <Button
               type='text'
               size='mini'
-              onClick={() => navigate('/settings/capabilities?tab=tools')}
+              onClick={() => navigate('/settings/tools')}
               data-testid='btn-open-mcp-settings'
               className='!h-auto !px-0 !text-primary-6'
             >

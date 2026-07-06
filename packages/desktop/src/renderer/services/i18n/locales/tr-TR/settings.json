@@ -2,7 +2,7 @@
   "title": "Ayarlar",
   "skillsHub": {
     "title": "Beceri Merkezi",
-    "description": "AI ajanı becerilerini merkezi olarak yönetin. Bir kez yükleyin, tüm asistanlarda kullanın.",
+    "description": "Yapay zekâ beceri paketlerini merkezî olarak yönetin — bir kez kurun, tüm asistanlarda kullanın. Bir beceri klasörü, üst klasör veya zip içe aktarın; dosya başına en fazla {{maxFileSize}} ve beceri başına {{maxTotalSize}}; aynı adla içe aktarma mevcut beceriyi değiştirir.",
     "mySkillsTitle": "Becerilerim",
     "noSkills": "Beceri bulunamadı. Başlamak için bazılarını içe aktarın.",
     "custom": "Özel",
@@ -79,7 +79,11 @@
     "importHistorySizeLine": "Size: {{actual}}, limit: {{limit}}",
     "importHistoryLocationLine": "Location: line {{line}}, column {{column}}",
     "importHistorySourceLine": "Source: {{source}}",
-    "addSkill": "Beceri ekle"
+    "addSkill": "Beceri ekle",
+    "tabCustom": "Özel",
+    "tabOfficial": "Resmi",
+    "officialSkillsTitle": "Resmi beceriler",
+    "officialSkillsEmpty": "Kullanılabilir resmi beceri yok."
   },
   "authMethod": "Kimlik Doğrulama",
   "geminiApiKey": "Gemini API Anahtarı",
@@ -249,7 +253,7 @@
   "cssTheme": {
     "selectOrCustomize": "Bir tema seçin veya özelleştirin",
     "followSystem": "Sistemi Takip Et",
-    "addManually": "Manuel Ekle",
+    "addManually": "Tema Ekle",
     "default": "Varsayılan",
     "addToPreset": "Tema Ekle",
     "editTheme": "Temayı Düzenle",
@@ -386,7 +390,10 @@
   "lightMode": "Açık",
   "darkMode": "Koyu",
   "agent": "Ajan",
+  "skills": "Beceriler",
   "tools": "Araçlar",
+  "toolsDescription": "MCP sunucularını ve görüntü oluşturma gibi yerleşik araçları yapılandırın. Görüntü oluşturma yalnızca Model sayfasında görüntü destekli bir model yapılandırıldıktan sonra etkinleştirilebilir.",
+  "modelDescription": "Tüm asistanlarda kullanmak için LLM sağlayıcılarını ve API anahtarlarını yapılandırın. Özel modelleri yalnızca Aion CLI destekler; diğer aracılar kendi yerleşik modellerini kullanır.",
   "capabilities": "Yetenekler",
   "capabilitiesTab": {
     "skills": "Beceriler",
@@ -604,7 +611,7 @@
   "mcpSettings": "MCP Araçları Yapılandırması",
   "mcpServerList": "MCP Sunucuları",
   "mcpStatus": "Durum",
-  "mcpAddServer": "Manuel Ekle",
+  "mcpAddServer": "MCP Ekle",
   "mcpEditServer": "Düzenle",
   "mcpDeleteServer": "Sil",
   "mcpDeleteConfirm": "Bu MCP sunucusunu silmek istediğinizden emin misiniz?",
@@ -1043,7 +1050,7 @@
   "agentManagement": {
     "localAgents": "Yerel Ajanlar",
     "remoteAgents": "Uzak Ajanlar",
-    "localAgentsDescription": "Aion CLI yerleşik ajandır ve uygulamayla birlikte gelir, kurulum gerektirmez. Diğer ajanlar yalnızca ilgili CLI yerel olarak kurulduktan sonra algılanır.",
+    "localAgentsDescription": "Bu cihazda kullanılabilen yapay zekâ kodlama aracılarını yönetin. Aion CLI yerleşiktir ve uygulamayla birlikte gelir — kuruluma gerek yoktur; diğer aracılar yalnızca CLI’leri yerel olarak kurulduktan sonra algılanır.",
     "localAgentsSetupLink": "Kurulum kılavuzu",
     "goToChat": "Sohbete Başla",
     "remoteAgentsDescription": "Şimdilik yalnızca OpenClaw uzak bağlantısı desteklenmektedir. Diğer ajanlar geliştirilmektedir.",

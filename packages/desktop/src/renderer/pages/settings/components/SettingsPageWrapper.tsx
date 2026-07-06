@@ -19,6 +19,7 @@ import {
   Puzzle,
   Robot,
   System,
+  Toolkit,
 } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -51,11 +52,17 @@ export function getBuiltinSettingsNavItems(isDesktop: boolean, t: TranslateFn): 
       icon: <Robot theme='outline' size='16' />,
       path: 'agent',
     },
-    capabilities: {
-      id: 'capabilities',
-      label: t('settings.capabilities', { defaultValue: 'Capabilities' }),
+    skills: {
+      id: 'skills',
+      label: t('settings.skills', { defaultValue: 'Skills' }),
       icon: <Lightning theme='outline' size='16' />,
-      path: 'capabilities',
+      path: 'skills',
+    },
+    tools: {
+      id: 'tools',
+      label: t('settings.tools', { defaultValue: 'Tools' }),
+      icon: <Toolkit theme='outline' size='16' />,
+      path: 'tools',
     },
     appearance: {
       id: 'appearance',

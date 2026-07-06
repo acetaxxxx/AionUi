@@ -400,9 +400,9 @@ describe('LocalAgents', () => {
     render(<LocalAgents />);
 
     // Filter tabs render as buttons (underline-tab style), not an Arco radio group.
-    const allTab = screen.getByTestId('agent-filter-all');
-    const availableTab = screen.getByTestId('agent-filter-available');
-    const unavailableTab = screen.getByTestId('agent-filter-unavailable');
+    const allTab = screen.getByTestId('settings-tab-all');
+    const availableTab = screen.getByTestId('settings-tab-available');
+    const unavailableTab = screen.getByTestId('settings-tab-unavailable');
     expect(allTab.tagName).toBe('BUTTON');
 
     // Default "all": both official agents visible (Aion CLI online, Claude Code missing).
