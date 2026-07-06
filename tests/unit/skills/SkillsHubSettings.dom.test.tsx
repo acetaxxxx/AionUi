@@ -310,9 +310,10 @@ describe('SkillsHubSettings', () => {
 
     render(<SkillsHubSettings withWrapper={false} />);
 
-    await waitFor(() => expect(screen.getByTestId('my-skill-card-sample-single')).toBeInTheDocument());
-    // "Custom" now appears both as the active tab label and the card badge.
-    expect(screen.getAllByText('Custom').length).toBeGreaterThanOrEqual(1);
+    const card = await screen.findByTestId('my-skill-card-sample-single');
+    // Per-card source badges were removed (the tab/section already conveys origin);
+    // the card shows only the name + description, no "Custom" / "Available" tag.
+    expect(card.textContent).not.toContain('Custom');
     expect(screen.queryByText('Available')).not.toBeInTheDocument();
   });
 

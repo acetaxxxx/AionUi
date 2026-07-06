@@ -2,7 +2,7 @@
   "title": "Налаштування",
   "skillsHub": {
     "title": "Центр навичок",
-    "description": "Централізовано керуйте пакетами навичок ШІ — установіть один раз і використовуйте в усіх асистентах. Імпортуйте теку навички, батьківську теку або zip; до {{maxFileSize}} на файл і {{maxTotalSize}} на навичку; імпорт з тією самою назвою перезаписує наявну навичку.",
+    "description": "Централізовано керуйте пакетами навичок ШІ — установіть один раз і використовуйте в усіх асистентах.",
     "mySkillsTitle": "Мої навички",
     "noSkills": "Навичок не знайдено. Імпортуйте щось, щоб почати.",
     "custom": "Власні",
@@ -80,10 +80,12 @@
     "importHistoryLocationLine": "Location: line {{line}}, column {{column}}",
     "importHistorySourceLine": "Source: {{source}}",
     "addSkill": "Додати навичку",
-    "tabCustom": "Власні",
-    "tabOfficial": "Офіційні",
+    "tabCustom": "Мої навички",
+    "tabOfficial": "Офіційні навички",
     "officialSkillsTitle": "Офіційні навички",
-    "officialSkillsEmpty": "Немає доступних офіційних навичок."
+    "officialSkillsEmpty": "Немає доступних офіційних навичок.",
+    "customHint": "Імпортуйте теку навички, батьківську теку або zip; до {{maxFileSize}} на файл і {{maxTotalSize}} на навичку; імпорт з тією самою назвою перезаписує наявну навичку.",
+    "officialHint": "Офіційні навички, що постачаються з AionUi, — готові до використання, лише для читання та оновлюються з кожним випуском."
   },
   "authMethod": "Автентифікація",
   "geminiApiKey": "API-ключ Gemini",
@@ -1240,5 +1242,6 @@
   },
   "providerIdConflict": "Provider ID вже існує. Спробуйте ще раз.",
   "channels.wecomTitle": "WeCom",
-  "channels.wecomDesc": "Chat with AionUi assistant via WeCom (Enterprise WeChat AI Bot)"
+  "channels.wecomDesc": "Chat with AionUi assistant via WeCom (Enterprise WeChat AI Bot)",
+  "autoInjectedSkillsHint": "Автоматично завантажуються в кожну розмову — вмикати не потрібно; агент сам вирішує, коли їх використовувати."
 }

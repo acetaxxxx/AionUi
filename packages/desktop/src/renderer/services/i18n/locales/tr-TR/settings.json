@@ -2,7 +2,7 @@
   "title": "Ayarlar",
   "skillsHub": {
     "title": "Beceri Merkezi",
-    "description": "Yapay zekâ beceri paketlerini merkezî olarak yönetin — bir kez kurun, tüm asistanlarda kullanın. Bir beceri klasörü, üst klasör veya zip içe aktarın; dosya başına en fazla {{maxFileSize}} ve beceri başına {{maxTotalSize}}; aynı adla içe aktarma mevcut beceriyi değiştirir.",
+    "description": "Yapay zekâ beceri paketlerini merkezî olarak yönetin — bir kez kurun, tüm asistanlarda kullanın.",
     "mySkillsTitle": "Becerilerim",
     "noSkills": "Beceri bulunamadı. Başlamak için bazılarını içe aktarın.",
     "custom": "Özel",
@@ -80,10 +80,12 @@
     "importHistoryLocationLine": "Location: line {{line}}, column {{column}}",
     "importHistorySourceLine": "Source: {{source}}",
     "addSkill": "Beceri ekle",
-    "tabCustom": "Özel",
-    "tabOfficial": "Resmi",
+    "tabCustom": "Becerilerim",
+    "tabOfficial": "Resmi beceriler",
     "officialSkillsTitle": "Resmi beceriler",
-    "officialSkillsEmpty": "Kullanılabilir resmi beceri yok."
+    "officialSkillsEmpty": "Kullanılabilir resmi beceri yok.",
+    "customHint": "Bir beceri klasörü, üst klasör veya zip içe aktarın; dosya başına en fazla {{maxFileSize}} ve beceri başına {{maxTotalSize}}; aynı adla içe aktarma mevcut beceriyi değiştirir.",
+    "officialHint": "AionUi ile birlikte gelen resmi beceriler — kullanıma hazır, salt okunur ve her sürümde güncellenir."
   },
   "authMethod": "Kimlik Doğrulama",
   "geminiApiKey": "Gemini API Anahtarı",
@@ -1239,5 +1241,6 @@
       "diagnose": "AionUi kullanırken bir sorunla karşılaştım, teşhis etmeme yardım et.\n\n[Modül] {{module}}\n[Açıklama] {{description}}\n[Ekler] giriş alanındaki ekran görüntülerine bakın.\n\nLütfen nedenini teşhis et ve nasıl düzelteceğimi söyle."
     }
   },
-  "providerIdConflict": "Provider ID zaten var. Lütfen tekrar deneyin."
+  "providerIdConflict": "Provider ID zaten var. Lütfen tekrar deneyin.",
+  "autoInjectedSkillsHint": "Her sohbete otomatik olarak yüklenir — etkinleştirmeye gerek yoktur; aracı bunları ne zaman kullanacağına karar verir."
 }

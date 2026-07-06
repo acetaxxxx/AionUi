@@ -1,6 +1,6 @@
 import { ipcBridge } from '@/common';
-import { Button, Message, Modal } from '@arco-design/web-react';
-import { Delete, Lightning, Puzzle, Search } from '@icon-park/react';
+import { Button, Message, Modal, Tooltip } from '@arco-design/web-react';
+import { Delete, Help, Lightning, Puzzle, Search } from '@icon-park/react';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -547,11 +547,6 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
     const isAuto = variant === 'auto';
     const isExtension = variant === 'extension';
     const accent = isAuto ? 'success' : 'primary';
-    const badgeLabel = isExtension
-      ? t('settings.extensionSkillsBadge', { defaultValue: 'Extension' })
-      : isAuto
-        ? t('settings.autoInjectedSkillsBadge')
-        : t('settings.skillsHub.builtin', { defaultValue: 'Built-in' });
     return (
       <div
         key={skill.name}
@@ -581,20 +576,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
           )}
         </div>
         <div className='flex-1 min-w-0 flex flex-col justify-center gap-4px'>
-          <div className='flex items-center gap-10px'>
-            <h3 className='text-14px font-semibold text-t-primary/90 truncate m-0'>{skill.name}</h3>
-            <span
-              className={
-                isAuto
-                  ? 'bg-[rgba(var(--success-6),0.08)] text-[rgb(var(--success-6))] border border-[rgba(var(--success-6),0.2)] text-10px px-6px py-1px rd-4px font-medium uppercase'
-                  : isExtension
-                    ? 'bg-[rgba(var(--primary-6),0.08)] text-primary-6 border border-[rgba(var(--primary-6),0.2)] text-10px px-6px py-1px rd-4px font-medium uppercase'
-                    : 'bg-[rgba(var(--blue-6),0.08)] text-blue-6 border border-[rgba(var(--blue-6),0.2)] text-11px px-6px py-1px rd-4px font-medium'
-              }
-            >
-              {badgeLabel}
-            </span>
-          </div>
+          <h3 className='text-14px font-semibold text-t-primary/90 truncate m-0'>{skill.name}</h3>
           {skill.description && (
             <p className='text-13px text-t-secondary leading-relaxed line-clamp-2 m-0' title={skill.description}>
               {skill.description}
@@ -629,12 +611,18 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
     count: number,
     countClass: string,
     skills: SkillInfo[],
-    variant: 'extension' | 'auto'
+    variant: 'extension' | 'auto',
+    hint?: React.ReactNode
   ) => (
     <div data-testid={testId}>
       <div className='flex items-center gap-10px mb-12px'>
         {icon}
         <span className='text-14px font-bold text-t-primary'>{title}</span>
+        {hint ? (
+          <Tooltip content={hint}>
+            <Help theme='outline' size={14} className='text-t-tertiary hover:text-t-secondary cursor-help shrink-0' />
+          </Tooltip>
+        ) : null}
         <span className={`text-12px px-10px py-2px rd-[100px] font-medium ${countClass}`}>{count}</span>
       </div>
       <div className='flex flex-col gap-8px rounded-12px border border-border-2 bg-2 p-8px md:rounded-16px md:p-10px'>
@@ -646,6 +634,18 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
   // ======== Custom tab ========
   const customPane = (
     <div data-testid='my-skills-section' className='flex flex-col gap-12px'>
+      <p className='m-0 text-12px leading-relaxed text-t-tertiary'>
+        {t('settings.skillsHub.customHint', {
+          maxFileSize:
+            formatBytes(importLimits?.max_file_bytes) ??
+            t('settings.skillsHub.importHelpConfiguredLimit', { defaultValue: 'configured limit' }),
+          maxTotalSize:
+            formatBytes(importLimits?.max_total_bytes) ??
+            t('settings.skillsHub.importHelpConfiguredLimit', { defaultValue: 'configured limit' }),
+          defaultValue:
+            'Import a skill folder, parent folder, or zip; up to {{maxFileSize}} per file and {{maxTotalSize}} per skill; importing the same name overwrites the existing skill.',
+        })}
+      </p>
       {mySkills.length > 0 ? (
         <div className='flex flex-col gap-8px rounded-12px border border-border-2 bg-2 p-8px md:rounded-16px md:p-10px'>
           {filteredSkills.map((skill) => (
@@ -666,12 +666,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
               </div>
 
               <div className='flex-1 min-w-0 flex flex-col justify-center gap-4px'>
-                <div className='flex items-center gap-10px flex-wrap'>
-                  <h3 className='text-14px font-semibold text-t-primary/90 truncate m-0'>{skill.name}</h3>
-                  <span className='bg-[rgba(var(--orange-6),0.08)] text-orange-6 border border-[rgba(var(--orange-6),0.2)] text-11px px-6px py-1px rd-4px font-medium'>
-                    {t('settings.skillsHub.custom', { defaultValue: 'Custom' })}
-                  </span>
-                </div>
+                <h3 className='text-14px font-semibold text-t-primary/90 truncate m-0'>{skill.name}</h3>
                 {skill.description && (
                   <p className='text-13px text-t-secondary leading-relaxed line-clamp-2 m-0' title={skill.description}>
                     {skill.description}
@@ -720,6 +715,11 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
   const officialPane = (
     <div className='flex flex-col gap-24px'>
       <div data-testid='official-skills-section'>
+        <p className='m-0 mb-12px text-12px leading-relaxed text-t-tertiary'>
+          {t('settings.skillsHub.officialHint', {
+            defaultValue: 'Built-in skills maintained by AionUi — read-only and updated with each release.',
+          })}
+        </p>
         {officialSkills.length > 0 ? (
           <div className='flex flex-col gap-8px rounded-12px border border-border-2 bg-2 p-8px md:rounded-16px md:p-10px'>
             {filteredOfficialSkills.map((skill) =>
@@ -754,7 +754,11 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
           builtinAutoSkills.length,
           'bg-[rgba(var(--success-6),0.08)] text-[rgb(var(--success-6))]',
           filteredAutoSkills,
-          'auto'
+          'auto',
+          t('settings.autoInjectedSkillsHint', {
+            defaultValue:
+              'Loaded automatically into every conversation — no need to enable them; the agent decides when to use them.',
+          })
         )}
     </div>
   );
@@ -767,14 +771,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
         data-testid='skills-header'
         title={t('settings.skills', { defaultValue: 'Skills' })}
         description={t('settings.skillsHub.description', {
-          maxFileSize:
-            formatBytes(importLimits?.max_file_bytes) ??
-            t('settings.skillsHub.importHelpConfiguredLimit', { defaultValue: 'configured limit' }),
-          maxTotalSize:
-            formatBytes(importLimits?.max_total_bytes) ??
-            t('settings.skillsHub.importHelpConfiguredLimit', { defaultValue: 'configured limit' }),
-          defaultValue:
-            'Centrally manage AI skill packs — install once, use across all assistants. Import a skill folder, parent folder, or zip; up to {{maxFileSize}} per file and {{maxTotalSize}} per skill; importing the same name overwrites the existing skill.',
+          defaultValue: 'Centrally manage AI skill packs — install once, use across all assistants.',
         })}
         actions={
           <>

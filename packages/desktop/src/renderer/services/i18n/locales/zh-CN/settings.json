@@ -2,7 +2,7 @@
   "title": "设置",
   "skillsHub": {
     "title": "技能中心",
-    "description": "集中管理 AI 技能包，一次安装、全助手通用。支持技能目录、父目录或 zip 导入，单文件上限 {{maxFileSize}}、单技能上限 {{maxTotalSize}}，同名导入会覆盖现有技能。",
+    "description": "集中管理 AI 技能包，一次安装、全助手通用。",
     "mySkillsTitle": "我的技能",
     "noSkills": "未发现技能。请导入技能以开始使用。",
     "custom": "自定义",
@@ -80,10 +80,12 @@
     "importHistoryLocationLine": "位置：第 {{line}} 行，第 {{column}} 列",
     "importHistorySourceLine": "来源：{{source}}",
     "addSkill": "添加技能",
-    "tabCustom": "自定义",
-    "tabOfficial": "官方",
+    "tabCustom": "我的技能",
+    "tabOfficial": "官方技能",
     "officialSkillsTitle": "官方技能",
-    "officialSkillsEmpty": "暂无官方技能。"
+    "officialSkillsEmpty": "暂无官方技能。",
+    "customHint": "支持技能目录、父目录或 zip 导入；单文件上限 {{maxFileSize}}、单技能上限 {{maxTotalSize}}；同名导入会覆盖现有技能。",
+    "officialHint": "AionUi 官方内置的技能，开箱即用、只读，随版本更新维护。"
   },
   "authMethod": "认证",
   "geminiApiKey": "Gemini API 密钥",
@@ -1240,5 +1242,6 @@
       "diagnose": "我在使用 AionUi 时遇到问题，帮我排查一下。\n\n【模块】{{module}}\n【问题描述】{{description}}\n【附件】见输入框中的截图。\n\n请帮我诊断原因并给出解决办法。"
     }
   },
-  "providerIdConflict": "Provider ID 已存在，请重试。"
+  "providerIdConflict": "Provider ID 已存在，请重试。",
+  "autoInjectedSkillsHint": "每次对话都会自动加载，无需手动启用；由智能体自行决定何时调用。"
 }

@@ -2,7 +2,7 @@
   "title": "Settings",
   "skillsHub": {
     "title": "Skills Hub",
-    "description": "Centrally manage AI skill packs — install once, use across all assistants. Import a skill folder, parent folder, or zip; up to {{maxFileSize}} per file and {{maxTotalSize}} per skill; importing the same name overwrites the existing skill.",
+    "description": "Centrally manage AI skill packs — install once, use across all assistants.",
     "mySkillsTitle": "My Skills",
     "noSkills": "No skills found. Import some to get started.",
     "custom": "Custom",
@@ -80,10 +80,12 @@
     "importHistoryLocationLine": "Location: line {{line}}, column {{column}}",
     "importHistorySourceLine": "Source: {{source}}",
     "addSkill": "Add Skill",
-    "tabCustom": "Custom",
-    "tabOfficial": "Official",
+    "tabCustom": "My Skills",
+    "tabOfficial": "Official Skills",
     "officialSkillsTitle": "Official Skills",
-    "officialSkillsEmpty": "No official skills available."
+    "officialSkillsEmpty": "No official skills available.",
+    "customHint": "Import a skill folder, parent folder, or zip; up to {{maxFileSize}} per file and {{maxTotalSize}} per skill; importing the same name overwrites the existing skill.",
+    "officialHint": "Official skills bundled with AionUi — ready to use out of the box, read-only, and updated with each release."
   },
   "authMethod": "Authentication",
   "geminiApiKey": "Gemini API Key",
@@ -1239,5 +1241,6 @@
       "diagnose": "I ran into a problem with AionUi, please help me diagnose it.\n\n[Module] {{module}}\n[Description] {{description}}\n[Attachments] see the screenshots in the input.\n\nPlease diagnose the cause and tell me how to fix it."
     }
   },
-  "providerIdConflict": "Provider ID already exists. Please try again."
+  "providerIdConflict": "Provider ID already exists. Please try again.",
+  "autoInjectedSkillsHint": "Loaded automatically into every conversation — no need to enable them; the agent decides when to use them."
 }

@@ -2,7 +2,7 @@
   "title": "Configuración",
   "skillsHub": {
     "title": "Centro de habilidades",
-    "description": "Gestiona de forma centralizada los paquetes de habilidades de IA: instala una vez y úsalos en todos los asistentes. Importa una carpeta de habilidad, carpeta superior o zip; hasta {{maxFileSize}} por archivo y {{maxTotalSize}} por habilidad; importar el mismo nombre sobrescribe la habilidad existente.",
+    "description": "Gestiona de forma centralizada los paquetes de habilidades de IA: instala una vez y úsalos en todos los asistentes.",
     "mySkillsTitle": "Mis habilidades",
     "noSkills": "No se encontraron habilidades. Importa algunas para comenzar.",
     "custom": "Personalizado",
@@ -80,10 +80,12 @@
     "importHistoryLocationLine": "Location: line {{line}}, column {{column}}",
     "importHistorySourceLine": "Source: {{source}}",
     "addSkill": "Add Skill",
-    "tabCustom": "Personalizadas",
-    "tabOfficial": "Oficiales",
+    "tabCustom": "Mis habilidades",
+    "tabOfficial": "Habilidades oficiales",
     "officialSkillsTitle": "Habilidades oficiales",
-    "officialSkillsEmpty": "No hay habilidades oficiales disponibles."
+    "officialSkillsEmpty": "No hay habilidades oficiales disponibles.",
+    "customHint": "Importa una carpeta de habilidad, carpeta superior o zip; hasta {{maxFileSize}} por archivo y {{maxTotalSize}} por habilidad; importar el mismo nombre sobrescribe la habilidad existente.",
+    "officialHint": "Habilidades oficiales incluidas en AionUi: listas para usar, de solo lectura y actualizadas con cada versión."
   },
   "authMethod": "Autenticación",
   "geminiApiKey": "Clave API de Gemini",
@@ -1214,5 +1216,6 @@
       "diagnose": "I ran into a problem with AionUi, please help me diagnose it.\n\n[Module] {{module}}\n[Description] {{description}}\n[Attachments] see the screenshots in the input.\n\nPlease diagnose the cause and tell me how to fix it."
     }
   },
-  "providerIdConflict": "El ID del proveedor ya existe. Inténtalo de nuevo."
+  "providerIdConflict": "El ID del proveedor ya existe. Inténtalo de nuevo.",
+  "autoInjectedSkillsHint": "Se cargan automáticamente en cada conversación: no hace falta activarlas; el agente decide cuándo usarlas."
 }
