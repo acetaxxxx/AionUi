@@ -10,7 +10,7 @@ import { formatManagedAgentDiagnosticMessage, type ManagedAgent } from '@/render
 import AionModal from '@/renderer/components/base/AionModal';
 import { useManagedAgents } from '@/renderer/hooks/agent/useManagedAgents';
 import { openExternalUrl } from '@/renderer/utils/platform';
-import { Button, Message, Radio, Typography } from '@arco-design/web-react';
+import { Button, Message, Typography } from '@arco-design/web-react';
 import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -115,6 +115,28 @@ const LocalAgents: React.FC = () => {
   const officialFilterStats = getAgentAvailabilityFilterStats(sortedOfficialAgents);
   const visibleOfficialAgents = filterAgentsByAvailability(sortedOfficialAgents, agentFilter);
 
+  // Underline-style tab matching the assistant home tabs (label + count badge).
+  const filterTab = (key: AgentAvailabilityFilter, label: string, count: number) => (
+    <button
+      type='button'
+      data-testid={`agent-filter-${key}`}
+      onClick={() => setAgentFilter(key)}
+      className={`relative inline-flex cursor-pointer items-center border-none bg-transparent px-2px pb-12px text-14px leading-none transition-colors ${
+        agentFilter === key ? 'font-600 text-t-primary' : 'font-500 text-t-tertiary hover:text-t-secondary'
+      }`}
+    >
+      <span>{label}</span>
+      <span
+        className={`ml-6px inline-flex h-16px min-w-16px items-center justify-center rounded-999px px-5px text-10px font-500 leading-none ${
+          agentFilter === key ? 'bg-primary-1 text-primary-6' : 'bg-fill-2 text-t-quaternary'
+        }`}
+      >
+        {count}
+      </span>
+      {agentFilter === key ? <span className='absolute inset-x-0 -bottom-1px h-2px rounded-2px bg-primary-6' /> : null}
+    </button>
+  );
+
   const openCustomAgentEditor = useCallback(() => {
     setEditingAgent(null);
     setEditorVisible(true);
@@ -193,34 +215,20 @@ const LocalAgents: React.FC = () => {
       ) : null}
 
       {/* Detected Agents section — row list, mirroring the assistant list style */}
-      <div data-testid='agent-management-official-section' className='px-16px mt-8px'>
-        <Radio.Group
-          type='button'
-          size='small'
-          value={agentFilter}
-          onChange={(value) => setAgentFilter(value as AgentAvailabilityFilter)}
-          className='mb-8px'
-          data-testid='agent-availability-filter'
-        >
-          <Radio value='all'>
-            {t('settings.agentManagement.filterAll', {
-              defaultValue: 'All ({{count}})',
-              count: officialFilterStats.all,
-            })}
-          </Radio>
-          <Radio value='available'>
-            {t('settings.agentManagement.filterAvailable', {
-              defaultValue: 'Available ({{count}})',
-              count: officialFilterStats.available,
-            })}
-          </Radio>
-          <Radio value='unavailable'>
-            {t('settings.agentManagement.filterUnavailable', {
-              defaultValue: 'Unavailable ({{count}})',
-              count: officialFilterStats.unavailable,
-            })}
-          </Radio>
-        </Radio.Group>
+      <div data-testid='agent-management-official-section' className='px-16px'>
+        <div className='mt-4px mb-12px flex gap-26px' data-testid='agent-availability-filter'>
+          {filterTab('all', t('settings.agentManagement.filterAll', { defaultValue: 'All' }), officialFilterStats.all)}
+          {filterTab(
+            'available',
+            t('settings.agentManagement.filterAvailable', { defaultValue: 'Available' }),
+            officialFilterStats.available
+          )}
+          {filterTab(
+            'unavailable',
+            t('settings.agentManagement.filterUnavailable', { defaultValue: 'Unavailable' }),
+            officialFilterStats.unavailable
+          )}
+        </div>
         <div className='flex flex-col gap-8px rounded-12px border border-border-2 bg-2 p-8px md:rounded-16px md:p-10px'>
           {visibleOfficialAgents.map((agent) => (
             <AgentCard
