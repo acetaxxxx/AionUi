@@ -118,8 +118,7 @@ const AcpSendBox: React.FC<{
   teamSendMessage,
   teamRuntime,
 }) => {
-  const { aiProcessing, setAiProcessing, resetState, hasThinkingMessage, slashCommands, fetchSlashCommands } =
-    messageState;
+  const { aiProcessing, setAiProcessing, resetState, hasThinkingMessage, slashCommands } = messageState;
   const { t } = useTranslation();
   const teamPermission = useTeamPermission();
   // In team mode, all agents show the permission mode selector (members don't propagate)
@@ -141,13 +140,13 @@ const AcpSendBox: React.FC<{
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   const [currentMode, setCurrentMode] = useState<string | undefined>(session_mode);
   const prepareRuntimeConfig = useCallback(async () => {
-    if (teamPermission) {
-      await teamPermission.warmupSession();
-    }
+    if (teamPermission) return;
   }, [teamPermission]);
   const runtimeConfig = useAcpConfigOptions({
     conversation_id,
     prepareRuntime: prepareRuntimeConfig,
+    prepareSetRuntime: teamPermission?.warmupSession,
+    loadConfigOptions: teamPermission?.loadConfigOptions,
     enabled: true,
   });
   const runtimeMode = runtimeConfig.mode;
@@ -166,6 +165,8 @@ const AcpSendBox: React.FC<{
     conversation_id,
     backend,
     prepareRuntime: prepareRuntimeConfig,
+    prepareSetRuntime: teamPermission?.warmupSession,
+    loadConfigOptions: teamPermission?.loadConfigOptions,
     enabled: isMobile,
     onSelectModelSuccess: () => Message.success(t('agent.model.switchSuccess')),
     onSelectModelFailed: (_modelId, error) => Message.error(t(configErrorMessageKey(error))),
@@ -190,19 +191,6 @@ const AcpSendBox: React.FC<{
     },
     [isLeaderInTeam, runtimeConfig, runtimeMode, t, teamPermission]
   );
-
-  // In team mode, warmup the agent then fetch slash commands
-  useEffect(() => {
-    if (!teamPermission) return;
-    void teamPermission
-      .warmupSession()
-      .then(() => {
-        fetchSlashCommands();
-      })
-      .catch((error) => {
-        Message.error(getConversationRuntimeWorkspaceErrorMessage(error, t));
-      });
-  }, [teamPermission, fetchSlashCommands, t]);
 
   const handleContentChange = useCallback(
     (val: string) => {
@@ -665,6 +653,7 @@ Please check your local CLI tool authentication status`,
       />
       <ThoughtDisplay
         running={teamRuntime?.loading ?? (aiProcessing && !hasThinkingMessage)}
+        statusText={teamRuntime?.statusText}
         onStop={effectiveHandleStop}
       />
 
@@ -712,6 +701,8 @@ Please check your local CLI tool authentication status`,
                 hideCompactLabelPrefixOnMobile
                 onModeChanged={isLeaderInTeam ? teamPermission?.propagateMode : undefined}
                 beforeRuntimeSync={prepareRuntimeConfig}
+                beforeRuntimeSet={teamPermission?.warmupSession}
+                loadConfigOptions={teamPermission?.loadConfigOptions}
               />
             )}
           </div>
