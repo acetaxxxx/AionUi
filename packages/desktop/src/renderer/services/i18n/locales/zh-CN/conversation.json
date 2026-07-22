@@ -1,7 +1,7 @@
 {
   "welcome": {
     "title": "Hi，今天有什么安排？",
-    "placeholder": "发消息、上传文件、打开文件夹或创建定时任务...",
+    "placeholder": "发消息、上传文件、打开文件夹、创建定时任务，或输入 / 唤起命令...",
     "linkFolder": "打开文件夹",
     "newConversation": "新会话",
     "selectModel": "选择模型",
@@ -555,7 +555,7 @@
     "sendboxHint": "正在准备运行环境。首次启动可能会稍慢一些。"
   },
   "sendbox": {
-    "hint": "输入 / 唤起命令，@ 引用文件"
+    "hint": "输入 / 唤起命令，@ 引用文件，↑/↓ 切换历史消息"
   },
   "agentTip": {
     "codes": {
