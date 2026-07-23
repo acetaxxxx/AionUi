@@ -1016,6 +1016,7 @@ export type I18nKey =
   | 'messages.openLinkFailed'
   | 'messages.option'
   | 'messages.permissionRequest'
+  | 'messages.permissionResponseFailed'
   | 'messages.processing'
   | 'messages.responseSentSuccessfully'
   | 'messages.scrollToBottom'
