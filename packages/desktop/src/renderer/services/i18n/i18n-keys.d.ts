@@ -2451,6 +2451,7 @@ export type I18nKey =
   | 'team.work.processingWithQueued'
   | 'team.work.queued'
   | 'team.work.removing'
+  | 'team.work.retryStart'
   | 'team.work.runtimeFailed'
   | 'team.work.runtimeStarting'
   | 'team.work.sessionStopped'
