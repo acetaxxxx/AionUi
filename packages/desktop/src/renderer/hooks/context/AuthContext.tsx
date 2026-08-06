@@ -5,6 +5,12 @@ const hasValidCsrfToken = (): boolean => true;
 const clearCookie = (_name: string, _path?: string): void => {};
 const CSRF_COOKIE_NAME = 'csrf-token';
 
+function getCsrfTokenFromCookie(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const match = document.cookie.match(/(?:^|;\s*)(?:aionui-csrf-token|csrf-token)\s*=\s*([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
 type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
 
 export interface AuthUser {
@@ -163,11 +169,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
       // P1 安全修复：登录请求需要 CSRF Token / P1 Security fix: Login needs CSRF token
       // Backend route is /login; web-host's static-server explicitly proxies it.
+      const csrfToken = getCsrfTokenFromCookie();
+      const loginHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (csrfToken) {
+        loginHeaders['X-CSRF-Token'] = csrfToken;
+        loginHeaders['aionui-csrf-token'] = csrfToken;
+      }
+
       const response = await fetch('/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: loginHeaders,
         credentials: 'include',
         body: JSON.stringify(withCsrfToken({ username, password, remember })),
       });
@@ -257,12 +270,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     }
 
     try {
+      const csrfToken = getCsrfTokenFromCookie();
+      const logoutHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (csrfToken) {
+        logoutHeaders['X-CSRF-Token'] = csrfToken;
+        logoutHeaders['aionui-csrf-token'] = csrfToken;
+      }
+
       await fetch('/logout', {
         method: 'POST',
-        // Logout also needs CSRF token / 登出同样需要 CSRF Token
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: logoutHeaders,
         credentials: 'include',
         body: JSON.stringify(withCsrfToken({})),
       });
