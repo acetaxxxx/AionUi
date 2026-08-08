@@ -48,7 +48,12 @@ export async function uploadFileViaHttp(
 function getCsrfTokenFromCookie(): string | undefined {
   if (typeof document === 'undefined') return undefined;
   const match = document.cookie.match(/(?:^|;\s*)(?:aionui-csrf-token|csrf-token)\s*=\s*([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : undefined;
+  if (match) return decodeURIComponent(match[1]);
+  try {
+    return sessionStorage.getItem('aionui-csrf-token') || localStorage.getItem('aionui-csrf-token') || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
   return new Promise<string>((resolve, reject) => {

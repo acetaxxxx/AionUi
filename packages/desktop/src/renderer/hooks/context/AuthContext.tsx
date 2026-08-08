@@ -8,7 +8,12 @@ const CSRF_COOKIE_NAME = 'csrf-token';
 function getCsrfTokenFromCookie(): string | undefined {
   if (typeof document === 'undefined') return undefined;
   const match = document.cookie.match(/(?:^|;\s*)(?:aionui-csrf-token|csrf-token)\s*=\s*([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : undefined;
+  if (match) return decodeURIComponent(match[1]);
+  try {
+    return sessionStorage.getItem('aionui-csrf-token') || localStorage.getItem('aionui-csrf-token') || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
@@ -89,6 +94,15 @@ async function fetchCurrentUser(signal?: AbortSignal): Promise<AuthUser | null> 
 
     if (!response.ok) {
       return null;
+    }
+
+    const headerCsrf = response.headers.get('x-csrf-token') || response.headers.get('aionui-csrf-token');
+    const activeCsrf = getCsrfTokenFromCookie() || headerCsrf;
+    if (activeCsrf) {
+      try {
+        sessionStorage.setItem('aionui-csrf-token', activeCsrf);
+        localStorage.setItem('aionui-csrf-token', activeCsrf);
+      } catch {}
     }
 
     const data = (await response.json()) as {
@@ -230,6 +244,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       setUser(data.user);
       setStatus('authenticated');
       setReady(true);
+
+      // Persist CSRF token in storage as fallback if cookie path differs
+      const headerCsrf = response.headers.get('x-csrf-token') || response.headers.get('aionui-csrf-token');
+      const activeCsrf = getCsrfTokenFromCookie() || headerCsrf;
+      if (activeCsrf) {
+        try {
+          sessionStorage.setItem('aionui-csrf-token', activeCsrf);
+          localStorage.setItem('aionui-csrf-token', activeCsrf);
+        } catch {}
+      }
 
       // Re-enable WebSocket reconnection after successful login (WebUI mode only)
       if (typeof window !== 'undefined' && (window as any).__websocketReconnect) {
