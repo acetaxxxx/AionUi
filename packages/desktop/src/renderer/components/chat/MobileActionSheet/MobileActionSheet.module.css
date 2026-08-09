@@ -19,6 +19,7 @@
   right: 0;
   bottom: 0;
   max-height: min(72vh, 560px);
+  max-height: min(72svh, 560px);
   background: var(--color-bg-1, #ffffff);
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;

@@ -264,7 +264,7 @@ const AionModal: React.FC<AionModalProps> = ({
       mergedStyle.maxWidth = `calc(100vw - ${viewportGap}px)`;
     }
     if (!mergedStyle.maxHeight) {
-      mergedStyle.maxHeight = `calc(100vh - ${viewportGap}px)`;
+      mergedStyle.maxHeight = `calc(var(--app-viewport-height) - ${viewportGap}px)`;
     }
   }
 
