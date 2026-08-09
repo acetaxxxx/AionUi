@@ -303,12 +303,23 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         logoutHeaders['aionui-csrf-token'] = csrfToken;
       }
 
-      await fetch('/logout', {
+      const res = await fetch('/logout', {
         method: 'POST',
         headers: logoutHeaders,
         credentials: 'include',
         body: JSON.stringify(withCsrfToken({})),
       });
+
+      const isCfLogout = res.headers.get('x-cloudflare-logout') === 'true' || (typeof document !== 'undefined' && document.cookie.includes('CF_Authorization'));
+      if (isCfLogout) {
+        setUser(null);
+        setStatus('unauthenticated');
+        clearAuthCache();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/cdn-cgi/access/logout';
+        }
+        return;
+      }
     } catch (error) {
       console.error('Logout request failed:', error);
     } finally {

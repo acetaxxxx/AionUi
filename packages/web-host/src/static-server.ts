@@ -52,7 +52,15 @@ function forwardToBackend(req: IncomingMessage, res: ServerResponse, backendPort
     headers: { ...req.headers, host: `127.0.0.1:${backendPort}` },
   };
   const proxy = http.request(options, (proxyRes) => {
-    res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+    const isLogout = req.url?.startsWith('/logout') || req.url?.startsWith('/api/auth/logout');
+    const isCfAccess = Boolean(extractCloudflareEmail(req) || req.headers.cookie?.includes('CF_Authorization'));
+
+    const resHeaders = { ...proxyRes.headers };
+    if (isLogout && isCfAccess) {
+      resHeaders['x-cloudflare-logout'] = 'true';
+    }
+
+    res.writeHead(proxyRes.statusCode ?? 502, resHeaders);
     proxyRes.pipe(res);
   });
   proxy.on('error', () => {
@@ -273,11 +281,18 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
           const userMatch = getAionUserForEmail(cfEmail);
           const cookieHeader = await autoLoginUser(opts.backendPort, userMatch.username, userMatch.password);
           if (cookieHeader) {
-            res.writeHead(302, {
-              'Set-Cookie': cookieHeader,
-              Location: req.url || '/',
+            let formattedCookie = cookieHeader;
+            if (!formattedCookie.toLowerCase().includes('path=')) formattedCookie += '; Path=/';
+            if (!formattedCookie.toLowerCase().includes('samesite=')) formattedCookie += '; SameSite=Lax';
+            const isHttps = req.headers['x-forwarded-proto'] === 'https' || req.headers['cf-visitor']?.includes('https');
+            if (isHttps && !formattedCookie.toLowerCase().includes('secure')) {
+              formattedCookie += '; Secure';
+            }
+            res.setHeader('Set-Cookie', formattedCookie);
+            await serveHandler(req, res, {
+              public: opts.staticDir,
+              rewrites: [{ source: '**', destination: '/index.html' }],
             });
-            res.end();
             return;
           }
         }
