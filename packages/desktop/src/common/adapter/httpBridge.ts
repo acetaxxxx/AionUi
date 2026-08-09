@@ -104,6 +104,12 @@ export class BackendHttpError extends Error {
       details = b.details;
     } else if (typeof body === 'string') {
       backendMessage = body;
+      if (status === 502 || body.includes('502') || body.includes('Bad gateway') || body.includes('Bad Gateway')) {
+        code = 'BAD_GATEWAY';
+      }
+    }
+    if (status === 502 && !code) {
+      code = 'BAD_GATEWAY';
     }
     super(`Backend ${method} ${path} failed (${status}): ${JSON.stringify(body)}`);
     this.name = 'BackendHttpError';
