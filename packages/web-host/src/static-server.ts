@@ -79,11 +79,11 @@ const PEEK_LIMIT_BYTES = 4096;
  */
 function spliceToTcpEndpoint(client: Socket, targetPort: number, initialBytes: Buffer): void {
   client.setNoDelay(true);
-  client.setKeepAlive(true);
+  client.setKeepAlive(true, 15000);
   client.setTimeout(0);
   const upstream = net.connect({ host: '127.0.0.1', port: targetPort });
   upstream.setNoDelay(true);
-  upstream.setKeepAlive(true);
+  upstream.setKeepAlive(true, 15000);
   upstream.once('connect', () => {
     if (initialBytes.length > 0) upstream.write(initialBytes);
     upstream.pipe(client);
@@ -297,6 +297,11 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
       }
     }
   });
+
+  // Configure timeouts to prevent Cloudflare Tunnel TCP Keep-Alive race condition 502 errors
+  http_server.keepAliveTimeout = 75000; // 75 seconds (> Cloudflare 60s default)
+  http_server.headersTimeout = 76000;   // 76 seconds (> keepAliveTimeout)
+  http_server.requestTimeout = 300000;  // 5 minutes for long LLM / Agent streaming requests
 
   // Internal HTTP server — 127.0.0.1 ephemeral port, never visible to the user.
   await new Promise<void>((resolve, reject) => {
