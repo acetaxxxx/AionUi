@@ -4,4 +4,11 @@ dist-server
 .git
 .github
 data
+data-dev
+credential
+credentials
+credential*
+aionui-workspace
+aionui-data
+workspace
 *.log
