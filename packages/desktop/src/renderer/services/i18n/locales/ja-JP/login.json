@@ -18,9 +18,12 @@
   "errors": {
     "empty": "ユーザー名とパスワードを入力してください",
     "invalidCredentials": "ユーザー名またはパスワードが正しくありません",
-    "tooManyAttempts": "試行回数が多すぎます。後でもう一度お試しください",
-    "networkError": "接続に失敗しました。後でもう一度お試しください",
-    "serverError": "サーバーで問題が発生しました。しばらく待ってから再試行してください",
-    "unknown": "ログインに失敗しました。後でもう一度お試しください"
-  }
+    "tooManyAttempts": "試行回数が多すぎます。後ほど再試行してください",
+    "networkError": "接続に失敗しました。再試行してください",
+    "serverError": "サーバーエラーが発生しました。後ほど再試行してください",
+    "unknown": "ログインに失敗しました"
+  },
+  "pwaSessionExpiredTitle": "セッションの有効期限が切れました",
+  "pwaSessionExpiredDesc": "ログインセッションの有効期限が切れました。再ログインしてください。",
+  "pwaSessionExpiredButton": "SSOで再ログイン"
 }
