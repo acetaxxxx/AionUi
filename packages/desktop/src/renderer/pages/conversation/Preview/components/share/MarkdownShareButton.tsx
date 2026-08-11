@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Attention, CheckSmall, Copy, Launch, LoadingTwo, ShareTwo } from '@icon-park/react';
+import { Attention, CheckSmall, Copy, LoadingTwo, ShareTwo } from '@icon-park/react';
 import { Button, Input, Modal, Message } from '@arco-design/web-react';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +15,23 @@ export type MarkdownShareButtonProps = {
   title?: string;
   className?: string;
 };
+
+const OpenExternalIcon: React.FC<{ size?: number }> = ({ size = 14 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox='0 0 24 24'
+    fill='none'
+    stroke='currentColor'
+    strokeWidth='2'
+    strokeLinecap='round'
+    strokeLinejoin='round'
+  >
+    <path d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6' />
+    <polyline points='15 3 21 3 21 9' />
+    <line x1='10' y1='14' x2='21' y2='3' />
+  </svg>
+);
 
 export const MarkdownShareButton: React.FC<MarkdownShareButtonProps> = ({ content, title, className = '' }) => {
   const { t } = useTranslation();
@@ -120,7 +137,7 @@ export const MarkdownShareButton: React.FC<MarkdownShareButtonProps> = ({ conten
                     defaultValue: 'Public share links are read-only and unauthenticated.',
                   })}
                 </span>
-                <Button type='text' size='small' onClick={handleOpenLink} icon={<Launch />}>
+                <Button type='text' size='small' onClick={handleOpenLink} icon={<OpenExternalIcon />}>
                   {t('common.openInBrowser', { defaultValue: 'Open' })}
                 </Button>
               </div>
