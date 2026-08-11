@@ -42,8 +42,9 @@ export const getPublicShareHost = (): string => {
   if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).__AIONUI_PUBLIC_SHARE_HOST__) {
     return String((window as unknown as Record<string, unknown>).__AIONUI_PUBLIC_SHARE_HOST__).replace(/\/+$/, '');
   }
-  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PUBLIC_SHARE_HOST) {
-    return String(import.meta.env.VITE_PUBLIC_SHARE_HOST).replace(/\/+$/, '');
+  const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as unknown as { env?: Record<string, string> }).env : undefined;
+  if (metaEnv?.VITE_PUBLIC_SHARE_HOST) {
+    return String(metaEnv.VITE_PUBLIC_SHARE_HOST).replace(/\/+$/, '');
   }
   return DEFAULT_PUBLIC_SHARE_HOST;
 };

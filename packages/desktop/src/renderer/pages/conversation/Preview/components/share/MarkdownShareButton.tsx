@@ -102,7 +102,7 @@ export const MarkdownShareButton: React.FC<MarkdownShareButtonProps> = ({
         title={t('preview.shareModalTitle', { defaultValue: 'Share Markdown Snapshot' })}
         onCancel={() => setModalVisible(false)}
         footer={null}
-        unmountOnClose
+        unmountOnExit
       >
         <div className='flex flex-col gap-4 py-2'>
           {publishing && (
