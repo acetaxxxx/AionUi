@@ -16,11 +16,14 @@
   "footerPrimary": "Transforma tu IA de línea de comandos",
   "footerSecondary": "Moderno y eficiente",
   "errors": {
-    "empty": "Ingresa usuario y contraseña",
+    "empty": "Por favor ingresa usuario y contraseña",
     "invalidCredentials": "Usuario o contraseña inválidos",
-    "tooManyAttempts": "Demasiados intentos, vuelve a intentarlo más tarde",
-    "networkError": "Error de conexión, intenta de nuevo",
-    "serverError": "Error del servidor, intenta más tarde",
-    "unknown": "Error al iniciar sesión, intenta de nuevo"
-  }
+    "tooManyAttempts": "Demasiados intentos, inténtalo más tarde",
+    "networkError": "Error de conexión, inténtalo de nuevo",
+    "serverError": "Error del servidor, inténtalo más tarde",
+    "unknown": "Error al iniciar sesión, inténtalo de nuevo"
+  },
+  "pwaSessionExpiredTitle": "Sesión expirada",
+  "pwaSessionExpiredDesc": "Tu sesión ha expirado. Por favor inicia sesión de nuevo.",
+  "pwaSessionExpiredButton": "Iniciar sesión vía SSO"
 }

@@ -184,10 +184,18 @@ if (win.electronAPI) {
 
           // 短暂延迟后跳转到登录页，以便显示 UI 反馈
           // Redirect to login page after a short delay to show any UI feedback
-          // Use hash navigation to stay within the SPA (HashRouter), avoiding a full
-          // page reload that would land on an empty hash and cause a blank screen.
+          // In PWA standalone mode, reload top-level window so Cloudflare Access proxy can capture the GET request.
           setTimeout(() => {
-            window.location.hash = '/login';
+            const isPwaStandalone =
+              typeof window !== 'undefined' &&
+              (Boolean((navigator as any).standalone) ||
+                (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches));
+
+            if (isPwaStandalone) {
+              window.location.href = window.location.origin;
+            } else {
+              window.location.hash = '/login';
+            }
           }, 1000);
 
           return;
