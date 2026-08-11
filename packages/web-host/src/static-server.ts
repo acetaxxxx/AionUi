@@ -73,6 +73,7 @@ export const createBackendSessionAuthenticator = (backendPort: number) => (req: 
         authRes.on('error', () => resolve(null));
       }
     );
+    authReq.setTimeout(2000, () => authReq.destroy());
     authReq.on('error', () => resolve(null));
     authReq.end();
   });
