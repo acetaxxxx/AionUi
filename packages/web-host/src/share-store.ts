@@ -24,6 +24,8 @@ export type PublicShare = Omit<StoredShare, 'tokenHash' | 'ownerId' | 'revokedAt
 
 const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_MARKDOWN_BYTES = 2 * 1024 * 1024;
+/** Maximum decoded payload for an inline data:image URL in Markdown. */
+export const MAX_INLINE_IMAGE_BYTES = 100 * 1024;
 const MAX_ASSET_BYTES = 5 * 1024 * 1024;
 const MAX_ASSETS = 64;
 
@@ -36,6 +38,33 @@ const isValidBase64 = (value: string): boolean => {
 };
 const isSafeImageMime = (value: string): boolean =>
   /^image\/(?:png|jpeg|gif|webp|avif|bmp|x-icon|tiff)$/i.test(value);
+
+const inlineImageBytes = (url: string): number | null => {
+  const comma = url.indexOf(',');
+  if (comma < 0) return null;
+  const metadata = url.slice(5, comma).toLowerCase();
+  const payload = url.slice(comma + 1);
+  if (metadata.split(';').includes('base64')) {
+    if (!isValidBase64(payload)) return null;
+    return Buffer.from(payload, 'base64').length;
+  }
+  try {
+    return byteLength(decodeURIComponent(payload));
+  } catch {
+    return null;
+  }
+};
+
+const validateInlineImages = (markdown: string): void => {
+  // Markdown image destinations cannot contain whitespace or a closing ')'.
+  const pattern = /data:image\/[^\s)"'<>]+/gi;
+  for (const match of markdown.matchAll(pattern)) {
+    const bytes = inlineImageBytes(match[0]);
+    if (bytes !== null && bytes > MAX_INLINE_IMAGE_BYTES) {
+      throw new ShareStoreError('INLINE_IMAGE_TOO_LARGE', 400);
+    }
+  }
+};
 
 export class ShareStore {
   private readonly metadataFile: string;
@@ -71,6 +100,7 @@ export class ShareStore {
     if (!input || typeof input.markdown !== 'string' || byteLength(input.markdown) > this.maxMarkdownBytes) {
       throw new ShareStoreError('INVALID_MARKDOWN', 400);
     }
+    validateInlineImages(input.markdown);
     const assets = input.assets ?? [];
     if (!Array.isArray(assets) || assets.length > MAX_ASSETS) throw new ShareStoreError('INVALID_ASSETS', 400);
 

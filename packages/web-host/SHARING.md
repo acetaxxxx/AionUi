@@ -38,9 +38,11 @@ return `401` rather than trusting a client-supplied header or cookie.
 
 The response is `201` with `{ id, token, title, createdAt, expiresAt }`. Tokens
 are returned only once and are stored as SHA-256 hashes. Markdown is limited to
-2 MiB, each raster image asset to 5 MiB, and each request to 8 MiB (64 assets per share).
-Asset names are
-basename-normalized and only image MIME types are accepted.
+2 MiB, each raster image asset to 5 MiB, and each inline `data:image` payload to
+100 KiB (decoded bytes). Each request is limited to 8 MiB (64 assets per share).
+Asset names are basename-normalized and only PNG, JPEG, GIF, WebP, AVIF, BMP,
+ICO, and TIFF image MIME types are accepted. SVG is rejected because it can
+carry active content. Remote HTTPS images remain links and are not uploaded.
 
 `DELETE /api/shares/:id/revoke` (app host, authenticated)
 

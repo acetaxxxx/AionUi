@@ -34,6 +34,7 @@ describe('markdownSharePublish', () => {
       expect(isSafeLocalImagePath('logo.png')).toBe(true);
       expect(isSafeLocalImagePath('./assets/diagram.jpg')).toBe(true);
       expect(isSafeLocalImagePath('images/photo.webp')).toBe(true);
+      expect(isSafeLocalImagePath('images/photo.svg')).toBe(false);
     });
 
     it('rejects remote URLs, inline data URLs, file:// scheme, and path traversal', () => {

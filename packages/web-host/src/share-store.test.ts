@@ -53,5 +53,22 @@ describe('ShareStore', () => {
     await expect(store.create('owner-1', { markdown: 'ok', assets: [{ name: 'x', mime: 'image/png', data: 'not-base64!' }] })).rejects.toBeInstanceOf(
       ShareStoreError
     );
+    await expect(store.create('owner-1', { markdown: 'ok', assets: [{ name: 'x.svg', mime: 'image/svg+xml', data: 'PHN2Zz48L3N2Zz4=' }] })).rejects.toBeInstanceOf(
+      ShareStoreError
+    );
+  });
+
+  it('rejects inline data:image payloads over 100 KiB before persistence', async () => {
+    const store = await makeStore();
+    const oversized = Buffer.alloc(100 * 1024 + 1, 7).toString('base64');
+    await expect(store.create('owner-1', { markdown: `![large](data:image/png;base64,${oversized})` })).rejects.toMatchObject({
+      code: 'INLINE_IMAGE_TOO_LARGE',
+      status: 400,
+    });
+
+    const accepted = Buffer.alloc(100 * 1024, 7).toString('base64');
+    await expect(store.create('owner-1', { markdown: `![limit](data:image/png;base64,${accepted})` })).resolves.toMatchObject({
+      title: 'Shared Markdown',
+    });
   });
 });

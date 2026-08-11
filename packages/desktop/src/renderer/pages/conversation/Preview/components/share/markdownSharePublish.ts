@@ -26,7 +26,10 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/jpg',
   'image/gif',
   'image/webp',
-  'image/svg+xml',
+  'image/avif',
+  'image/bmp',
+  'image/x-icon',
+  'image/tiff',
 ]);
 
 const MAX_ASSET_BYTES = 5 * 1024 * 1024; // 5MB
@@ -60,7 +63,7 @@ export const isSafeLocalImagePath = (src: string, _baseDir?: string, _workspace?
 
   // Reject unsupported file extensions
   const ext = cleaned.split('#')[0].split('?')[0].split('.').pop()?.toLowerCase();
-  if (!ext || !['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) {
+  if (!ext || !['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'bmp', 'ico', 'tif', 'tiff'].includes(ext)) {
     return false;
   }
 
