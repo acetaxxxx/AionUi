@@ -302,6 +302,9 @@ const AionrsSendBox: React.FC<{
 
         markSendFailed({ kind: 'ordinary', reason: errorMessage });
         Message.error(errorMessage);
+        if (input && input.trim() && !contentRef.current) {
+          setContentRef.current(input);
+        }
         throw error;
       }
     },

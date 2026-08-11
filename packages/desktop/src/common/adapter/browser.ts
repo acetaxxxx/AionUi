@@ -262,6 +262,44 @@ if (win.electronAPI) {
 
   connect();
 
+  // 5. 監聽 tab visibilitychange 與 online 事件，當使用者切回分頁或網路復原時自動檢測並喚醒連線
+  // Auto-reconnect & ping check when returning to visible tab or network restores online
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && shouldReconnect) {
+        if (!socket || socket.readyState === WebSocket.CLOSED || socket.readyState === WebSocket.CLOSING) {
+          reconnectDelay = 500;
+          connect();
+        } else if (socket.readyState === WebSocket.OPEN) {
+          try {
+            socket.send(JSON.stringify({ name: 'ping', data: { timestamp: Date.now() } }));
+          } catch {
+            reconnectDelay = 500;
+            connect();
+          }
+        }
+      }
+    });
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('online', () => {
+      if (shouldReconnect) {
+        reconnectDelay = 500;
+        connect();
+      }
+    });
+
+    // Background heartbeat ping every 25 seconds to keep Cloudflare Tunnel TCP streams active
+    window.setInterval(() => {
+      if (socket && socket.readyState === WebSocket.OPEN && document.visibilityState === 'visible') {
+        try {
+          socket.send(JSON.stringify({ name: 'ping', data: { timestamp: Date.now() } }));
+        } catch {}
+      }
+    }, 25000);
+  }
+
   // Expose reconnection control for login flow
   win.__websocketReconnect = () => {
     shouldReconnect = true;

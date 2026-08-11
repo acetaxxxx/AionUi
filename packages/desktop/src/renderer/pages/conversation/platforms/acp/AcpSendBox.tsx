@@ -377,6 +377,9 @@ Please check your local CLI tool authentication status`,
 
         resetState();
         setAiProcessing(false);
+        if (input && input.trim() && !contentRef.current) {
+          setContentRef.current(input);
+        }
         throw error;
       }
 

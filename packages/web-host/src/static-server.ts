@@ -89,22 +89,33 @@ function spliceToTcpEndpoint(client: Socket, targetPort: number, initialBytes: B
   client.setNoDelay(true);
   client.setKeepAlive(true, 15000);
   client.setTimeout(0);
+  let connected = false;
   const upstream = net.connect({ host: '127.0.0.1', port: targetPort });
   upstream.setNoDelay(true);
   upstream.setKeepAlive(true, 15000);
   upstream.once('connect', () => {
+    connected = true;
     if (initialBytes.length > 0) upstream.write(initialBytes);
     upstream.pipe(client);
     client.pipe(upstream);
   });
-  const tearDown = (): void => {
-    client.destroy();
+  const tearDown = (err?: Error): void => {
+    if (!connected && err && client.writable) {
+      client.write(
+        'HTTP/1.1 502 Bad Gateway\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{"error":"BACKEND_UNREACHABLE"}'
+      );
+      client.end();
+    } else {
+      client.destroy();
+    }
     upstream.destroy();
   };
   upstream.on('error', tearDown);
-  client.on('error', tearDown);
-  upstream.on('close', tearDown);
-  client.on('close', tearDown);
+  client.on('error', () => tearDown());
+  upstream.on('close', () => {
+    if (!connected) tearDown();
+  });
+  client.on('close', () => tearDown());
 }
 
 /**
