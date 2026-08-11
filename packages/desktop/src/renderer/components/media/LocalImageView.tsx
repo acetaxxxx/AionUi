@@ -19,20 +19,31 @@ const LocalImageView: React.FC<{
   const [url, setUrl] = useState(src);
   const { root } = useLocalImage();
 
-  const absolutePath = useMemo(() => {
-    if (!root) return src;
-    if (
-      src.startsWith('http') ||
-      src.startsWith('data:') ||
-      src.startsWith('/') ||
-      src.startsWith('file:') ||
-      src.startsWith('\\') ||
-      /^[A-Za-z]:/.test(src)
-    ) {
-      return src;
+  const cleanSrc = useMemo(() => {
+    if (!src) return '';
+    let path = decodeURIComponent(src);
+    if (path.startsWith('file://')) {
+      path = path.replace(/^file:\/\//i, '');
+      if (/^\/[A-Za-z]:\//.test(path)) {
+        path = path.slice(1);
+      }
     }
-    return joinPath(root, src);
-  }, [src, root]);
+    return path;
+  }, [src]);
+
+  const absolutePath = useMemo(() => {
+    if (!cleanSrc) return '';
+    if (
+      cleanSrc.startsWith('http') ||
+      cleanSrc.startsWith('data:') ||
+      cleanSrc.startsWith('/') ||
+      cleanSrc.startsWith('\\') ||
+      /^[A-Za-z]:/.test(cleanSrc)
+    ) {
+      return cleanSrc;
+    }
+    return root ? joinPath(root, cleanSrc) : cleanSrc;
+  }, [cleanSrc, root]);
 
   useEffect(() => {
     setLoading(true);
