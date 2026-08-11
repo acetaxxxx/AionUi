@@ -8,6 +8,11 @@ import type React from 'react';
 
 import { diffColors } from '@/renderer/styles/colors';
 
+/** Preserve inline image data URLs rejected by ReactMarkdown's default transform. */
+export const isImageDataUrl = (value: string): boolean => {
+  return /^data:image\/[a-z0-9.+-]+(?:;[a-z0-9=.-]+)*,/.test(value.trim().toLowerCase());
+};
+
 /**
  * Format raw code string, attempting JSON pretty-print.
  * Falls back to stripped trailing newline if parsing fails.
