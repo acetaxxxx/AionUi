@@ -102,13 +102,15 @@ async function fetchCurrentUser(signal?: AbortSignal): Promise<AuthUser | null> 
         (Boolean((navigator as any).standalone) ||
           (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches));
 
-      // Trigger top-level reload if:
-      // 1. Response was intercepted by Cloudflare Access / SSO returning an HTML login page (applies to ALL web browsers)
-      // 2. OR running in PWA Standalone mode where the user has no address bar to manually refresh/navigate
-      if (isHtmlIntercepted || (isPwaStandalone && isAuthError)) {
-        console.warn('[AuthContext] SSO / CloudAccess session expired, reloading top window...');
-        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-          window.location.href = window.location.origin;
+      // Trigger top-level reload only if response was intercepted by Cloudflare Access / SSO returning an HTML login page
+      if (isHtmlIntercepted) {
+        console.warn('[AuthContext] SSO / CloudAccess session expired (HTML intercepted), triggering SSO logout...');
+        if (
+          typeof window !== 'undefined' &&
+          window.location.pathname !== '/login' &&
+          !window.location.hash.includes('/login')
+        ) {
+          window.location.href = '/cdn-cgi/access/logout';
           return null;
         }
       }

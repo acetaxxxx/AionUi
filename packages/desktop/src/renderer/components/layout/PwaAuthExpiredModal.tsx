@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { Button, Modal, Typography } from '@arco-design/web-react';
 import { Lock, Refresh } from '@icon-park/react';
 import usePwaMode from '@renderer/hooks/system/usePwaMode';
@@ -11,6 +12,7 @@ export const PwaAuthExpiredModal: React.FC = () => {
   const { t } = useTranslation();
   const isPwa = usePwaMode();
   const { status } = useAuth();
+  const location = useLocation();
 
   const handleSsoReload = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -23,7 +25,11 @@ export const PwaAuthExpiredModal: React.FC = () => {
     }
   }, []);
 
-  if (!isPwa || status !== 'unauthenticated') {
+  const isLoginPage =
+    location.pathname === '/login' ||
+    (typeof window !== 'undefined' && window.location.hash.includes('/login'));
+
+  if (!isPwa || status !== 'unauthenticated' || isLoginPage) {
     return null;
   }
 
