@@ -1,3 +1,5 @@
+import type { IncomingMessage } from 'node:http';
+
 // Core types for @aionui/web-host (M3 interface contract, locked for M4-M8)
 
 /**
@@ -27,6 +29,17 @@ export type BackendSystemDirs = {
   logDir: string;
 };
 
+/** Optional public Markdown snapshot sharing. Disabled unless explicitly enabled. */
+export type WebHostSharingOptions = {
+  enabled: boolean;
+  /** Defaults to `<dataDir>/shares`; an explicit path is useful for external storage. */
+  storageDir?: string;
+  /** Exact public hostname. Defaults to share.snoozydoggy.com. */
+  publicHost?: string;
+  /** Must validate the app session through the host's auth authority. */
+  authenticateUser?: (req: IncomingMessage) => string | null | Promise<string | null>;
+};
+
 /**
  * Options for starting WebHost
  */
@@ -38,6 +51,7 @@ export type WebHostOptions = {
   dataDir?: string;
   logDir?: string;
   dirs?: BackendSystemDirs;
+  sharing?: WebHostSharingOptions;
   backend: { kind: 'ownBackend'; resolveBackend: BackendBinaryResolver } | { kind: 'useExistingBackend'; port: number };
 };
 

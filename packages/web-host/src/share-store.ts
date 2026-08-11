@@ -29,6 +29,13 @@ const MAX_ASSETS = 64;
 
 const tokenHash = (token: string): string => createHash('sha256').update(token).digest('hex');
 const byteLength = (value: string): number => Buffer.byteLength(value, 'utf8');
+const isValidBase64 = (value: string): boolean => {
+  if (!value || value.length % 4 === 1 || !/^[A-Za-z0-9+/]*={0,2}$/.test(value)) return false;
+  const normalized = value.replace(/=+$/, '');
+  return Buffer.from(value, 'base64').toString('base64').replace(/=+$/, '') === normalized;
+};
+const isSafeImageMime = (value: string): boolean =>
+  /^image\/(?:png|jpeg|gif|webp|avif|bmp|x-icon|tiff)$/i.test(value);
 
 export class ShareStore {
   private readonly metadataFile: string;
@@ -78,8 +85,9 @@ export class ShareStore {
       if (!asset || typeof asset.name !== 'string' || typeof asset.mime !== 'string' || typeof asset.data !== 'string') {
         throw new ShareStoreError('INVALID_ASSET', 400);
       }
+      if (!isValidBase64(asset.data) || !isSafeImageMime(asset.mime)) throw new ShareStoreError('INVALID_ASSET', 400);
       const bytes = Buffer.from(asset.data, 'base64');
-      if (!bytes.length || bytes.length > this.maxAssetBytes || !/^image\/[a-z0-9.+-]+$/i.test(asset.mime)) {
+      if (!bytes.length || bytes.length > this.maxAssetBytes) {
         throw new ShareStoreError('INVALID_ASSET', 400);
       }
       const assetId = randomUUID();

@@ -50,5 +50,8 @@ describe('ShareStore', () => {
     await expect(store.create('owner-1', { markdown: 'ok', assets: [{ name: 'x', mime: 'text/html', data: 'aA==' }] })).rejects.toBeInstanceOf(
       ShareStoreError
     );
+    await expect(store.create('owner-1', { markdown: 'ok', assets: [{ name: 'x', mime: 'image/png', data: 'not-base64!' }] })).rejects.toBeInstanceOf(
+      ShareStoreError
+    );
   });
 });

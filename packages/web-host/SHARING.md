@@ -5,6 +5,21 @@ The static host can optionally expose persistent snapshot shares. Set
 0600 `shares.json` metadata file and an `assets/` directory. The host does not
 modify aioncore.
 
+When using `startWebHost`, enable the same module with:
+
+```ts
+sharing: {
+  enabled: true,
+  // Defaults to `${dataDir}/shares`.
+  publicHost: 'share.snoozydoggy.com',
+  authenticateUser: validateSession,
+}
+```
+
+`enabled: true` requires either `WebHostOptions.dataDir` or an explicit
+`sharing.storageDir`; sharing is disabled by default. `authenticateUser` is an
+injected server-side verifier, not a client header parser.
+
 Management endpoints are only enabled when `authenticateShareUser` is injected.
 The callback must validate the app's session using the same auth authority as
 the backend and return a stable owner id. If it is absent, management requests
@@ -23,7 +38,7 @@ return `401` rather than trusting a client-supplied header or cookie.
 
 The response is `201` with `{ id, token, title, createdAt, expiresAt }`. Tokens
 are returned only once and are stored as SHA-256 hashes. Markdown is limited to
-2 MiB, each image asset to 5 MiB, and each request to 8 MiB (64 assets per share).
+2 MiB, each raster image asset to 5 MiB, and each request to 8 MiB (64 assets per share).
 Asset names are
 basename-normalized and only image MIME types are accepted.
 

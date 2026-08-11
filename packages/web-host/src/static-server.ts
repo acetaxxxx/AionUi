@@ -74,6 +74,15 @@ function forwardToBackend(req: IncomingMessage, res: ServerResponse, backendPort
 }
 
 const requestHost = (req: IncomingMessage): string => (req.headers.host || '').split(':')[0].toLowerCase();
+const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+const validatePublicHost = (value: string): string => {
+  const host = value.trim().toLowerCase();
+  if (!host || host.includes('/') || host.includes(':') || host.includes('..') || !/^[a-z0-9.-]+$/.test(host)) {
+    throw new Error('sharePublicHost must be an exact DNS hostname without a port or path');
+  }
+  return host;
+};
 
 const sendJson = (res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}): void => {
   const data = JSON.stringify(body);
@@ -117,6 +126,10 @@ async function handleShareRequest(
       return true;
     }
     const token = (publicMatch || assetMatch)![1];
+    if (!SHARE_TOKEN_PATTERN.test(token)) {
+      sendJson(res, 404, { error: 'NOT_FOUND' });
+      return true;
+    }
     if (assetMatch) {
       const result = await store.readAsset(token, assetMatch[2]);
       if (!result) {
@@ -232,7 +245,7 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
   const host = allowRemote ? '0.0.0.0' : '127.0.0.1';
   const shareStore = opts.shareStorageDir ? new ShareStore(opts.shareStorageDir) : null;
   if (shareStore) await shareStore.init();
-  const sharePublicHost = opts.sharePublicHost ?? 'share.snoozydoggy.com';
+  const sharePublicHost = validatePublicHost(opts.sharePublicHost ?? 'share.snoozydoggy.com');
 
   // The HTTP server listens only on loopback — user traffic hits the outer
   // net.Server first. We route to this server for everything except WS
