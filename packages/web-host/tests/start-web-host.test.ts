@@ -31,6 +31,7 @@ describe('startWebHost', () => {
         localUrl: 'http://127.0.0.1:33000',
         stop: vi.fn().mockResolvedValue(undefined),
       }),
+      createBackendSessionAuthenticator: vi.fn(),
     }));
 
     const { startWebHost } = await import('../src/index.js');

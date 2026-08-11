@@ -12,6 +12,29 @@ afterEach(async () => {
   await Promise.all(cleanups.splice(0).map((cleanup) => cleanup()));
 });
 
+const request = (port: number, pathname: string, options: { method?: string; host: string; body?: string }) =>
+  new Promise<{ status: number; headers: http.IncomingHttpHeaders; text: string }>((resolve, reject) => {
+    const req = http.request(
+      {
+        hostname: '127.0.0.1',
+        port,
+        path: pathname,
+        method: options.method ?? 'GET',
+        headers: { Host: options.host, Connection: 'close', 'Content-Type': 'application/json' },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () =>
+          resolve({ status: res.statusCode ?? 500, headers: res.headers, text: Buffer.concat(chunks).toString('utf8') })
+        );
+      }
+    );
+    req.on('error', reject);
+    if (options.body) req.write(options.body);
+    req.end();
+  });
+
 describe('share routes', () => {
   it('resolves the default authenticator from the backend session endpoint', async () => {
     const backend = http.createServer((req, res) => {
@@ -23,7 +46,9 @@ describe('share routes', () => {
     await new Promise<void>((resolve) => backend.listen(0, '127.0.0.1', () => resolve()));
     cleanups.push(async () => new Promise<void>((resolve) => backend.close(() => resolve())));
     const authenticate = createBackendSessionAuthenticator((backend.address() as { port: number }).port);
-    await expect(authenticate({ headers: { cookie: 'aionui-session=test' } } as IncomingMessage)).resolves.toBe('user-from-backend');
+    await expect(authenticate({ headers: { cookie: 'aionui-session=test' } } as IncomingMessage)).resolves.toBe(
+      'user-from-backend'
+    );
   });
 
   it('creates on an authenticated app host and reads only on the configured public host', async () => {
@@ -51,27 +76,25 @@ describe('share routes', () => {
       await fs.rm(storage, { recursive: true, force: true });
     });
 
-    const createdResponse = await fetch(`${handle.localUrl}/api/shares/markdown`, {
+    const createdResponse = await request(handle.port, '/api/shares/markdown', {
       method: 'POST',
-      headers: { host: 'app.example.test', connection: 'close', 'content-type': 'application/json' },
+      host: 'app.example.test',
       body: JSON.stringify({ markdown: '# Shared' }),
     });
     expect(createdResponse.status).toBe(201);
-    const created = (await createdResponse.json()) as { token: string };
+    const created = JSON.parse(createdResponse.text) as { token: string };
 
-    const wrongHost = await fetch(`${handle.localUrl}/s/${created.token}`, { headers: { host: 'app.example.test', connection: 'close' } });
+    const wrongHost = await request(handle.port, `/s/${created.token}`, { host: 'app.example.test' });
     expect(wrongHost.status).toBe(404);
-    const publicResponse = await fetch(`${handle.localUrl}/s/${created.token}`, {
-      headers: { host: 'share.snoozydoggy.com', connection: 'close' },
-    });
+    const publicResponse = await request(handle.port, `/s/${created.token}`, { host: 'share.snoozydoggy.com' });
     expect(publicResponse.status).toBe(200);
-    expect(publicResponse.headers.get('content-type')).toContain('text/html');
-    expect(await publicResponse.text()).toContain('compiled-share');
-    const publicApiResponse = await fetch(`${handle.localUrl}/api/public/shares/${created.token}`, {
-      headers: { host: 'share.snoozydoggy.com', connection: 'close' },
+    expect(publicResponse.headers['content-type']).toContain('text/html');
+    expect(publicResponse.text).toContain('compiled-share');
+    const publicApiResponse = await request(handle.port, `/api/public/shares/${created.token}`, {
+      host: 'share.snoozydoggy.com',
     });
     expect(publicApiResponse.status).toBe(200);
-    expect((await publicApiResponse.json()).markdown).toBe('# Shared');
+    expect((JSON.parse(publicApiResponse.text) as { markdown: string }).markdown).toBe('# Shared');
   });
 
   it('denies management APIs without an injected authenticator', async () => {
@@ -92,9 +115,9 @@ describe('share routes', () => {
       await fs.rm(root, { recursive: true, force: true });
       await fs.rm(storage, { recursive: true, force: true });
     });
-    const response = await fetch(`${handle.localUrl}/api/shares/markdown`, {
+    const response = await request(handle.port, '/api/shares/markdown', {
       method: 'POST',
-      headers: { host: 'app.example.test', connection: 'close', 'content-type': 'application/json' },
+      host: 'app.example.test',
       body: JSON.stringify({ markdown: '# Blocked' }),
     });
     expect(response.status).toBe(401);
@@ -122,10 +145,8 @@ describe('share routes', () => {
       await fs.rm(root, { recursive: true, force: true });
       await fs.rm(storage, { recursive: true, force: true });
     });
-    const response = await fetch(`${handle.localUrl}/s/${created.token}`, {
-      headers: { host: 'share.snoozydoggy.com', connection: 'close' },
-    });
+    const response = await request(handle.port, `/s/${created.token}`, { host: 'share.snoozydoggy.com' });
     expect(response.status).toBe(503);
-    expect((await response.json()).error).toBe('PUBLIC_SHARE_ENTRY_UNAVAILABLE');
+    expect((JSON.parse(response.text) as { error: string }).error).toBe('PUBLIC_SHARE_ENTRY_UNAVAILABLE');
   });
 });
