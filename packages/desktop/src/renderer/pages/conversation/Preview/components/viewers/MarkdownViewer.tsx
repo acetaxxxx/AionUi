@@ -17,6 +17,8 @@ import MarkdownEditor from '../editors/MarkdownEditor';
 import SelectionToolbar from '../renderers/SelectionToolbar';
 import { useContainerScroll, useContainerScrollTarget } from '../../hooks/useScrollSyncHelpers';
 import { useLocalFilePreview, useThemeDetection } from '../../hooks';
+import { usePreviewToolbarExtras } from '../../context/PreviewToolbarExtrasContext';
+import MarkdownShareButton from '../share/MarkdownShareButton';
 import { getMarkdownShikiThemes, getMermaidTheme } from '../../theme';
 import { convertLatexDelimiters } from '@/renderer/utils/chat/latexDelimiters';
 
@@ -246,6 +248,19 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
 
   // 监听文本选择 / Monitor text selection
   const { selectedText, selectionPosition, clearSelection } = useTextSelection(containerRef);
+
+  const toolbarExtras = usePreviewToolbarExtras();
+
+  useEffect(() => {
+    if (!toolbarExtras?.setExtras) return;
+    const title = file_path ? file_path.split('/').pop()?.split('\\').pop() : 'Shared Document';
+    toolbarExtras.setExtras({
+      right: <MarkdownShareButton content={content} title={title} />,
+    });
+    return () => {
+      toolbarExtras.setExtras(null);
+    };
+  }, [toolbarExtras, content, file_path]);
 
   const baseDir = useMemo(() => {
     if (!file_path) return undefined;
