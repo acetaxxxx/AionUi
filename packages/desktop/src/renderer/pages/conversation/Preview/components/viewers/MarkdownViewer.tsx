@@ -255,12 +255,12 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     if (!toolbarExtras?.setExtras) return;
     const title = file_path ? file_path.split('/').pop()?.split('\\').pop() : 'Shared Document';
     toolbarExtras.setExtras({
-      right: <MarkdownShareButton content={content} title={title} />,
+      right: <MarkdownShareButton content={content} title={title} filePath={file_path} workspace={workspace} />,
     });
     return () => {
       toolbarExtras.setExtras(null);
     };
-  }, [toolbarExtras, content, file_path]);
+  }, [toolbarExtras, content, file_path, workspace]);
 
   const baseDir = useMemo(() => {
     if (!file_path) return undefined;

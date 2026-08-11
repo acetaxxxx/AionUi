@@ -13,6 +13,8 @@ import { PublishShareResult, publishMarkdownShare } from './markdownSharePublish
 export type MarkdownShareButtonProps = {
   content: string;
   title?: string;
+  filePath?: string;
+  workspace?: string;
   className?: string;
 };
 
@@ -33,7 +35,13 @@ const OpenExternalIcon: React.FC<{ size?: number }> = ({ size = 14 }) => (
   </svg>
 );
 
-export const MarkdownShareButton: React.FC<MarkdownShareButtonProps> = ({ content, title, className = '' }) => {
+export const MarkdownShareButton: React.FC<MarkdownShareButtonProps> = ({
+  content,
+  title,
+  filePath,
+  workspace,
+  className = '',
+}) => {
   const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -48,7 +56,7 @@ export const MarkdownShareButton: React.FC<MarkdownShareButtonProps> = ({ conten
     setShareResult(null);
 
     try {
-      const result = await publishMarkdownShare(content, title);
+      const result = await publishMarkdownShare(content, title, { filePath, workspace });
       setShareResult(result);
     } catch (err) {
       const msg = (err as Error)?.message || 'Failed to publish share snapshot';
@@ -57,7 +65,7 @@ export const MarkdownShareButton: React.FC<MarkdownShareButtonProps> = ({ conten
     } finally {
       setPublishing(false);
     }
-  }, [content, title]);
+  }, [content, title, filePath, workspace]);
 
   const handleCopyLink = useCallback(() => {
     if (!shareResult?.shareUrl) return;
