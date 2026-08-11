@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createBackendSessionAuthenticator, startStaticServer, type StaticServerHandle } from './static-server.js';
+import { ShareStore } from './share-store.js';
 
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -97,5 +98,34 @@ describe('share routes', () => {
       body: JSON.stringify({ markdown: '# Blocked' }),
     });
     expect(response.status).toBe(401);
+  });
+
+  it('returns 503 when the compiled public entry is absent', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'aionui-share-server-entry-'));
+    const storage = await fs.mkdtemp(path.join(os.tmpdir(), 'aionui-share-storage-entry-'));
+    await fs.writeFile(path.join(root, 'index.html'), '<title>app</title>');
+    const store = new ShareStore(storage);
+    await store.init();
+    const created = await store.create('owner-1', { markdown: '# Missing entry' });
+    const backend = http.createServer((_req, res) => res.end('backend'));
+    await new Promise<void>((resolve) => backend.listen(0, '127.0.0.1', () => resolve()));
+    const handle = await startStaticServer({
+      staticDir: root,
+      backendPort: (backend.address() as { port: number }).port,
+      port: 0,
+      shareStorageDir: storage,
+      sharePublicHost: 'share.snoozydoggy.com',
+    });
+    cleanups.push(async () => {
+      await handle.stop();
+      await new Promise<void>((resolve) => backend.close(() => resolve()));
+      await fs.rm(root, { recursive: true, force: true });
+      await fs.rm(storage, { recursive: true, force: true });
+    });
+    const response = await fetch(`${handle.localUrl}/s/${created.token}`, {
+      headers: { host: 'share.snoozydoggy.com', connection: 'close' },
+    });
+    expect(response.status).toBe(503);
+    expect((await response.json()).error).toBe('PUBLIC_SHARE_ENTRY_UNAVAILABLE');
   });
 });
