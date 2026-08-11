@@ -252,6 +252,7 @@ export default defineConfig(({ mode }) => {
         rollupOptions: {
           input: {
             index: resolve(rendererRoot, 'index.html'),
+            share: resolve(rendererRoot, 'share.html'),
             pet: resolve(rendererRoot, 'pet/pet.html'),
             'pet-hit': resolve(rendererRoot, 'pet/pet-hit.html'),
             'pet-confirm': resolve(rendererRoot, 'pet/pet-confirm.html'),
