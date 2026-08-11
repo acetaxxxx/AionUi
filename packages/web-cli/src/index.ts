@@ -218,6 +218,7 @@ async function runStart(flags: Map<string, string | true>): Promise<void> {
         kind: 'ownBackend',
         resolveBackend: () => backendBin,
       },
+      sharing: { enabled: true },
     });
 
     currentHandle = handle;
@@ -242,7 +243,7 @@ async function runStart(flags: Map<string, string | true>): Promise<void> {
     );
 
     await ensureUsers(
-      { backendPort: handle.backendPort, dataDir: workDir },
+      { backendPort: handle.backendPort, dataDir },
       {
         fetch: (...args) => fetch(...args),
         log: (msg) => console.log(msg),

@@ -912,6 +912,7 @@ const handleAppReady = async (): Promise<void> => {
             return port;
           })(),
         },
+        sharing: { enabled: true },
       });
       console.log(`[WebUI] Headless server started (port=${handle.port}, backendPort=${handle.backendPort})`);
     } catch (err) {
