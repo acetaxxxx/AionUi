@@ -47,12 +47,12 @@ export const ProjectPanelMobileOverlay: React.FC<ProjectPanelMobileOverlayProps>
         data-explorer-mobile-overlay
         data-mount-id={mountIdRef.current}
         data-collapsed={collapsed ? 'true' : 'false'}
-        className='!bg-1 relative'
+        className='!bg-1 relative mobile-viewport-overlay flex flex-col'
         style={{
           position: 'fixed',
           right: 0,
           top: 0,
-          height: '100vh',
+          height: 'var(--app-viewport-height)',
           width: `${Math.round(widthPx)}px`,
           zIndex: 100,
           transform: collapsed ? 'translateX(100%)' : 'translateX(0)',

@@ -674,7 +674,7 @@ const AionrsSendBox: React.FC<{
   const sendBoxWidthClass = getChatSurfaceWidthClass();
 
   return (
-    <div className={`${sendBoxWidthClass} flex flex-col mt-auto mb-16px`}>
+    <div className={`${sendBoxWidthClass} conversation-sendbox flex flex-col mt-auto`}>
       <CommandQueuePanel
         items={queuedCommands}
         mode={queueMode}
