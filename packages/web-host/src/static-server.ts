@@ -11,6 +11,8 @@
  */
 
 import http, { type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { networkInterfaces } from 'node:os';
 import net, { type Socket } from 'node:net';
 import serveHandler from 'serve-handler';
@@ -37,6 +39,43 @@ export type StaticServerHandle = {
   lanIP?: string;
   stop: () => Promise<void>;
 };
+
+/** Validate the existing backend session without trusting client identity headers. */
+export const createBackendSessionAuthenticator = (backendPort: number) => (req: IncomingMessage): Promise<string | null> =>
+  new Promise((resolve) => {
+    const headers: Record<string, string> = {};
+    if (req.headers.cookie) headers.cookie = req.headers.cookie;
+    if (req.headers.authorization) headers.authorization = req.headers.authorization;
+    const authReq = http.request(
+      { hostname: '127.0.0.1', port: backendPort, path: '/api/auth/user', method: 'GET', headers },
+      (authRes) => {
+        const chunks: Buffer[] = [];
+        let size = 0;
+        authRes.on('data', (chunk: Buffer) => {
+          size += chunk.length;
+          if (size <= 64 * 1024) chunks.push(chunk);
+        });
+        authRes.on('end', () => {
+          if ((authRes.statusCode ?? 500) < 200 || (authRes.statusCode ?? 500) >= 300) {
+            resolve(null);
+            return;
+          }
+          try {
+            const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as {
+              success?: boolean;
+              user?: { id?: string };
+            };
+            resolve(body.success === true && body.user?.id ? body.user.id : null);
+          } catch {
+            resolve(null);
+          }
+        });
+        authRes.on('error', () => resolve(null));
+      }
+    );
+    authReq.on('error', () => resolve(null));
+    authReq.end();
+  });
 
 const DEFAULT_PORT = 25808;
 
@@ -125,6 +164,7 @@ async function handleShareRequest(
   res: ServerResponse,
   store: ShareStore,
   publicHost: string,
+  staticDir: string,
   authenticate: StaticServerOptions['authenticateShareUser']
 ): Promise<boolean> {
   const parsed = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
@@ -159,6 +199,19 @@ async function handleShareRequest(
       return true;
     }
     if (shellMatch) {
+      const shellPath = path.join(staticDir, 'share.html');
+      try {
+        const shell = await readFile(shellPath, 'utf8');
+        res.writeHead(200, {
+          'content-type': 'text/html; charset=utf-8',
+          'cache-control': 'public, max-age=30, must-revalidate',
+          'x-content-type-options': 'nosniff',
+        });
+        res.end(shell);
+        return true;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'cache-control': 'public, max-age=30, must-revalidate',
@@ -287,7 +340,7 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
       }
 
       if (shareStore && (req.url.startsWith('/s/') || req.url.startsWith('/api/shares') || req.url.startsWith('/api/public/shares/'))) {
-        const handled = await handleShareRequest(req, res, shareStore, sharePublicHost, opts.authenticateShareUser);
+        const handled = await handleShareRequest(req, res, shareStore, sharePublicHost, opts.staticDir, opts.authenticateShareUser);
         if (handled) return;
       }
 

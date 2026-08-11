@@ -51,13 +51,14 @@ all public endpoints.
 and `GET /api/public/shares/:token/assets/:assetId` (public bytes)
 
 These routes are served only when the request host exactly matches
-`sharePublicHost` (default `share.snoozydoggy.com`). `/s/:token` serves a
-minimal standalone HTML shell that fetches the JSON endpoint and renders a
-safe reading view. The JSON endpoint returns the Markdown snapshot and asset
-manifest; the asset endpoint returns image bytes with `nosniff` and immutable
-cache headers. The legacy `/s/:token/assets/:assetId` bytes alias remains for
-compatibility. A public page can use this contract without exposing local paths
-or requiring an authenticated WebSocket session.
+`sharePublicHost` (default `share.snoozydoggy.com`). `/s/:token` serves
+`<staticDir>/share.html` when the compiled public MPA is present, with a safe
+minimal fallback shell only for development. The shell fetches the JSON endpoint
+and renders a reading view. The JSON endpoint returns the Markdown snapshot and
+asset manifest; the asset endpoint returns image bytes with `nosniff` and
+immutable cache headers. The legacy `/s/:token/assets/:assetId` bytes alias
+remains for compatibility. A public page can use this contract without exposing
+local paths or requiring an authenticated WebSocket session.
 
 This module intentionally implements snapshot shares only. Live publication
 should add append-only revisions and a `current_revision_id` pointer before

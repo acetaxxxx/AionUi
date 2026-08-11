@@ -1,8 +1,9 @@
 import { join } from 'node:path';
 import type { WebHostOptions, WebHostHandle } from './types.js';
+import { createBackendSessionAuthenticator } from './static-server.js';
 
 export type { AppMetadata, BackendBinaryResolver, WebHostOptions, WebHostHandle, WebHostSharingOptions } from './types.js';
-export { startStaticServer, stopStaticServer } from './static-server.js';
+export { createBackendSessionAuthenticator, startStaticServer, stopStaticServer } from './static-server.js';
 export type { StaticServerOptions, StaticServerHandle } from './static-server.js';
 
 // Backend launcher exports (M4)
@@ -64,7 +65,7 @@ export async function startWebHost(opts: WebHostOptions): Promise<WebHostHandle>
         ? (opts.sharing.storageDir ?? join(opts.dataDir!, 'shares'))
         : undefined,
       sharePublicHost: opts.sharing?.publicHost,
-      authenticateShareUser: opts.sharing?.authenticateUser,
+      authenticateShareUser: opts.sharing?.authenticateUser ?? createBackendSessionAuthenticator(backendHandle.port),
     });
   } catch (err) {
     // If static-server fails, clean up backend
