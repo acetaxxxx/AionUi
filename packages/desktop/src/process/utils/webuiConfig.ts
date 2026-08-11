@@ -260,6 +260,7 @@ export async function startDesktopWebUI(opts: { port?: number; allowRemote?: boo
       kind: 'useExistingBackend',
       port: backendPort,
     },
+    sharing: { enabled: true },
   });
 
   currentHandle = Object.assign(handle, { allowRemote });

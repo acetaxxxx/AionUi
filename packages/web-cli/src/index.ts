@@ -218,6 +218,7 @@ async function runStart(flags: Map<string, string | true>): Promise<void> {
         kind: 'ownBackend',
         resolveBackend: () => backendBin,
       },
+      sharing: { enabled: true },
     });
 
     currentHandle = handle;
