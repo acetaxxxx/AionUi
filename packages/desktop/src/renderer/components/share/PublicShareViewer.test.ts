@@ -29,7 +29,7 @@ describe('PublicShareViewer integration logic', () => {
     expect(share.assets).toHaveLength(1);
     expect(share.assets[0].id).toBe('asset-77');
     expect(fetchFn).toHaveBeenCalledWith(
-      'https://share.aionui.com/s/tok-abc',
+      'https://share.aionui.com/api/public/shares/tok-abc',
       expect.objectContaining({ credentials: 'omit' })
     );
   });
