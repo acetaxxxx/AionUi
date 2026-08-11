@@ -68,17 +68,18 @@ export const isShareExpired = (expiresAt?: string): boolean => {
 };
 
 /**
- * Build canonical asset URL for a public share asset.
- * Supports both /s/:token/assets/:assetId and /api/public/shares/:token/assets/:assetId paths.
+ * Build canonical asset URL for a public share asset under /api/public/shares/:token/assets/:assetId.
  */
 export const buildPublicAssetUrl = (
   token: string,
   assetId: string,
   baseUrl: string = '',
-  useApiPath = false
+  useApiPath = true
 ): string => {
   const normalizedBase = baseUrl.replace(/\/+$/, '');
-  const pathPrefix = useApiPath ? `/api/public/shares/${encodeURIComponent(token)}/assets` : `/s/${encodeURIComponent(token)}/assets`;
+  const pathPrefix = useApiPath
+    ? `/api/public/shares/${encodeURIComponent(token)}/assets`
+    : `/s/${encodeURIComponent(token)}/assets`;
   return `${normalizedBase}${pathPrefix}/${encodeURIComponent(assetId)}`;
 };
 
@@ -91,7 +92,7 @@ export const rewritePublicShareMarkdown = (
   token: string,
   assets: ShareAsset[] = [],
   baseUrl: string = '',
-  useApiPath = false
+  useApiPath = true
 ): string => {
   if (!markdown || !token) return markdown || '';
   if (!assets.length) return markdown;
@@ -136,7 +137,7 @@ export const rewritePublicShareMarkdown = (
 };
 
 /**
- * Fetch a public share snapshot from GET /api/public/shares/:token or GET /s/:token without sending authenticated credentials.
+ * Fetch a public share snapshot strictly from GET /api/public/shares/:token without sending authenticated credentials.
  */
 export const fetchPublicShare = async (
   token: string,
@@ -144,73 +145,55 @@ export const fetchPublicShare = async (
 ): Promise<PublicShare> => {
   const fetchImpl = options.fetchFn || fetch;
   const baseUrl = (options.baseUrl || '').replace(/\/+$/, '');
+  const url = `${baseUrl}/api/public/shares/${encodeURIComponent(token)}`;
 
-  // Try /api/public/shares/:token first, then fallback to /s/:token
-  const candidateUrls = [
-    `${baseUrl}/api/public/shares/${encodeURIComponent(token)}`,
-    `${baseUrl}/s/${encodeURIComponent(token)}`,
-  ];
-
-  let lastError: PublicShareError | null = null;
-
-  for (const url of candidateUrls) {
-    try {
-      const response = await fetchImpl(url, {
-        method: 'GET',
-        credentials: 'omit', // Critical: Never send session cookies for public share fetching
-        headers: {
-          Accept: 'application/json',
-        },
-      });
-
-      if (response.status === 404) {
-        lastError = new PublicShareError('NOT_FOUND', 404, 'Share not found or has been revoked');
-        continue;
-      }
-
-      if (response.status === 410) {
-        throw new PublicShareError('EXPIRED', 410, 'Share has expired');
-      }
-
-      if (!response.ok) {
-        lastError = new PublicShareError('FETCH_FAILED', response.status, `HTTP error ${response.status}`);
-        continue;
-      }
-
-      let data: unknown;
-      try {
-        data = await response.json();
-      } catch {
-        lastError = new PublicShareError('INVALID_PAYLOAD', response.status, 'Invalid JSON payload received');
-        continue;
-      }
-
-      if (!data || typeof data !== 'object') {
-        lastError = new PublicShareError('INVALID_PAYLOAD', 200, 'Invalid share response structure');
-        continue;
-      }
-
-      const payload = data as Partial<PublicShare>;
-      if (typeof payload.markdown !== 'string' || typeof payload.id !== 'string') {
-        lastError = new PublicShareError('INVALID_PAYLOAD', 200, 'Missing required markdown content');
-        continue;
-      }
-
-      return {
-        id: payload.id,
-        title: typeof payload.title === 'string' ? payload.title : 'Shared Document',
-        markdown: payload.markdown,
-        assets: Array.isArray(payload.assets) ? payload.assets : [],
-        createdAt: typeof payload.createdAt === 'string' ? payload.createdAt : new Date().toISOString(),
-        expiresAt: typeof payload.expiresAt === 'string' ? payload.expiresAt : '',
-      };
-    } catch (err) {
-      if (err instanceof PublicShareError && (err.code === 'EXPIRED' || err.code === 'NOT_FOUND')) {
-        throw err;
-      }
-      lastError = new PublicShareError('FETCH_FAILED', 0, (err as Error)?.message || 'Network request failed');
-    }
+  let response: Response;
+  try {
+    response = await fetchImpl(url, {
+      method: 'GET',
+      credentials: 'omit', // Critical: Never send session cookies for public share fetching
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+  } catch (err) {
+    throw new PublicShareError('FETCH_FAILED', 0, (err as Error)?.message || 'Network request failed');
   }
 
-  throw lastError || new PublicShareError('NOT_FOUND', 404, 'Share not found or has been revoked');
+  if (response.status === 404) {
+    throw new PublicShareError('NOT_FOUND', 404, 'Share not found or has been revoked');
+  }
+
+  if (response.status === 410) {
+    throw new PublicShareError('EXPIRED', 410, 'Share has expired');
+  }
+
+  if (!response.ok) {
+    throw new PublicShareError('FETCH_FAILED', response.status, `HTTP error ${response.status}`);
+  }
+
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch {
+    throw new PublicShareError('INVALID_PAYLOAD', response.status, 'Invalid JSON payload received');
+  }
+
+  if (!data || typeof data !== 'object') {
+    throw new PublicShareError('INVALID_PAYLOAD', 200, 'Invalid share response structure');
+  }
+
+  const payload = data as Partial<PublicShare>;
+  if (typeof payload.markdown !== 'string' || typeof payload.id !== 'string') {
+    throw new PublicShareError('INVALID_PAYLOAD', 200, 'Missing required markdown content');
+  }
+
+  return {
+    id: payload.id,
+    title: typeof payload.title === 'string' ? payload.title : 'Shared Document',
+    markdown: payload.markdown,
+    assets: Array.isArray(payload.assets) ? payload.assets : [],
+    createdAt: typeof payload.createdAt === 'string' ? payload.createdAt : new Date().toISOString(),
+    expiresAt: typeof payload.expiresAt === 'string' ? payload.expiresAt : '',
+  };
 };

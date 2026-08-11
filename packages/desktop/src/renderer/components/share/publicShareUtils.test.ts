@@ -17,12 +17,9 @@ import {
 
 describe('publicShareUtils', () => {
   describe('buildPublicAssetUrl', () => {
-    it('builds canonical public asset URL', () => {
-      expect(buildPublicAssetUrl('token123', 'asset456')).toBe('/s/token123/assets/asset456');
+    it('builds canonical public asset URL under /api/public/shares by default', () => {
+      expect(buildPublicAssetUrl('token123', 'asset456')).toBe('/api/public/shares/token123/assets/asset456');
       expect(buildPublicAssetUrl('token123', 'asset456', 'https://share.example.com')).toBe(
-        'https://share.example.com/s/token123/assets/asset456'
-      );
-      expect(buildPublicAssetUrl('token123', 'asset456', 'https://share.example.com', true)).toBe(
         'https://share.example.com/api/public/shares/token123/assets/asset456'
       );
     });
@@ -37,8 +34,8 @@ describe('publicShareUtils', () => {
       ];
 
       const rewritten = rewritePublicShareMarkdown(markdown, 'my-token', assets, 'https://share.example.com');
-      expect(rewritten).toContain('![Logo](https://share.example.com/s/my-token/assets/uuid-1)');
-      expect(rewritten).toContain('![Diagram](https://share.example.com/s/my-token/assets/uuid-2)');
+      expect(rewritten).toContain('![Logo](https://share.example.com/api/public/shares/my-token/assets/uuid-1)');
+      expect(rewritten).toContain('![Diagram](https://share.example.com/api/public/shares/my-token/assets/uuid-2)');
     });
 
     it('ignores external HTTP and inline data URLs', () => {
@@ -75,7 +72,7 @@ describe('publicShareUtils', () => {
   });
 
   describe('fetchPublicShare', () => {
-    it('fetches and parses valid public share without credentials', async () => {
+    it('fetches strictly from /api/public/shares/:token without credentials', async () => {
       const mockPayload = {
         id: 'share-1',
         title: 'My Notes',
@@ -101,29 +98,7 @@ describe('publicShareUtils', () => {
       });
     });
 
-    it('falls back to /s/:token if /api/public/shares/:token returns 404', async () => {
-      const mockPayload = {
-        id: 'share-2',
-        title: 'Fallback Share',
-        markdown: '# Hello',
-        assets: [],
-        createdAt: '2026-08-11T00:00:00.000Z',
-        expiresAt: '',
-      };
-
-      const fetchFn = vi.fn().mockImplementation(async (url: string) => {
-        if (url.includes('/api/public/shares/')) {
-          return { ok: false, status: 404 } as Response;
-        }
-        return { ok: true, status: 200, json: async () => mockPayload } as Response;
-      });
-
-      const share = await fetchPublicShare('fallback-tok', { fetchFn, baseUrl: 'https://share.com' });
-      expect(share.id).toBe('share-2');
-      expect(fetchFn).toHaveBeenCalledTimes(2);
-    });
-
-    it('throws NOT_FOUND error on 404 from all candidates', async () => {
+    it('throws NOT_FOUND error on 404', async () => {
       const fetchFn = vi.fn().mockResolvedValue({
         ok: false,
         status: 404,

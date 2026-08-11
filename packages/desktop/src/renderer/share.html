@@ -2,19 +2,12 @@
 <html data-theme="light" data-color-scheme="default">
   <head>
     <meta charset="UTF-8" />
+    <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="application-name" content="AionUi Public Share" />
     <meta name="theme-color" content="#4E5969" />
     <link rel="icon" type="image/png" href="./pwa/icon-192.png" />
     <title>Shared Document - AionUi</title>
-    <script>
-      (function () {
-        try {
-          var theme = localStorage.getItem('__aionui_theme');
-          if (theme) document.documentElement.setAttribute('data-theme', theme);
-        } catch (e) {}
-      })();
-    </script>
     <style>
       html,
       body,
