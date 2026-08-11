@@ -79,7 +79,10 @@ describe('share routes', () => {
     const createdResponse = await request(handle.port, '/api/shares/markdown', {
       method: 'POST',
       host: 'app.example.test',
-      body: JSON.stringify({ markdown: '# Shared' }),
+      body: JSON.stringify({
+        markdown: '# Shared\n\n![logo](logo.png)',
+        assets: [{ name: 'logo.png', mime: 'image/png', data: Buffer.from('png').toString('base64') }],
+      }),
     });
     expect(createdResponse.status).toBe(201);
     const created = JSON.parse(createdResponse.text) as { token: string };
@@ -89,12 +92,24 @@ describe('share routes', () => {
     const publicResponse = await request(handle.port, `/s/${created.token}`, { host: 'share.snoozydoggy.com' });
     expect(publicResponse.status).toBe(200);
     expect(publicResponse.headers['content-type']).toContain('text/html');
+    expect(publicResponse.headers['content-security-policy']).toContain("script-src 'self'");
+    expect(publicResponse.headers['content-security-policy']).toContain("object-src 'none'");
+    expect(publicResponse.headers['content-security-policy']).toContain("frame-ancestors 'none'");
+    expect(publicResponse.headers['referrer-policy']).toBe('no-referrer');
     expect(publicResponse.text).toContain('compiled-share');
     const publicApiResponse = await request(handle.port, `/api/public/shares/${created.token}`, {
       host: 'share.snoozydoggy.com',
     });
     expect(publicApiResponse.status).toBe(200);
-    expect((JSON.parse(publicApiResponse.text) as { markdown: string }).markdown).toBe('# Shared');
+    expect(publicApiResponse.headers['content-security-policy']).toContain("connect-src 'self'");
+    const publicData = JSON.parse(publicApiResponse.text) as { markdown: string; assets: Array<{ id: string }> };
+    expect(publicData.markdown).toContain('# Shared');
+    const assetResponse = await request(handle.port, `/api/public/shares/${created.token}/assets/${publicData.assets[0].id}`, {
+      host: 'share.snoozydoggy.com',
+    });
+    expect(assetResponse.status).toBe(200);
+    expect(assetResponse.headers['x-content-type-options']).toBe('nosniff');
+    expect(assetResponse.headers['cache-control']).toContain('immutable');
   });
 
   it('denies management APIs without an injected authenticator', async () => {

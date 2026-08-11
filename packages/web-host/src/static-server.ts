@@ -130,6 +130,19 @@ const sendJson = (res: ServerResponse, status: number, body: unknown, headers: R
   res.end(data);
 };
 
+const PUBLIC_SHARE_CSP =
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'";
+const publicShareHeaders = (headers: Record<string, string> = {}): Record<string, string> => ({
+  'content-security-policy': PUBLIC_SHARE_CSP,
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+  'cross-origin-resource-policy': 'cross-origin',
+  ...headers,
+});
+const sendPublicJson = (res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}): void => {
+  sendJson(res, status, body, publicShareHeaders(headers));
+};
+
 const readJson = async (req: IncomingMessage, maxBytes = 8 * 1024 * 1024): Promise<Record<string, unknown>> => {
   const chunks: Buffer[] = [];
   let size = 0;
@@ -166,26 +179,26 @@ async function handleShareRequest(
   const apiAssetMatch = /^\/api\/public\/shares\/([A-Za-z0-9_-]+)\/assets\/([A-Za-z0-9_-]+)$/.exec(parsed.pathname);
   if (shellMatch || legacyAssetMatch || apiMatch || apiAssetMatch) {
     if (!isExactPublicHost(req, publicHost) || req.method !== 'GET') {
-      sendJson(res, 404, { error: 'NOT_FOUND' });
+      sendPublicJson(res, 404, { error: 'NOT_FOUND' });
       return true;
     }
     const token = (shellMatch || legacyAssetMatch || apiMatch || apiAssetMatch)![1];
     if (!SHARE_TOKEN_PATTERN.test(token)) {
-      sendJson(res, 404, { error: 'NOT_FOUND' });
+      sendPublicJson(res, 404, { error: 'NOT_FOUND' });
       return true;
     }
     if (legacyAssetMatch || apiAssetMatch) {
       const assetId = (legacyAssetMatch || apiAssetMatch)![2];
       const result = await store.readAsset(token, assetId);
       if (!result) {
-        sendJson(res, 404, { error: 'NOT_FOUND' });
+        sendPublicJson(res, 404, { error: 'NOT_FOUND' });
         return true;
       }
       res.writeHead(200, {
         'content-type': result.asset.mime,
         'content-length': String(result.data.length),
         'cache-control': 'public, max-age=31536000, immutable',
-        'x-content-type-options': 'nosniff',
+        ...publicShareHeaders(),
       });
       res.end(result.data);
       return true;
@@ -197,21 +210,21 @@ async function handleShareRequest(
         res.writeHead(200, {
           'content-type': 'text/html; charset=utf-8',
           'cache-control': 'public, max-age=30, must-revalidate',
-          'x-content-type-options': 'nosniff',
+          ...publicShareHeaders(),
         });
         res.end(shell);
         return true;
       } catch (error) {
-        sendJson(res, 503, { error: 'PUBLIC_SHARE_ENTRY_UNAVAILABLE' });
+        sendPublicJson(res, 503, { error: 'PUBLIC_SHARE_ENTRY_UNAVAILABLE' });
         return true;
       }
     }
     const share = store.getPublic(token);
     if (!share) {
-      sendJson(res, 404, { error: 'NOT_FOUND' });
+      sendPublicJson(res, 404, { error: 'NOT_FOUND' });
       return true;
     }
-    sendJson(res, 200, share, { 'cache-control': 'public, max-age=30, must-revalidate', etag: `"${share.id}-${share.createdAt}"` });
+    sendPublicJson(res, 200, share, { 'cache-control': 'public, max-age=30, must-revalidate', etag: `"${share.id}-${share.createdAt}"` });
     return true;
   }
 
