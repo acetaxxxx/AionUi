@@ -103,15 +103,28 @@ export class BackendHttpError extends Error {
       if (typeof b.error === 'string') backendMessage = b.error;
       details = b.details;
     } else if (typeof body === 'string') {
-      backendMessage = body;
-      if (status === 502 || body.includes('502') || body.includes('Bad gateway') || body.includes('Bad Gateway')) {
+      const isHtml = body.trim().toLowerCase().startsWith('<!doctype') || body.includes('<html');
+      const is502 = status === 502 || body.includes('502') || body.includes('Bad gateway') || body.includes('Bad Gateway');
+
+      if (is502) {
         code = 'BAD_GATEWAY';
+        backendMessage = 'Bad Gateway (502): Reverse proxy or server connection interrupted.';
+      } else if (isHtml) {
+        backendMessage = `Server error (${status}): Unexpected HTML response.`;
+      } else {
+        backendMessage = body;
       }
     }
     if (status === 502 && !code) {
       code = 'BAD_GATEWAY';
+      if (!backendMessage || backendMessage.includes('<html')) {
+        backendMessage = 'Bad Gateway (502): Reverse proxy or server connection interrupted.';
+      }
     }
-    super(`Backend ${method} ${path} failed (${status}): ${JSON.stringify(body)}`);
+    const safeBodySummary = typeof body === 'string' && (body.includes('<html') || body.includes('<!DOCTYPE'))
+      ? '[HTML Document]'
+      : JSON.stringify(body);
+    super(`Backend ${method} ${path} failed (${status}): ${safeBodySummary}`);
     this.name = 'BackendHttpError';
     this.status = status;
     this.code = code;

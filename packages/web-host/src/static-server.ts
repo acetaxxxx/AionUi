@@ -89,22 +89,33 @@ function spliceToTcpEndpoint(client: Socket, targetPort: number, initialBytes: B
   client.setNoDelay(true);
   client.setKeepAlive(true, 15000);
   client.setTimeout(0);
+  let connected = false;
   const upstream = net.connect({ host: '127.0.0.1', port: targetPort });
   upstream.setNoDelay(true);
   upstream.setKeepAlive(true, 15000);
   upstream.once('connect', () => {
+    connected = true;
     if (initialBytes.length > 0) upstream.write(initialBytes);
     upstream.pipe(client);
     client.pipe(upstream);
   });
-  const tearDown = (): void => {
-    client.destroy();
+  const tearDown = (err?: Error): void => {
+    if (!connected && err && client.writable) {
+      client.write(
+        'HTTP/1.1 502 Bad Gateway\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{"error":"BACKEND_UNREACHABLE"}'
+      );
+      client.end();
+    } else {
+      client.destroy();
+    }
     upstream.destroy();
   };
   upstream.on('error', tearDown);
-  client.on('error', tearDown);
-  upstream.on('close', tearDown);
-  client.on('close', tearDown);
+  client.on('error', () => tearDown());
+  upstream.on('close', () => {
+    if (!connected) tearDown();
+  });
+  client.on('close', () => tearDown());
 }
 
 /**
@@ -265,17 +276,12 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
         return;
       }
 
-      // /api/* — reverse proxy to backend (includes /api/auth/*).
-      // /login and /logout are aionui-auth's top-level auth endpoints: proxy them too
-      // so WebUI browser clients reach the backend without a path-rewrite.
-      if (req.url.startsWith('/api/') || req.url.startsWith('/api?') || req.url.startsWith('/login') || req.url.startsWith('/logout')) {
-        forwardToBackend(req, res, opts.backendPort);
-        return;
-      }
-
       // Cloudflare Access SSO Auto-Login Interceptor
       const hasSessionCookie = req.headers.cookie && req.headers.cookie.includes('aionui-session=');
-      if (!hasSessionCookie && req.method === 'GET' && (!req.url.includes('.') || req.url === '/' || req.url.startsWith('/?'))) {
+      const isAuthCheck = req.url === '/api/auth/user' || req.url.startsWith('/api/auth/user?');
+      const isDocumentGet = req.method === 'GET' && (!req.url.includes('.') || req.url === '/' || req.url.startsWith('/?'));
+
+      if (!hasSessionCookie && (isDocumentGet || isAuthCheck)) {
         const cfEmail = extractCloudflareEmail(req);
         if (cfEmail) {
           const userMatch = getAionUserForEmail(cfEmail);
@@ -289,6 +295,13 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
               formattedCookie += '; Secure';
             }
             res.setHeader('Set-Cookie', formattedCookie);
+
+            if (isAuthCheck) {
+              req.headers.cookie = req.headers.cookie ? `${req.headers.cookie}; ${formattedCookie}` : formattedCookie;
+              forwardToBackend(req, res, opts.backendPort);
+              return;
+            }
+
             await serveHandler(req, res, {
               public: opts.staticDir,
               rewrites: [{ source: '**', destination: '/index.html' }],
@@ -296,6 +309,14 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
             return;
           }
         }
+      }
+
+      // /api/* — reverse proxy to backend (includes /api/auth/*).
+      // /login and /logout are aionui-auth's top-level auth endpoints: proxy them too
+      // so WebUI browser clients reach the backend without a path-rewrite.
+      if (req.url.startsWith('/api/') || req.url.startsWith('/api?') || req.url.startsWith('/login') || req.url.startsWith('/logout')) {
+        forwardToBackend(req, res, opts.backendPort);
+        return;
       }
 
       // static files + SPA fallback
