@@ -110,6 +110,16 @@ const readJson = async (req: IncomingMessage, maxBytes = 8 * 1024 * 1024): Promi
 
 const isExactPublicHost = (req: IncomingMessage, publicHost: string): boolean => requestHost(req) === publicHost.toLowerCase();
 
+const publicShareShell = (token: string): string => {
+  const encodedToken = JSON.stringify(token);
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shared Markdown</title><meta name="robots" content="noindex">
+<style>:root{color-scheme:light dark}body{margin:0;background:#f7f7f8;color:#202124;font:16px/1.7 system-ui,sans-serif}main{box-sizing:border-box;max-width:860px;margin:0 auto;padding:64px 28px 96px;background:#fff;min-height:100vh}h1{font-size:2rem;line-height:1.2;margin:0 0 8px}#meta{color:#6b7280;font-size:.9rem;margin-bottom:40px}.markdown{overflow-wrap:anywhere}.markdown h1,.markdown h2,.markdown h3{line-height:1.3;margin:1.5em 0 .5em}.markdown p{margin:1em 0}.markdown pre{padding:16px;border-radius:8px;overflow:auto;background:#f1f3f5}.markdown code{font-family:ui-monospace,monospace}.markdown img{display:block;max-width:100%;height:auto;margin:1.25em auto;border-radius:8px}.error{padding:24px;border:1px solid #f0a0a0;border-radius:8px}@media(prefers-color-scheme:dark){body{background:#17181a;color:#e8eaed}main{background:#202124}.markdown pre{background:#303134}}</style></head>
+<body><main><h1 id="title">Shared Markdown</h1><div id="meta"></div><article id="content" class="markdown">Loading…</article></main>
+<script>(async()=>{const token=${encodedToken},root=document.getElementById('content'),title=document.getElementById('title'),meta=document.getElementById('meta');const esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));try{const r=await fetch('/api/public/shares/'+token);if(!r.ok)throw Error('not found');const d=await r.json();title.textContent=d.title||'Shared Markdown';meta.textContent='Shared '+new Date(d.createdAt).toLocaleDateString();const assets=new Map((d.assets||[]).map(a=>[a.name,'/api/public/shares/'+token+'/assets/'+a.id]));let md=esc(d.markdown||'');md=md.replace(/!\\[([^\\]]*)\\]\\(([^)]+)\\)/g,(_,alt,src)=>{const clean=src.split(/[?#]/)[0].split('/').pop(),url=assets.get(clean)||(/^https?:\\/\\//i.test(src)||/^data:image\\//i.test(src)?src:'');return url?'<img alt="'+alt+'" src="'+url+'">':''});md=md.replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>').replace(/\\*\\*([^*]+)\\*\\*/g,'<strong>$1</strong>').replace(/\\n{2,}/g,'</p><p>').replace(/\\n/g,'<br>');root.innerHTML='<p>'+md+'</p>'}catch(e){root.innerHTML='<div class="error">This shared document is unavailable or has expired.</div>'}})()</script></body></html>`;
+};
+
 async function handleShareRequest(
   req: IncomingMessage,
   res: ServerResponse,
@@ -118,20 +128,23 @@ async function handleShareRequest(
   authenticate: StaticServerOptions['authenticateShareUser']
 ): Promise<boolean> {
   const parsed = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-  const publicMatch = /^\/s\/([A-Za-z0-9_-]+)$/.exec(parsed.pathname);
-  const assetMatch = /^\/s\/([A-Za-z0-9_-]+)\/assets\/([A-Za-z0-9_-]+)$/.exec(parsed.pathname);
-  if (publicMatch || assetMatch) {
+  const shellMatch = /^\/s\/([A-Za-z0-9_-]+)$/.exec(parsed.pathname);
+  const legacyAssetMatch = /^\/s\/([A-Za-z0-9_-]+)\/assets\/([A-Za-z0-9_-]+)$/.exec(parsed.pathname);
+  const apiMatch = /^\/api\/public\/shares\/([A-Za-z0-9_-]+)$/.exec(parsed.pathname);
+  const apiAssetMatch = /^\/api\/public\/shares\/([A-Za-z0-9_-]+)\/assets\/([A-Za-z0-9_-]+)$/.exec(parsed.pathname);
+  if (shellMatch || legacyAssetMatch || apiMatch || apiAssetMatch) {
     if (!isExactPublicHost(req, publicHost) || req.method !== 'GET') {
       sendJson(res, 404, { error: 'NOT_FOUND' });
       return true;
     }
-    const token = (publicMatch || assetMatch)![1];
+    const token = (shellMatch || legacyAssetMatch || apiMatch || apiAssetMatch)![1];
     if (!SHARE_TOKEN_PATTERN.test(token)) {
       sendJson(res, 404, { error: 'NOT_FOUND' });
       return true;
     }
-    if (assetMatch) {
-      const result = await store.readAsset(token, assetMatch[2]);
+    if (legacyAssetMatch || apiAssetMatch) {
+      const assetId = (legacyAssetMatch || apiAssetMatch)![2];
+      const result = await store.readAsset(token, assetId);
       if (!result) {
         sendJson(res, 404, { error: 'NOT_FOUND' });
         return true;
@@ -143,6 +156,16 @@ async function handleShareRequest(
         'x-content-type-options': 'nosniff',
       });
       res.end(result.data);
+      return true;
+    }
+    if (shellMatch) {
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'public, max-age=30, must-revalidate',
+        'content-security-policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: https:",
+        'x-content-type-options': 'nosniff',
+      });
+      res.end(publicShareShell(token));
       return true;
     }
     const share = store.getPublic(token);
@@ -263,7 +286,7 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
         return;
       }
 
-      if (shareStore && (req.url.startsWith('/s/') || req.url.startsWith('/api/shares'))) {
+      if (shareStore && (req.url.startsWith('/s/') || req.url.startsWith('/api/shares') || req.url.startsWith('/api/public/shares/'))) {
         const handled = await handleShareRequest(req, res, shareStore, sharePublicHost, opts.authenticateShareUser);
         if (handled) return;
       }

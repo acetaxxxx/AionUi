@@ -49,7 +49,13 @@ describe('share routes', () => {
       headers: { host: 'share.snoozydoggy.com', connection: 'close' },
     });
     expect(publicResponse.status).toBe(200);
-    expect((await publicResponse.json()).markdown).toBe('# Shared');
+    expect(publicResponse.headers.get('content-type')).toContain('text/html');
+    expect(await publicResponse.text()).toContain('/api/public/shares/');
+    const publicApiResponse = await fetch(`${handle.localUrl}/api/public/shares/${created.token}`, {
+      headers: { host: 'share.snoozydoggy.com', connection: 'close' },
+    });
+    expect(publicApiResponse.status).toBe(200);
+    expect((await publicApiResponse.json()).markdown).toBe('# Shared');
   });
 
   it('denies management APIs without an injected authenticator', async () => {

@@ -47,13 +47,17 @@ basename-normalized and only image MIME types are accepted.
 Revokes a share and returns `204`. Revoked and expired shares return `404` from
 all public endpoints.
 
-`GET /s/:token` and `GET /s/:token/assets/:assetId` (public)
+`GET /s/:token` (public HTML shell), `GET /api/public/shares/:token` (JSON),
+and `GET /api/public/shares/:token/assets/:assetId` (public bytes)
 
 These routes are served only when the request host exactly matches
-`sharePublicHost` (default `share.snoozydoggy.com`). The first returns the
-Markdown snapshot and asset manifest as JSON; the second returns image bytes
-with `nosniff` and immutable cache headers. A public page can use this contract
-without exposing local paths or requiring an authenticated WebSocket session.
+`sharePublicHost` (default `share.snoozydoggy.com`). `/s/:token` serves a
+minimal standalone HTML shell that fetches the JSON endpoint and renders a
+safe reading view. The JSON endpoint returns the Markdown snapshot and asset
+manifest; the asset endpoint returns image bytes with `nosniff` and immutable
+cache headers. The legacy `/s/:token/assets/:assetId` bytes alias remains for
+compatibility. A public page can use this contract without exposing local paths
+or requiring an authenticated WebSocket session.
 
 This module intentionally implements snapshot shares only. Live publication
 should add append-only revisions and a `current_revision_id` pointer before
