@@ -14,7 +14,12 @@ export const PwaAuthExpiredModal: React.FC = () => {
 
   const handleSsoReload = useCallback(() => {
     if (typeof window !== 'undefined') {
-      window.location.href = window.location.origin;
+      const isCfAccess = document.cookie.includes('CF_Authorization');
+      if (isCfAccess) {
+        window.location.href = '/cdn-cgi/access/logout';
+      } else {
+        window.location.href = window.location.origin;
+      }
     }
   }, []);
 
