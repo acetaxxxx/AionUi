@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "jose": "^6.2.1",
     "serve-handler": "^6.1.5"
   },
   "devDependencies": {
