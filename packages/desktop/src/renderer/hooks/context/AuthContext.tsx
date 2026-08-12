@@ -341,7 +341,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         body: JSON.stringify(withCsrfToken({})),
       });
 
-      const isCfLogout = res.headers.get('x-cloudflare-logout') === 'true' || (typeof document !== 'undefined' && document.cookie.includes('CF_Authorization'));
+      const isCfLogout =
+        res.headers.get('x-cloudflare-logout') === 'true' ||
+        (typeof document !== 'undefined' && document.cookie.includes('CF_Authorization'));
       if (isCfLogout) {
         setUser(null);
         setStatus('unauthenticated');

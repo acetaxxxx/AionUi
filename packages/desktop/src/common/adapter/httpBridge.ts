@@ -104,7 +104,8 @@ export class BackendHttpError extends Error {
       details = b.details;
     } else if (typeof body === 'string') {
       const isHtml = body.trim().toLowerCase().startsWith('<!doctype') || body.includes('<html');
-      const is502 = status === 502 || body.includes('502') || body.includes('Bad gateway') || body.includes('Bad Gateway');
+      const is502 =
+        status === 502 || body.includes('502') || body.includes('Bad gateway') || body.includes('Bad Gateway');
 
       if (is502) {
         code = 'BAD_GATEWAY';
@@ -121,9 +122,10 @@ export class BackendHttpError extends Error {
         backendMessage = 'Bad Gateway (502): Reverse proxy or server connection interrupted.';
       }
     }
-    const safeBodySummary = typeof body === 'string' && (body.includes('<html') || body.includes('<!DOCTYPE'))
-      ? '[HTML Document]'
-      : JSON.stringify(body);
+    const safeBodySummary =
+      typeof body === 'string' && (body.includes('<html') || body.includes('<!DOCTYPE'))
+        ? '[HTML Document]'
+        : JSON.stringify(body);
     super(`Backend ${method} ${path} failed (${status}): ${safeBodySummary}`);
     this.name = 'BackendHttpError';
     this.status = status;

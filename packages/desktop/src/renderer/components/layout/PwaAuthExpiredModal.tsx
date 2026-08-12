@@ -26,8 +26,7 @@ export const PwaAuthExpiredModal: React.FC = () => {
   }, []);
 
   const isLoginPage =
-    location.pathname === '/login' ||
-    (typeof window !== 'undefined' && window.location.hash.includes('/login'));
+    location.pathname === '/login' || (typeof window !== 'undefined' && window.location.hash.includes('/login'));
 
   if (!isPwa || status !== 'unauthenticated' || isLoginPage) {
     return null;

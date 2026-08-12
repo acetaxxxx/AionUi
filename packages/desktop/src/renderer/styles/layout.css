@@ -223,6 +223,10 @@
   /* Mobile-only: clip overflow instead of allowing scroll */
   .layout-sider-content {
     overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    min-height: 0 !important;
   }
 
   /* Footer stays at bottom with extra padding as fallback */

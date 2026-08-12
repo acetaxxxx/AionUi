@@ -33,6 +33,9 @@
    Mimics macOS native overlay scrollbars. */
 .scrollArea {
   scrollbar-width: none; /* Firefox */
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .scrollArea::-webkit-scrollbar {

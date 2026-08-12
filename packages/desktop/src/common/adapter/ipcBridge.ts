@@ -94,7 +94,7 @@ import type {
 import type { AgentMetadata } from '@/renderer/utils/model/agentTypes';
 import type { Theme } from '@/common/theme/types';
 import type { AttachFolderRequest, ProjectDetailDto, ProjectEntryDto } from '@/common/types/project';
-import { chatFileRefPath, type ChatFileRef, type ContentEncoding } from '@/common/types/chatFile';
+import { chatFileRefPath, localFileRef, type ChatFileRef, type ContentEncoding } from '@/common/types/chatFile';
 import type { ProtocolDetectionRequest, ProtocolDetectionResponse } from '../utils/protocolDetector';
 import {
   buildCreateConversationBody,
@@ -761,11 +761,10 @@ export const fs = {
         if (typeof res === 'string' && res) return res;
         if (res && typeof res === 'object' && 'content' in res)
           return String((res as { content: unknown }).content ?? '');
-        if (res && typeof res === 'object' && 'data' in res)
-          return String((res as { data: unknown }).data ?? '');
+        if (res && typeof res === 'object' && 'data' in res) return String((res as { data: unknown }).data ?? '');
       } catch (_err) {
         try {
-          const fileRef: ChatFileRef = { path: params.path, workspace: params.workspace };
+          const fileRef: ChatFileRef = localFileRef(params.path);
           const dataUrl = await fs.readContent.invoke({ file: fileRef, encoding: 'dataurl' });
           if (dataUrl) return dataUrl;
         } catch (_fallbackErr) {
@@ -788,7 +787,8 @@ export const fs = {
       try {
         const res = await httpRequest<unknown>('POST', '/api/fs/content', params);
         if (typeof res === 'string') return res;
-        if (res && typeof res === 'object' && 'content' in res) return String((res as { content: unknown }).content ?? '');
+        if (res && typeof res === 'object' && 'content' in res)
+          return String((res as { content: unknown }).content ?? '');
         if (res && typeof res === 'object' && 'data' in res) return String((res as { data: unknown }).data ?? '');
         return String(res ?? '');
       } catch (err: unknown) {
@@ -796,7 +796,8 @@ export const fs = {
           const filePath = chatFileRefPath(params.file);
           const res = await httpRequest<unknown>('POST', '/api/fs/read', { path: filePath });
           if (typeof res === 'string') return res;
-          if (res && typeof res === 'object' && 'content' in res) return String((res as { content: unknown }).content ?? '');
+          if (res && typeof res === 'object' && 'content' in res)
+            return String((res as { content: unknown }).content ?? '');
           if (res && typeof res === 'object' && 'data' in res) return String((res as { data: unknown }).data ?? '');
           return String(res ?? '');
         }

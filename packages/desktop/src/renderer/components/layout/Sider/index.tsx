@@ -180,7 +180,7 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
             <SettingsSider collapsed={collapsed} tooltipEnabled={tooltipEnabled} />
           </Suspense>
         ) : (
-          <div className='size-full flex flex-col gap-2px'>
+          <div className='size-full flex flex-col gap-2px min-h-0'>
             <SiderToolbar
               isMobile={isMobile}
               isBatchMode={isBatchMode}
