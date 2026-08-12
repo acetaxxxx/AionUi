@@ -17,7 +17,7 @@
 /* Ticks hug the very left edge so all of this width is free for them to grow
    rightwards into. The wider the travel between rest and selected, the more
    obvious the hover feedback. */
-@container (min-width: 720px) {
+@container (min-width: 800px) {
   .rail {
     display: block;
     width: 32px;
