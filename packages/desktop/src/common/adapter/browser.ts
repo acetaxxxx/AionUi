@@ -282,7 +282,7 @@ if (win.electronAPI) {
     });
   }
 
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
     window.addEventListener('online', () => {
       if (shouldReconnect) {
         reconnectDelay = 500;
@@ -291,13 +291,17 @@ if (win.electronAPI) {
     });
 
     // Background heartbeat ping every 25 seconds to keep Cloudflare Tunnel TCP streams active
-    window.setInterval(() => {
-      if (socket && socket.readyState === WebSocket.OPEN && document.visibilityState === 'visible') {
-        try {
-          socket.send(JSON.stringify({ name: 'ping', data: { timestamp: Date.now() } }));
-        } catch {}
-      }
-    }, 25000);
+    if (typeof window.setInterval === 'function') {
+      window.setInterval(() => {
+        if (socket && socket.readyState === WebSocket.OPEN && document.visibilityState === 'visible') {
+          try {
+            socket.send(JSON.stringify({ name: 'ping', data: { timestamp: Date.now() } }));
+          } catch {
+            // Heartbeat send failed, WebSocket will reconnect via onclose
+          }
+        }
+      }, 25000);
+    }
   }
 
   // Expose reconnection control for login flow

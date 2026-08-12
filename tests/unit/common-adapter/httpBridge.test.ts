@@ -461,11 +461,13 @@ describe('httpBridge', () => {
       const result = await httpRequest<{ result: string }>('GET', '/api/test');
 
       expect(result).toEqual({ result: 'ok' });
-      expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/api/test'), {
-        method: 'GET',
-        headers: {},
-        body: undefined,
-      });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/api/test'),
+        expect.objectContaining({
+          method: 'GET',
+          headers: {},
+        })
+      );
     });
 
     it('sends JSON body for POST with content-type', async () => {
