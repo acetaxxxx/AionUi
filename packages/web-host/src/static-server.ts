@@ -409,7 +409,13 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
     lanIP,
     stop: () =>
       new Promise<void>((resolve) => {
+        if (typeof (http_server as unknown as { closeIdleConnections?: () => void }).closeIdleConnections === 'function') {
+          (http_server as unknown as { closeIdleConnections: () => void }).closeIdleConnections();
+        }
         tcp_server.close(() => {
+          if (typeof (http_server as unknown as { closeAllConnections?: () => void }).closeAllConnections === 'function') {
+            (http_server as unknown as { closeAllConnections: () => void }).closeAllConnections();
+          }
           http_server.close(() => resolve());
         });
       }),
