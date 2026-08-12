@@ -448,13 +448,11 @@
     display: none;
   }
 
-  /* Sendbox input — 14px to match desktop body type (per product call;
-     accept the iOS auto-zoom trade-off). One-line resting height; autoSize
-     still expands the textarea as soon as the user wraps. The wrapping
-     container shares the same floor, and we trim the gap below the textarea
-     (default inline 8px → 4px) so the toolbar sits closer. */
+  /* Keep the mobile input at 16px so iOS Safari does not auto-zoom when it is
+     focused. The line height and resting height stay compact; autoSize still
+     expands the textarea as soon as the user wraps. */
   .sendbox-input--mobile {
-    font-size: 14px !important;
+    font-size: 16px !important;
     line-height: 22px !important;
     min-height: 22px !important;
   }
@@ -476,11 +474,11 @@
     margin-bottom: 4px !important;
   }
 
-  /* Mobile placeholder shares the input's 14px font for consistency. */
+  /* Keep the placeholder metrics aligned with the input to avoid a focus jump. */
   .sendbox-input--mobile::placeholder,
   .sendbox-input--mobile::-webkit-input-placeholder,
   .sendbox-highlight-textarea.sendbox-input--mobile::placeholder {
-    font-size: 14px !important;
+    font-size: 16px !important;
   }
 
   /* Tighter mobile sendbox: reduce outer padding so the bottom input takes
@@ -505,5 +503,17 @@
 
   .speech-input-feedback__label {
     min-width: 28px;
+  }
+}
+
+/* The send box sits inside the app viewport rather than the document body, so
+   reserve the iOS home-indicator inset in addition to its normal breathing room. */
+.conversation-sendbox {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 767px) {
+  .conversation-sendbox {
+    margin-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }

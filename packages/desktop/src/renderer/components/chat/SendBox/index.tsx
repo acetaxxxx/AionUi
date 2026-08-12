@@ -1697,6 +1697,7 @@ const SendBox: React.FC<{
                 textOverflow: isSingleLine ? 'ellipsis' : 'clip',
                 wordBreak: isSingleLine ? 'normal' : 'break-word',
                 overflowWrap: 'break-word',
+                fontSize: isMobile ? '16px' : undefined,
               }}
               onChange={handleTextAreaChange}
               onPaste={onPaste}

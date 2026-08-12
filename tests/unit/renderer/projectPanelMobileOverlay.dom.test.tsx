@@ -25,6 +25,7 @@ describe('ProjectPanelMobileOverlay (P3 mobile)', () => {
     expect(p.getAttribute('data-collapsed')).toBe('true');
     expect(p.style.transform).toBe('translateX(100%)');
     expect(p.style.pointerEvents).toBe('none');
+    expect(p.style.height).toBe('var(--app-viewport-height)');
     // Explorer stays mounted (no remount on open/close).
     expect(screen.getByTestId('explorer')).toHaveTextContent('p1');
     // No floating collapse handle when collapsed.

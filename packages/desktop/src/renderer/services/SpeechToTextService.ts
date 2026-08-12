@@ -91,11 +91,27 @@ export async function transcribeAudioBlob(blob: Blob, languageHint?: string): Pr
     formData.append('languageHint', languageHint);
   }
 
+function getCsrfTokenFromCookie(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const match = document.cookie.match(/(?:^|;\s*)(?:aionui-csrf-token|csrf-token)\s*=\s*([^;]+)/);
+  if (match) return decodeURIComponent(match[1]);
+  try {
+    return sessionStorage.getItem('aionui-csrf-token') || localStorage.getItem('aionui-csrf-token') || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
   return new Promise<SpeechToTextResult>((resolve, reject) => {
+
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${getBaseUrl()}/api/stt`);
-    // No withCredentials: the desktop backend allows origin `*`, which the
-    // browser rejects for credentialed requests; WebUI is same-origin anyway.
+    xhr.withCredentials = true;
+    const csrfToken = getCsrfTokenFromCookie();
+    if (csrfToken) {
+      xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+      xhr.setRequestHeader('aionui-csrf-token', csrfToken);
+    }
 
     xhr.addEventListener('load', () => {
       if (xhr.status < 200 || xhr.status >= 300) {

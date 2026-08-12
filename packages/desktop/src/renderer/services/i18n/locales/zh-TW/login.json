@@ -22,5 +22,8 @@
     "networkError": "連線失敗，請稍後再試",
     "serverError": "伺服器發生錯誤，請稍後再試",
     "unknown": "登入失敗，請稍後再試"
-  }
+  },
+  "pwaSessionExpiredTitle": "連線驗證已過期",
+  "pwaSessionExpiredDesc": "您的登入驗證階段已過期，請點擊下方按鈕重新登入。",
+  "pwaSessionExpiredButton": "重新驗證登入 (SSO)"
 }

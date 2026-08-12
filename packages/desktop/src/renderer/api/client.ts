@@ -21,6 +21,17 @@ type RequestOptions = {
   signal?: AbortSignal;
 };
 
+function getCsrfTokenFromCookie(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const match = document.cookie.match(/(?:^|;\s*)(?:aionui-csrf-token|csrf-token)\s*=\s*([^;]+)/);
+  if (match) return decodeURIComponent(match[1]);
+  try {
+    return sessionStorage.getItem('aionui-csrf-token') || localStorage.getItem('aionui-csrf-token') || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function request<T>(
   baseURL: string,
   method: string,
@@ -31,10 +42,18 @@ async function request<T>(
   const url = `${baseURL}${path}`;
   const headers: Record<string, string> = { ...options?.headers };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (method !== 'GET' && method !== 'HEAD') {
+    const csrfToken = getCsrfTokenFromCookie();
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+      headers['aionui-csrf-token'] = csrfToken;
+    }
+  }
 
   const response = await fetch(url, {
     method,
     headers,
+    credentials: 'include',
     body: body !== undefined ? JSON.stringify(body) : undefined,
     signal: options?.signal,
   });

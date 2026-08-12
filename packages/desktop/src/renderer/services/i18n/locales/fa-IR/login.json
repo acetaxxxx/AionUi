@@ -22,5 +22,8 @@
     "networkError": "اتصال ناموفق بود، لطفاً دوباره تلاش کنید",
     "serverError": "خطای سرور، لطفاً بعداً دوباره تلاش کنید",
     "unknown": "ورود ناموفق بود، لطفاً دوباره تلاش کنید"
-  }
+  },
+  "pwaSessionExpiredTitle": "انقضای نشست کاری",
+  "pwaSessionExpiredDesc": "نشست کاری شما منقضی شده است. لطفاً دوباره وارد شوید.",
+  "pwaSessionExpiredButton": "ورود از طریق SSO"
 }
