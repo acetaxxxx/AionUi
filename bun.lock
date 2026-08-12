@@ -201,6 +201,7 @@
       "name": "@aionui/web-host",
       "version": "0.0.0",
       "dependencies": {
+        "jose": "^6.2.1",
         "serve-handler": "^6.1.5",
       },
       "devDependencies": {

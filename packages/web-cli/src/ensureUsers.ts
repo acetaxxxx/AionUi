@@ -30,9 +30,22 @@ export type EnsureUsersDeps = {
   warn: (msg: string) => void;
 };
 
+type SqliteStatement = {
+  get: (...params: unknown[]) => unknown;
+  run: (...params: unknown[]) => unknown;
+};
+
+type SqliteDatabase = {
+  prepare: (sql: string) => SqliteStatement;
+  close?: () => void;
+};
+
+type SqliteDatabaseConstructor = new (filename: string) => SqliteDatabase;
+
 /**
  * Parse `AIONUI_USERS` string into structured user specifications.
- * Supports comma-separated `user:pass,user2:pass2` and JSON formats.
+ * Supports comma-separated `user:pass,user2:pass2`,
+ * `email:username:password`, and JSON formats.
  */
 export function parseUsersEnv(rawEnv?: string): UserSpec[] {
   if (!rawEnv || !rawEnv.trim()) return [];
@@ -56,10 +69,16 @@ export function parseUsersEnv(rawEnv?: string): UserSpec[] {
   const specs: UserSpec[] = [];
   const entries = trimmed.split(',');
   for (const entry of entries) {
-    const colonIdx = entry.indexOf(':');
-    if (colonIdx > 0) {
-      const username = entry.slice(0, colonIdx).trim();
-      const password = entry.slice(colonIdx + 1).trim();
+    const firstColonIdx = entry.indexOf(':');
+    const secondColonIdx = entry.indexOf(':', firstColonIdx + 1);
+    const isEmailMapping =
+      firstColonIdx > 0 && secondColonIdx > firstColonIdx && entry.slice(0, firstColonIdx).includes('@');
+    const usernameStart = isEmailMapping ? firstColonIdx + 1 : 0;
+    const passwordStart = isEmailMapping ? secondColonIdx + 1 : firstColonIdx + 1;
+    if (firstColonIdx > 0 && passwordStart > usernameStart) {
+      const usernameEnd = isEmailMapping ? secondColonIdx : firstColonIdx;
+      const username = entry.slice(usernameStart, usernameEnd).trim();
+      const password = entry.slice(passwordStart).trim();
       if (username && password) {
         specs.push({ username, password });
       }
@@ -83,7 +102,7 @@ export async function hashPassword(password: string): Promise<string> {
     const bcrypt = await import('bcryptjs');
     return bcrypt.hashSync(password, 12);
   } catch {
-    return password;
+    throw new Error('Unable to hash AIONUI_USERS password with bcrypt');
   }
 }
 
@@ -106,14 +125,15 @@ export async function ensureUsers(opts: EnsureUsersOptions, deps: EnsureUsersDep
 
   deps.log(`[aionui-web] Ensuring ${specs.length} user(s) in SQLite database: ${dbPath}...`);
 
+  let db: SqliteDatabase | undefined;
   try {
-    let DatabaseClass: any = null;
+    let DatabaseClass: SqliteDatabaseConstructor | null = null;
     if (typeof Bun !== 'undefined') {
       const sqliteModule = await import('bun:sqlite');
-      DatabaseClass = sqliteModule.Database;
+      DatabaseClass = sqliteModule.Database as unknown as SqliteDatabaseConstructor;
     } else {
       const sqliteModule = await import('better-sqlite3');
-      DatabaseClass = sqliteModule.default || sqliteModule;
+      DatabaseClass = (sqliteModule.default || sqliteModule) as unknown as SqliteDatabaseConstructor;
     }
 
     if (!DatabaseClass || !fs.existsSync(dbPath)) {
@@ -121,26 +141,30 @@ export async function ensureUsers(opts: EnsureUsersOptions, deps: EnsureUsersDep
       return;
     }
 
-    const db = new DatabaseClass(dbPath);
+    db = new DatabaseClass(dbPath);
     const now = Date.now();
 
+    const passwordHashes = await Promise.all(specs.map((spec) => hashPassword(spec.password)));
     for (let i = 0; i < specs.length; i++) {
       const spec = specs[i];
-      const passwordHash = await hashPassword(spec.password);
+      const passwordHash = passwordHashes[i];
 
       // Check if user already exists
-      const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(spec.username);
+      const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(spec.username) as
+        | { id?: string }
+        | undefined;
       if (existing) {
         deps.log(`[aionui-web] User "${spec.username}" is ready.`);
         continue;
       }
 
+      let userId: string | undefined;
       if (i === 0) {
         // Configure primary account (system_default_user)
         const defaultUser = db
           .prepare('SELECT id FROM users WHERE id = ? OR username = ?')
-          .get('system_default_user', 'admin');
-        if (defaultUser) {
+          .get('system_default_user', 'admin') as { id?: string } | undefined;
+        if (defaultUser?.id === 'system_default_user') {
           db.prepare('UPDATE users SET username = ?, password_hash = ?, updated_at = ? WHERE id = ?').run(
             spec.username,
             passwordHash,
@@ -150,21 +174,20 @@ export async function ensureUsers(opts: EnsureUsersOptions, deps: EnsureUsersDep
           deps.log(`[aionui-web] Primary account configured: username="${spec.username}"`);
           continue;
         }
+        if (!defaultUser) userId = 'system_default_user';
       }
 
       // Create additional user
-      const userId = i === 0 ? 'system_default_user' : `user_${crypto.randomUUID()}`;
+      userId ??= `user_${crypto.randomUUID()}`;
       db.prepare(
         `INSERT INTO users (id, username, email, password_hash, created_at, updated_at) VALUES (?, ?, NULL, ?, ?, ?)`
       ).run(userId, spec.username, passwordHash, now, now);
 
       deps.log(`[aionui-web] Additional account created: username="${spec.username}"`);
     }
-
-    if (typeof db.close === 'function') {
-      db.close();
-    }
   } catch (err) {
     deps.warn(`[aionui-web] ensureUsers error: ${err instanceof Error ? err.message : String(err)}`);
+  } finally {
+    db?.close?.();
   }
 }

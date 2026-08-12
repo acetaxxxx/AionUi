@@ -14,6 +14,7 @@ import http, { type IncomingMessage, type Server, type ServerResponse } from 'no
 import { networkInterfaces } from 'node:os';
 import net, { type Socket } from 'node:net';
 import serveHandler from 'serve-handler';
+import { extractCloudflareAccessToken, getCloudflareAccessIdentity } from './cloudflareAccess.js';
 
 export type StaticServerOptions = {
   staticDir: string;
@@ -53,7 +54,7 @@ function forwardToBackend(req: IncomingMessage, res: ServerResponse, backendPort
   };
   const proxy = http.request(options, (proxyRes) => {
     const isLogout = req.url?.startsWith('/logout') || req.url?.startsWith('/api/auth/logout');
-    const isCfAccess = Boolean(extractCloudflareEmail(req) || req.headers.cookie?.includes('CF_Authorization'));
+    const isCfAccess = Boolean(extractCloudflareAccessToken(req.headers));
 
     const resHeaders = { ...proxyRes.headers };
     if (isLogout && isCfAccess) {
@@ -136,41 +137,6 @@ function peekWsRoute(buf: Buffer): boolean | null {
   return /^GET\s+\/(?:ws|api\/stt\/stream)(?:\?[^\s]*)?\s+HTTP\/1\.[01]\r?$/.test(firstLine);
 }
 
-/**
- * Extracts Cloudflare Access authenticated email from HTTP headers or CF_Authorization JWT cookie.
- */
-function extractCloudflareEmail(req: IncomingMessage): string | null {
-  const headerEmail = req.headers['cf-access-authenticated-user-email'];
-  if (typeof headerEmail === 'string' && headerEmail.trim()) {
-    return headerEmail.trim();
-  }
-
-  let jwt: string | undefined;
-  if (typeof req.headers['cf-access-jwt-assertion'] === 'string') {
-    jwt = req.headers['cf-access-jwt-assertion'];
-  } else if (req.headers.cookie) {
-    const match = req.headers.cookie.match(/(?:^|;\s*)CF_Authorization=([^;]+)/);
-    if (match) jwt = match[1];
-  }
-
-  if (jwt) {
-    try {
-      const parts = jwt.split('.');
-      if (parts.length === 3) {
-        const payloadStr = Buffer.from(parts[1], 'base64url').toString('utf8');
-        const payload = JSON.parse(payloadStr);
-        if (typeof payload.email === 'string' && payload.email.trim()) {
-          return payload.email.trim();
-        }
-      }
-    } catch {
-      // Ignore invalid JWT
-    }
-  }
-
-  return null;
-}
-
 interface AionUserMatch {
   username: string;
   password?: string;
@@ -183,42 +149,44 @@ interface AionUserMatch {
  * - "email:password"
  * - "username:password"
  */
-function getAionUserForEmail(cfEmail: string): AionUserMatch {
+function getAionUserForEmail(cfEmail: string): AionUserMatch | null {
   const usersEnv = process.env.AIONUI_USERS || '';
   const entries = usersEnv
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+  const normalizedEmail = cfEmail.toLowerCase();
 
   for (const entry of entries) {
-    const parts = entry.split(':');
-    if (parts.length === 3) {
-      const [email, username, password] = parts;
-      if (email.toLowerCase() === cfEmail.toLowerCase()) {
+    const firstColonIdx = entry.indexOf(':');
+    const secondColonIdx = entry.indexOf(':', firstColonIdx + 1);
+    const isEmailMapping =
+      firstColonIdx > 0 && secondColonIdx > firstColonIdx && entry.slice(0, firstColonIdx).includes('@');
+    if (isEmailMapping) {
+      const email = entry.slice(0, firstColonIdx);
+      const username = entry.slice(firstColonIdx + 1, secondColonIdx);
+      const password = entry.slice(secondColonIdx + 1);
+      if (email.toLowerCase() === normalizedEmail) {
         return { username, password };
       }
-    } else if (parts.length === 2) {
-      const [userOrEmail, password] = parts;
-      if (userOrEmail.toLowerCase() === cfEmail.toLowerCase()) {
-        const username = userOrEmail.includes('@') ? userOrEmail.split('@')[0] : userOrEmail;
-        return { username, password };
+    } else if (firstColonIdx > 0) {
+      const userOrEmail = entry.slice(0, firstColonIdx);
+      const password = entry.slice(firstColonIdx + 1);
+      if (userOrEmail.toLowerCase() === normalizedEmail) {
+        // ensureUsers creates the username exactly as it appears before the
+        // first colon, so an email-style key must keep its full address.
+        return { username: userOrEmail, password };
       }
-      if (cfEmail.toLowerCase().startsWith(userOrEmail.toLowerCase() + '@')) {
+      if (normalizedEmail.startsWith(userOrEmail.toLowerCase() + '@')) {
         return { username: userOrEmail, password };
       }
     }
   }
 
-  // Fallback: If no direct match in AIONUI_USERS, check first user entry or use email prefix
-  const firstEntry = entries[0];
-  if (firstEntry) {
-    const parts = firstEntry.split(':');
-    if (parts.length === 3) return { username: parts[1], password: parts[2] };
-    if (parts.length === 2) return { username: parts[0], password: parts[1] };
-  }
-
-  const username = cfEmail.includes('@') ? cfEmail.split('@')[0] : cfEmail;
-  return { username };
+  // Never fall back to the first configured account. An unmatched SSO
+  // identity must remain unauthenticated instead of inheriting another
+  // user's conversations, teams, credentials, or workspace.
+  return null;
 }
 
 /**
@@ -286,32 +254,35 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
         req.method === 'GET' && (!req.url.includes('.') || req.url === '/' || req.url.startsWith('/?'));
 
       if (!hasSessionCookie && (isDocumentGet || isAuthCheck)) {
-        const cfEmail = extractCloudflareEmail(req);
+        const cfIdentity = await getCloudflareAccessIdentity(req.headers);
+        const cfEmail = cfIdentity?.email;
         if (cfEmail) {
           const userMatch = getAionUserForEmail(cfEmail);
-          const cookieHeader = await autoLoginUser(opts.backendPort, userMatch.username, userMatch.password);
-          if (cookieHeader) {
-            let formattedCookie = cookieHeader;
-            if (!formattedCookie.toLowerCase().includes('path=')) formattedCookie += '; Path=/';
-            if (!formattedCookie.toLowerCase().includes('samesite=')) formattedCookie += '; SameSite=Lax';
-            const isHttps =
-              req.headers['x-forwarded-proto'] === 'https' || req.headers['cf-visitor']?.includes('https');
-            if (isHttps && !formattedCookie.toLowerCase().includes('secure')) {
-              formattedCookie += '; Secure';
-            }
-            res.setHeader('Set-Cookie', formattedCookie);
+          if (userMatch) {
+            const cookieHeader = await autoLoginUser(opts.backendPort, userMatch.username, userMatch.password);
+            if (cookieHeader) {
+              let formattedCookie = cookieHeader;
+              if (!formattedCookie.toLowerCase().includes('path=')) formattedCookie += '; Path=/';
+              if (!formattedCookie.toLowerCase().includes('samesite=')) formattedCookie += '; SameSite=Lax';
+              const isHttps =
+                req.headers['x-forwarded-proto'] === 'https' || req.headers['cf-visitor']?.includes('https');
+              if (isHttps && !formattedCookie.toLowerCase().includes('secure')) {
+                formattedCookie += '; Secure';
+              }
+              res.setHeader('Set-Cookie', formattedCookie);
 
-            if (isAuthCheck) {
-              req.headers.cookie = req.headers.cookie ? `${req.headers.cookie}; ${formattedCookie}` : formattedCookie;
-              forwardToBackend(req, res, opts.backendPort);
+              if (isAuthCheck) {
+                req.headers.cookie = req.headers.cookie ? `${req.headers.cookie}; ${formattedCookie}` : formattedCookie;
+                forwardToBackend(req, res, opts.backendPort);
+                return;
+              }
+
+              await serveHandler(req, res, {
+                public: opts.staticDir,
+                rewrites: [{ source: '**', destination: '/index.html' }],
+              });
               return;
             }
-
-            await serveHandler(req, res, {
-              public: opts.staticDir,
-              rewrites: [{ source: '**', destination: '/index.html' }],
-            });
-            return;
           }
         }
       }
@@ -334,7 +305,7 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
         public: opts.staticDir,
         rewrites: [{ source: '**', destination: '/index.html' }],
       });
-    } catch (err) {
+    } catch {
       if (!res.headersSent) {
         res.writeHead(500, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ error: 'INTERNAL_ERROR' }));
@@ -366,7 +337,11 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
   // route to either the backend (for /ws and /api/stt/stream upgrades) or the internal HTTP
   // server (everything else). Both routes use raw TCP splice — no reliance
   // on http.Server's upgrade event.
+  const activeClients = new Set<Socket>();
   const tcp_server = net.createServer((client: Socket) => {
+    activeClients.add(client);
+    client.once('close', () => activeClients.delete(client));
+
     let peeked = Buffer.alloc(0);
     let settled = false;
     const cleanup = (): void => {
@@ -424,6 +399,13 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
         ) {
           (http_server as unknown as { closeIdleConnections: () => void }).closeIdleConnections();
         }
+
+        // net.Server does not drain keep-alive sockets on close. Destroy the
+        // public clients first, otherwise an idle browser connection can keep
+        // shutdown pending while tcp_server.close() waits for it to end.
+        for (const client of activeClients) client.destroy();
+        activeClients.clear();
+
         tcp_server.close(() => {
           if (
             typeof (http_server as unknown as { closeAllConnections?: () => void }).closeAllConnections === 'function'
