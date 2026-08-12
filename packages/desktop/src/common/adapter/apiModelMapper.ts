@@ -120,6 +120,10 @@ export function fromApiPaginatedConversations<T>(result: { items: T[]; total: nu
 } {
   return {
     ...result,
+    // The backend scopes this endpoint to the authenticated session. Do not
+    // filter again with localStorage: that value can be stale during account
+    // switches, PWA session recovery, or Electron launches and would hide
+    // valid history from the authoritative response.
     items: result.items.map(fromApiConversation),
   };
 }

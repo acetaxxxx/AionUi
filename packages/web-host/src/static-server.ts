@@ -14,6 +14,7 @@ import http, { type IncomingMessage, type Server, type ServerResponse } from 'no
 import { networkInterfaces } from 'node:os';
 import net, { type Socket } from 'node:net';
 import serveHandler from 'serve-handler';
+import { extractCloudflareAccessToken, getCloudflareAccessIdentity } from './cloudflareAccess.js';
 
 export type StaticServerOptions = {
   staticDir: string;
@@ -52,7 +53,15 @@ function forwardToBackend(req: IncomingMessage, res: ServerResponse, backendPort
     headers: { ...req.headers, host: `127.0.0.1:${backendPort}` },
   };
   const proxy = http.request(options, (proxyRes) => {
-    res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+    const isLogout = req.url?.startsWith('/logout') || req.url?.startsWith('/api/auth/logout');
+    const isCfAccess = Boolean(extractCloudflareAccessToken(req.headers));
+
+    const resHeaders = { ...proxyRes.headers };
+    if (isLogout && isCfAccess) {
+      resHeaders['x-cloudflare-logout'] = 'true';
+    }
+
+    res.writeHead(proxyRes.statusCode ?? 502, resHeaders);
     proxyRes.pipe(res);
   });
   proxy.on('error', () => {
@@ -117,6 +126,94 @@ function peekWsRoute(buf: Buffer): boolean | null {
   return /^GET\s+\/(?:ws|api\/stt\/stream)(?:\?[^\s]*)?\s+HTTP\/1\.[01]\r?$/.test(firstLine);
 }
 
+interface AionUserMatch {
+  username: string;
+  password?: string;
+}
+
+/**
+ * Matches a Cloudflare Access email against configured AIONUI_USERS entries.
+ * Supports:
+ * - "email:username:password"
+ * - "email:password"
+ * - "username:password"
+ */
+function getAionUserForEmail(cfEmail: string): AionUserMatch | null {
+  const usersEnv = process.env.AIONUI_USERS || '';
+  const entries = usersEnv
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const normalizedEmail = cfEmail.toLowerCase();
+
+  for (const entry of entries) {
+    const firstColonIdx = entry.indexOf(':');
+    const secondColonIdx = entry.indexOf(':', firstColonIdx + 1);
+    const isEmailMapping =
+      firstColonIdx > 0 && secondColonIdx > firstColonIdx && entry.slice(0, firstColonIdx).includes('@');
+    if (isEmailMapping) {
+      const email = entry.slice(0, firstColonIdx);
+      const username = entry.slice(firstColonIdx + 1, secondColonIdx);
+      const password = entry.slice(secondColonIdx + 1);
+      if (email.toLowerCase() === normalizedEmail) {
+        return { username, password };
+      }
+    } else if (firstColonIdx > 0) {
+      const userOrEmail = entry.slice(0, firstColonIdx);
+      const password = entry.slice(firstColonIdx + 1);
+      if (userOrEmail.toLowerCase() === normalizedEmail) {
+        // ensureUsers creates the username exactly as it appears before the
+        // first colon, so an email-style key must keep its full address.
+        return { username: userOrEmail, password };
+      }
+      if (normalizedEmail.startsWith(userOrEmail.toLowerCase() + '@')) {
+        return { username: userOrEmail, password };
+      }
+    }
+  }
+
+  // Never fall back to the first configured account. An unmatched SSO
+  // identity must remain unauthenticated instead of inheriting another
+  // user's conversations, teams, credentials, or workspace.
+  return null;
+}
+
+/**
+ * Auto-authenticates a matched user with aioncore /login endpoint to issue a session cookie.
+ */
+function autoLoginUser(backendPort: number, username: string, password?: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const postData = JSON.stringify({ username, password: password || '' });
+    const req = http.request(
+      {
+        hostname: '127.0.0.1',
+        port: backendPort,
+        path: '/login',
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'content-length': Buffer.byteLength(postData),
+        },
+      },
+      (res) => {
+        const setCookie = res.headers['set-cookie'];
+        if (setCookie && setCookie.length > 0) {
+          const sessionCookie = setCookie.find((c) => c.includes('aionui-session='));
+          if (sessionCookie) {
+            resolve(sessionCookie);
+            return;
+          }
+          resolve(setCookie[0]);
+          return;
+        }
+        resolve(null);
+      }
+    );
+    req.on('error', () => resolve(null));
+    req.write(postData);
+    req.end();
+  });
+}
 export async function startStaticServer(opts: StaticServerOptions): Promise<StaticServerHandle> {
   const port = opts.port ?? DEFAULT_PORT;
   const allowRemote = opts.allowRemote === true;
@@ -138,6 +235,46 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
         return;
       }
 
+      // Cloudflare Access SSO Auto-Login Interceptor
+      const hasSessionCookie = req.headers.cookie && req.headers.cookie.includes('aionui-session=');
+      const isAuthCheck = req.url === '/api/auth/user' || req.url.startsWith('/api/auth/user?');
+      const isDocumentGet =
+        req.method === 'GET' && (!req.url.includes('.') || req.url === '/' || req.url.startsWith('/?'));
+
+      if (!hasSessionCookie && (isDocumentGet || isAuthCheck)) {
+        const cfIdentity = await getCloudflareAccessIdentity(req.headers);
+        const cfEmail = cfIdentity?.email;
+        if (cfEmail) {
+          const userMatch = getAionUserForEmail(cfEmail);
+          if (userMatch) {
+            const cookieHeader = await autoLoginUser(opts.backendPort, userMatch.username, userMatch.password);
+            if (cookieHeader) {
+              let formattedCookie = cookieHeader;
+              if (!formattedCookie.toLowerCase().includes('path=')) formattedCookie += '; Path=/';
+              if (!formattedCookie.toLowerCase().includes('samesite=')) formattedCookie += '; SameSite=Lax';
+              const isHttps =
+                req.headers['x-forwarded-proto'] === 'https' || req.headers['cf-visitor']?.includes('https');
+              if (isHttps && !formattedCookie.toLowerCase().includes('secure')) {
+                formattedCookie += '; Secure';
+              }
+              res.setHeader('Set-Cookie', formattedCookie);
+
+              if (isAuthCheck) {
+                req.headers.cookie = req.headers.cookie ? `${req.headers.cookie}; ${formattedCookie}` : formattedCookie;
+                forwardToBackend(req, res, opts.backendPort);
+                return;
+              }
+
+              await serveHandler(req, res, {
+                public: opts.staticDir,
+                rewrites: [{ source: '**', destination: '/index.html' }],
+              });
+              return;
+            }
+          }
+        }
+      }
+
       // /api/* — reverse proxy to backend (includes /api/auth/*).
       // /login and /logout are aionui-auth's top-level auth endpoints: proxy them too
       // so WebUI browser clients reach the backend without a path-rewrite.
@@ -151,7 +288,7 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
         public: opts.staticDir,
         rewrites: [{ source: '**', destination: '/index.html' }],
       });
-    } catch (err) {
+    } catch {
       if (!res.headersSent) {
         res.writeHead(500, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ error: 'INTERNAL_ERROR' }));
@@ -178,7 +315,11 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
   // route to either the backend (for /ws and /api/stt/stream upgrades) or the internal HTTP
   // server (everything else). Both routes use raw TCP splice — no reliance
   // on http.Server's upgrade event.
+  const activeClients = new Set<Socket>();
   const tcp_server = net.createServer((client: Socket) => {
+    activeClients.add(client);
+    client.once('close', () => activeClients.delete(client));
+
     let peeked = Buffer.alloc(0);
     let settled = false;
     const cleanup = (): void => {
@@ -231,7 +372,24 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
     lanIP,
     stop: () =>
       new Promise<void>((resolve) => {
+        if (
+          typeof (http_server as unknown as { closeIdleConnections?: () => void }).closeIdleConnections === 'function'
+        ) {
+          (http_server as unknown as { closeIdleConnections: () => void }).closeIdleConnections();
+        }
+
+        // net.Server does not drain keep-alive sockets on close. Destroy the
+        // public clients first, otherwise an idle browser connection can keep
+        // shutdown pending while tcp_server.close() waits for it to end.
+        for (const client of activeClients) client.destroy();
+        activeClients.clear();
+
         tcp_server.close(() => {
+          if (
+            typeof (http_server as unknown as { closeAllConnections?: () => void }).closeAllConnections === 'function'
+          ) {
+            (http_server as unknown as { closeAllConnections: () => void }).closeAllConnections();
+          }
           http_server.close(() => resolve());
         });
       }),
