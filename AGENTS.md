@@ -83,6 +83,7 @@ See the `testing` skill (`.claude/skills/testing/SKILL.md`) for complete workflo
 - **Ratchet rules**: existing directory size or single-file-directory violations do not require cleanup during ordinary feature work or bugfixes, but the current change must not make them worse.
 - **No scope expansion**: implementation plans and reviews must not create extra tasks, phases, or acceptance criteria for cleanup unless the user asks for that scope.
 - **Ignored working docs**: `docs/superpowers/` is intentionally gitignored for local Superpowers specs and plans. Do not force-add or otherwise commit files from this directory.
+- **Private working docs**: `docs/design/` and `llm/` are gitignored for local design discussions, deployment notes, and AI handoffs. Keep public documentation in the tracked `docs/guides/`, `docs/specs/`, `docs/prds/`, or other appropriate public documentation directories. Never force-add private working docs.
 
 ### During Development
 
