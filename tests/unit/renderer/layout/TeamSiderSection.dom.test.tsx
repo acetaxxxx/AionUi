@@ -5,6 +5,7 @@ import type { TTeam } from '@/common/types/team/teamTypes';
 import TeamSiderSection from '@/renderer/components/layout/Sider/TeamSiderSection';
 
 const fixtures = vi.hoisted(() => ({
+  teams: [] as TTeam[],
   runningTeamIds: new Set(['running-team']),
   teamBadgeCounts: new Map<string, number>(),
   refreshTeams: vi.fn(),
@@ -40,7 +41,7 @@ const teams: TTeam[] = [
 
 vi.mock('@renderer/pages/team/hooks/useTeamList', () => ({
   useTeamList: () => ({
-    teams,
+    teams: fixtures.teams,
     mutate: fixtures.refreshTeams,
     removeTeam: fixtures.removeTeam,
   }),
@@ -122,6 +123,7 @@ const renderSection = (collapsed: boolean) =>
 describe('TeamSiderSection running state', () => {
   beforeEach(() => {
     localStorage.clear();
+    fixtures.teams = teams;
     fixtures.runningTeamIds.clear();
     fixtures.runningTeamIds.add('running-team');
     fixtures.teamBadgeCounts.clear();
@@ -141,6 +143,15 @@ describe('TeamSiderSection running state', () => {
     expect(within(spinnerSlot).getByTestId('spin')).toHaveAttribute('data-size', '16');
     expect(screen.queryByTestId('team-icon-running-team')).not.toBeInTheDocument();
     expect(screen.getByTestId('sider-item-Running team')).toHaveAttribute('data-pinned', 'false');
+  });
+
+  it('keeps the team section visible when no teams are returned', () => {
+    fixtures.teams = [];
+    localStorage.setItem('team-section-expanded', 'true');
+    renderSection(false);
+
+    expect(screen.getByTestId('team-section-toggle')).toBeInTheDocument();
+    expect(screen.queryByTestId('sider-item-Idle team')).not.toBeInTheDocument();
   });
 
   it('keeps the regular team icon for an idle team in the expanded section', () => {

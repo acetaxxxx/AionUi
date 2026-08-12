@@ -104,11 +104,12 @@ node scripts/check-i18n.js
 
 ### Before Pushing
 
-AI agents must not push unless explicitly asked. When pushing, use `just push`, never `git push`:
+AI agents must not push unless explicitly asked. When pushing, prefer `just push` because it runs the pre-push checks; if `just` is unavailable, run the equivalent checks manually and use `git push`:
 
 ```bash
 just push                          # lint → format-check → typecheck → test → git push
 just push -u origin feat/branch    # same checks, with extra git push args
+git push -u origin feat/branch     # fallback when just is unavailable after running the checks
 ```
 
 Any step that fails aborts the push. Fix the issue, commit, then retry.

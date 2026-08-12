@@ -7,7 +7,7 @@
  * Tests model transformation between frontend and backend formats.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   toApiModel,
   toApiModelOptional,
@@ -387,6 +387,26 @@ describe('apiModelMapper', () => {
       expect(result.items).toHaveLength(0);
       expect(result.total).toBe(0);
       expect(result.has_more).toBe(false);
+    });
+
+    it('does not hide backend rows because of a stale browser user id', () => {
+      vi.stubGlobal('localStorage', { getItem: () => 'stale-user' });
+
+      try {
+        const result = fromApiPaginatedConversations({
+          items: [{ id: 'conversation-from-session', user_id: 'current-user' }],
+          total: 1,
+          has_more: false,
+        });
+
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0]).toMatchObject({
+          id: 'conversation-from-session',
+          user_id: 'current-user',
+        });
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
   });
 });

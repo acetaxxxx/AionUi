@@ -1,10 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { promises as fs } from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import type { AddressInfo } from 'node:net';
+import { getCloudflareAccessIdentity } from './cloudflareAccess.js';
 import { startStaticServer, type StaticServerHandle } from './static-server.js';
+
+vi.mock('./cloudflareAccess.js', () => ({
+  extractCloudflareAccessToken: vi.fn(() => null),
+  getCloudflareAccessIdentity: vi.fn(),
+}));
 
 async function mkRendererFixture(): Promise<string> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ws-static-'));
@@ -32,6 +38,7 @@ describe('static-server', () => {
   let staticDir = '';
 
   beforeEach(async () => {
+    vi.mocked(getCloudflareAccessIdentity).mockResolvedValue(null);
     staticDir = await mkRendererFixture();
   });
 
@@ -333,6 +340,90 @@ describe('static-server', () => {
       }, 3000).unref();
     });
     expect(status).toMatch(/HTTP\/1\.1 101/i);
+  });
+
+  it('keeps the full email username when SSO maps an email-style account', async () => {
+    const previousUsers = process.env.AIONUI_USERS;
+    process.env.AIONUI_USERS = 'user@example.com:secret';
+    let loginUsername: string | null = null;
+
+    try {
+      vi.mocked(getCloudflareAccessIdentity).mockResolvedValue({
+        email: 'user@example.com',
+        payload: {},
+      });
+      const backend = await startMockBackend((req, res) => {
+        if (req.url === '/login' && req.method === 'POST') {
+          let body = '';
+          req.setEncoding('utf8');
+          req.on('data', (chunk) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            loginUsername = (JSON.parse(body) as { username: string }).username;
+            res.writeHead(200, { 'set-cookie': 'aionui-session=sso-token; Path=/; HttpOnly' });
+            res.end();
+          });
+          return;
+        }
+        if (req.url === '/api/auth/user') {
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ success: true, user: { username: loginUsername } }));
+          return;
+        }
+        res.writeHead(404).end();
+      });
+      stopBackend = backend.close;
+      handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+      const response = await fetch(`${handle.localUrl}/api/auth/user`, {
+        headers: {
+          'cf-access-jwt-assertion': 'verified-token',
+          'cf-access-authenticated-user-email': 'forged@example.com',
+        },
+      });
+
+      expect(response.status).toBe(200);
+      expect(loginUsername).toBe('user@example.com');
+    } finally {
+      if (previousUsers === undefined) delete process.env.AIONUI_USERS;
+      else process.env.AIONUI_USERS = previousUsers;
+    }
+  });
+
+  it('does not auto-login an unmatched SSO identity as another user', async () => {
+    const previousUsers = process.env.AIONUI_USERS;
+    process.env.AIONUI_USERS = 'first@example.com:first-secret,second@example.com:second-secret';
+    let loginCalls = 0;
+
+    try {
+      const backend = await startMockBackend((req, res) => {
+        if (req.url === '/login' && req.method === 'POST') {
+          loginCalls += 1;
+          res.writeHead(200, { 'set-cookie': 'aionui-session=wrong-user; Path=/' });
+          res.end();
+          return;
+        }
+        if (req.url === '/api/auth/user') {
+          res.writeHead(401, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ success: false }));
+          return;
+        }
+        res.writeHead(404).end();
+      });
+      stopBackend = backend.close;
+      handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+      const response = await fetch(`${handle.localUrl}/api/auth/user`, {
+        headers: { 'cf-access-authenticated-user-email': 'unknown@example.com' },
+      });
+
+      expect(response.status).toBe(401);
+      expect(loginCalls).toBe(0);
+    } finally {
+      if (previousUsers === undefined) delete process.env.AIONUI_USERS;
+      else process.env.AIONUI_USERS = previousUsers;
+    }
   });
 
   it('network URL populated only when allowRemote=true', async () => {
