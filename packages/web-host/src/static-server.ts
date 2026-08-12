@@ -185,7 +185,10 @@ interface AionUserMatch {
  */
 function getAionUserForEmail(cfEmail: string): AionUserMatch {
   const usersEnv = process.env.AIONUI_USERS || '';
-  const entries = usersEnv.split(',').map((s) => s.trim()).filter(Boolean);
+  const entries = usersEnv
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   for (const entry of entries) {
     const parts = entry.split(':');
@@ -279,7 +282,8 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
       // Cloudflare Access SSO Auto-Login Interceptor
       const hasSessionCookie = req.headers.cookie && req.headers.cookie.includes('aionui-session=');
       const isAuthCheck = req.url === '/api/auth/user' || req.url.startsWith('/api/auth/user?');
-      const isDocumentGet = req.method === 'GET' && (!req.url.includes('.') || req.url === '/' || req.url.startsWith('/?'));
+      const isDocumentGet =
+        req.method === 'GET' && (!req.url.includes('.') || req.url === '/' || req.url.startsWith('/?'));
 
       if (!hasSessionCookie && (isDocumentGet || isAuthCheck)) {
         const cfEmail = extractCloudflareEmail(req);
@@ -290,7 +294,8 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
             let formattedCookie = cookieHeader;
             if (!formattedCookie.toLowerCase().includes('path=')) formattedCookie += '; Path=/';
             if (!formattedCookie.toLowerCase().includes('samesite=')) formattedCookie += '; SameSite=Lax';
-            const isHttps = req.headers['x-forwarded-proto'] === 'https' || req.headers['cf-visitor']?.includes('https');
+            const isHttps =
+              req.headers['x-forwarded-proto'] === 'https' || req.headers['cf-visitor']?.includes('https');
             if (isHttps && !formattedCookie.toLowerCase().includes('secure')) {
               formattedCookie += '; Secure';
             }
@@ -314,7 +319,12 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
       // /api/* — reverse proxy to backend (includes /api/auth/*).
       // /login and /logout are aionui-auth's top-level auth endpoints: proxy them too
       // so WebUI browser clients reach the backend without a path-rewrite.
-      if (req.url.startsWith('/api/') || req.url.startsWith('/api?') || req.url.startsWith('/login') || req.url.startsWith('/logout')) {
+      if (
+        req.url.startsWith('/api/') ||
+        req.url.startsWith('/api?') ||
+        req.url.startsWith('/login') ||
+        req.url.startsWith('/logout')
+      ) {
         forwardToBackend(req, res, opts.backendPort);
         return;
       }
@@ -336,8 +346,8 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
 
   // Configure timeouts to prevent Cloudflare Tunnel TCP Keep-Alive race condition 502 errors
   http_server.keepAliveTimeout = 75000; // 75 seconds (> Cloudflare 60s default)
-  http_server.headersTimeout = 76000;   // 76 seconds (> keepAliveTimeout)
-  http_server.requestTimeout = 300000;  // 5 minutes for long LLM / Agent streaming requests
+  http_server.headersTimeout = 76000; // 76 seconds (> keepAliveTimeout)
+  http_server.requestTimeout = 300000; // 5 minutes for long LLM / Agent streaming requests
 
   // Internal HTTP server — 127.0.0.1 ephemeral port, never visible to the user.
   await new Promise<void>((resolve, reject) => {
@@ -409,11 +419,15 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
     lanIP,
     stop: () =>
       new Promise<void>((resolve) => {
-        if (typeof (http_server as unknown as { closeIdleConnections?: () => void }).closeIdleConnections === 'function') {
+        if (
+          typeof (http_server as unknown as { closeIdleConnections?: () => void }).closeIdleConnections === 'function'
+        ) {
           (http_server as unknown as { closeIdleConnections: () => void }).closeIdleConnections();
         }
         tcp_server.close(() => {
-          if (typeof (http_server as unknown as { closeAllConnections?: () => void }).closeAllConnections === 'function') {
+          if (
+            typeof (http_server as unknown as { closeAllConnections?: () => void }).closeAllConnections === 'function'
+          ) {
             (http_server as unknown as { closeAllConnections: () => void }).closeAllConnections();
           }
           http_server.close(() => resolve());
