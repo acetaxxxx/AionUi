@@ -32,6 +32,7 @@
    fixed top nav and the scrollable list stay on the same vertical center line.
    Mimics macOS native overlay scrollbars. */
 .scrollArea {
+  min-height: 0;
   scrollbar-width: none; /* Firefox */
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;

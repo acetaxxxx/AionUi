@@ -111,7 +111,9 @@ const detectMobileViewportOrTouch = (): boolean => {
   // 仅在小屏时才将 coarse/touch 视为移动端，避免触控笔记本被误判
   // Treat touch/coarse pointer as mobile only on smaller viewports
   const smallScreen = width < 1024;
-  const byMedia = window.matchMedia('(hover: none)').matches || window.matchMedia('(pointer: coarse)').matches;
+  const byMedia =
+    typeof window.matchMedia === 'function' &&
+    (window.matchMedia('(hover: none)').matches || window.matchMedia('(pointer: coarse)').matches);
   const byTouchPoints = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
   return byWidth || (smallScreen && (byMedia || byTouchPoints));
 };
@@ -121,7 +123,7 @@ const Layout: React.FC<{
   onSessionClick?: () => void;
 }> = ({ sider, onSessionClick: _onSessionClick }) => {
   const [collapsed, setCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => detectMobileViewportOrTouch());
   const [viewportWidth, setViewportWidth] = useState<number>(() =>
     typeof window === 'undefined' ? 390 : window.innerWidth
   );
@@ -406,7 +408,7 @@ const Layout: React.FC<{
   return (
     <LayoutContext.Provider value={{ isMobile, siderCollapsed: collapsed, setSiderCollapsed: setCollapsed }}>
       <NavigationHistoryProvider>
-        <div className='app-shell flex flex-col size-full min-h-0'>
+        <div className={classNames('app-shell flex flex-col size-full min-h-0', { 'app-shell--mobile': isMobile })}>
           <Titlebar workspaceAvailable={workspaceAvailable} />
           {/* 移动端左侧边栏蒙板 / Mobile left sider backdrop */}
           {isMobile && !collapsed && (

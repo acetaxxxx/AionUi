@@ -172,7 +172,7 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
   };
 
   return (
-    <div className='size-full flex flex-col'>
+    <div className='size-full min-h-0 flex flex-col'>
       {/* Main content area */}
       <div className='flex-1 min-h-0 overflow-hidden'>
         {isSettings ? (

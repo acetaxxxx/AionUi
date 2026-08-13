@@ -73,6 +73,8 @@ vi.mock('@renderer/pages/conversation/Preview/context/PreviewContext', () => ({
 import Layout from '@renderer/components/layout/Layout';
 
 const renderLayout = () => render(<Layout sider={<div>sider</div>} />);
+const initialInnerWidth = window.innerWidth;
+const initialMaxTouchPoints = navigator.maxTouchPoints;
 
 const BACK_KEY = 'common.back';
 
@@ -101,6 +103,8 @@ describe('Layout sider brand Home button', () => {
   });
 
   afterEach(() => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: initialInnerWidth });
+    Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: initialMaxTouchPoints });
     vi.clearAllMocks();
   });
 
@@ -185,6 +189,26 @@ describe('Layout sider brand Home button', () => {
 
     act(() => shortcutMocks.params?.toggleSider());
     expect(sider).not.toHaveClass('collapsed');
+  });
+
+  it('uses the mobile flex/scroll layout for an iPad-sized touch viewport', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 820 });
+    Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 5 });
+
+    const { container } = renderLayout();
+
+    expect(container.querySelector('.app-shell')).toHaveClass('app-shell--mobile');
+    expect(container.querySelector('.layout-sider')).toHaveStyle({ position: 'fixed' });
+  });
+
+  it('keeps a non-touch narrow desktop viewport on the desktop layout', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 820 });
+    Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 0 });
+
+    const { container } = renderLayout();
+
+    expect(container.querySelector('.app-shell')).not.toHaveClass('app-shell--mobile');
+    expect(container.querySelector('.layout-sider')).toHaveStyle({ position: 'relative' });
   });
 
   it('keeps the common shortcut owner mounted on team routes', () => {
