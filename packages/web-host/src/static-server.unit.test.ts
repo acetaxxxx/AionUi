@@ -4,7 +4,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import type { AddressInfo } from 'node:net';
-import { getCloudflareAccessIdentity } from './cloudflareAccess.js';
+import { extractCloudflareAccessToken, getCloudflareAccessIdentity } from './cloudflareAccess.js';
 import { startStaticServer, type StaticServerHandle } from './static-server.js';
 
 vi.mock('./cloudflareAccess.js', () => ({
@@ -38,6 +38,10 @@ describe('static-server', () => {
   let staticDir = '';
 
   beforeEach(async () => {
+    vi.mocked(extractCloudflareAccessToken).mockImplementation((headers) => {
+      const token = headers['cf-access-jwt-assertion'];
+      return typeof token === 'string' ? token : null;
+    });
     vi.mocked(getCloudflareAccessIdentity).mockResolvedValue(null);
     staticDir = await mkRendererFixture();
   });
@@ -397,6 +401,10 @@ describe('static-server', () => {
     let loginCalls = 0;
 
     try {
+      vi.mocked(getCloudflareAccessIdentity).mockResolvedValue({
+        email: 'unknown@example.com',
+        payload: {},
+      });
       const backend = await startMockBackend((req, res) => {
         if (req.url === '/login' && req.method === 'POST') {
           loginCalls += 1;
@@ -415,11 +423,209 @@ describe('static-server', () => {
       handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
 
       const response = await fetch(`${handle.localUrl}/api/auth/user`, {
-        headers: { 'cf-access-authenticated-user-email': 'unknown@example.com' },
+        headers: { 'cf-access-jwt-assertion': 'verified-token' },
       });
 
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(403);
+      expect(response.headers.get('set-cookie')).toMatch(/aionui-session=;.*Max-Age=0/);
       expect(loginCalls).toBe(0);
+    } finally {
+      if (previousUsers === undefined) delete process.env.AIONUI_USERS;
+      else process.env.AIONUI_USERS = previousUsers;
+    }
+  });
+
+  it('reuses a valid AION session for the current Cloudflare identity', async () => {
+    const previousUsers = process.env.AIONUI_USERS;
+    process.env.AIONUI_USERS = 'user@example.com:secret';
+    let loginCalls = 0;
+
+    try {
+      vi.mocked(getCloudflareAccessIdentity).mockResolvedValue({
+        email: 'user@example.com',
+        payload: {},
+      });
+      const backend = await startMockBackend((req, res) => {
+        if (req.url === '/login' && req.method === 'POST') {
+          loginCalls += 1;
+          res.writeHead(200, { 'set-cookie': 'aionui-session=unexpected-login; Path=/' });
+          res.end();
+          return;
+        }
+        if (req.url === '/api/auth/user') {
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ success: true, user: { username: 'user@example.com', id: 'user-id' } }));
+          return;
+        }
+        res.writeHead(404).end();
+      });
+      stopBackend = backend.close;
+      handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+      const response = await fetch(`${handle.localUrl}/api/auth/user`, {
+        headers: {
+          'cf-access-jwt-assertion': 'verified-token',
+          cookie: 'aionui-session=valid-token',
+        },
+      });
+
+      expect(response.status).toBe(200);
+      expect(loginCalls).toBe(0);
+      const payload = (await response.json()) as { user: { username: string } };
+      expect(payload.user.username).toBe('user@example.com');
+    } finally {
+      if (previousUsers === undefined) delete process.env.AIONUI_USERS;
+      else process.env.AIONUI_USERS = previousUsers;
+    }
+  });
+
+  it('keeps a local AION session when no Cloudflare token is present', async () => {
+    let loginCalls = 0;
+    const backend = await startMockBackend((req, res) => {
+      if (req.url === '/login' && req.method === 'POST') {
+        loginCalls += 1;
+        res.writeHead(200, { 'set-cookie': 'aionui-session=unexpected-login; Path=/' });
+        res.end();
+        return;
+      }
+      if (req.url === '/api/auth/user') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ success: true, user: { username: 'local-user', id: 'local-id' } }));
+        return;
+      }
+      res.writeHead(404).end();
+    });
+    stopBackend = backend.close;
+    handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+    const response = await fetch(`${handle.localUrl}/api/auth/user`, {
+      headers: { cookie: 'aionui-session=local-token' },
+    });
+
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as { user: { username: string } };
+    expect(payload.user.username).toBe('local-user');
+    expect(loginCalls).toBe(0);
+  });
+
+  it('refreshes an expired AION session from the current Cloudflare identity', async () => {
+    const previousUsers = process.env.AIONUI_USERS;
+    process.env.AIONUI_USERS = 'user@example.com:secret';
+    let loginUsername: string | null = null;
+    let loginRemember: boolean | null = null;
+    let forwardedCookie: string | undefined;
+
+    try {
+      vi.mocked(getCloudflareAccessIdentity).mockResolvedValue({
+        email: 'user@example.com',
+        payload: {},
+      });
+      const backend = await startMockBackend((req, res) => {
+        if (req.url === '/login' && req.method === 'POST') {
+          let body = '';
+          req.setEncoding('utf8');
+          req.on('data', (chunk) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            const payload = JSON.parse(body) as { username: string; remember: boolean };
+            loginUsername = payload.username;
+            loginRemember = payload.remember;
+            res.writeHead(200, { 'set-cookie': 'aionui-session=refreshed-token; Path=/; HttpOnly' });
+            res.end();
+          });
+          return;
+        }
+        if (req.url === '/api/auth/user') {
+          if (req.headers.cookie?.includes('refreshed-token')) {
+            forwardedCookie = req.headers.cookie;
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({ success: true, user: { username: 'user@example.com', id: 'user-id' } }));
+          } else {
+            res.writeHead(401, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({ success: false }));
+          }
+          return;
+        }
+        res.writeHead(404).end();
+      });
+      stopBackend = backend.close;
+      handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+      const response = await fetch(`${handle.localUrl}/api/auth/user`, {
+        headers: {
+          'cf-access-jwt-assertion': 'verified-token',
+          cookie: 'aionui-session=expired-token; csrf-token=csrf-value',
+        },
+      });
+
+      expect(response.status).toBe(200);
+      expect(loginUsername).toBe('user@example.com');
+      expect(loginRemember).toBe(true);
+      expect(forwardedCookie).toContain('aionui-session=refreshed-token');
+      expect(forwardedCookie).not.toContain('aionui-session=expired-token');
+      expect(response.headers.get('set-cookie')).toMatch(/aionui-session=refreshed-token/);
+    } finally {
+      if (previousUsers === undefined) delete process.env.AIONUI_USERS;
+      else process.env.AIONUI_USERS = previousUsers;
+    }
+  });
+
+  it('switches the AION session when the Cloudflare identity changes', async () => {
+    const previousUsers = process.env.AIONUI_USERS;
+    process.env.AIONUI_USERS = 'first@example.com:first-secret,second@example.com:second-secret';
+    let loginUsername: string | null = null;
+    let forwardedCookie: string | undefined;
+
+    try {
+      vi.mocked(getCloudflareAccessIdentity).mockResolvedValue({
+        email: 'second@example.com',
+        payload: {},
+      });
+      const backend = await startMockBackend((req, res) => {
+        if (req.url === '/login' && req.method === 'POST') {
+          let body = '';
+          req.setEncoding('utf8');
+          req.on('data', (chunk) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            loginUsername = (JSON.parse(body) as { username: string }).username;
+            res.writeHead(200, { 'set-cookie': 'aionui-session=second-token; Path=/; HttpOnly' });
+            res.end();
+          });
+          return;
+        }
+        if (req.url === '/api/auth/user') {
+          if (req.headers.cookie?.includes('first-token')) {
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({ success: true, user: { username: 'first@example.com', id: 'first-id' } }));
+          } else if (req.headers.cookie?.includes('second-token')) {
+            forwardedCookie = req.headers.cookie;
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({ success: true, user: { username: 'second@example.com', id: 'second-id' } }));
+          } else {
+            res.writeHead(401, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({ success: false }));
+          }
+          return;
+        }
+        res.writeHead(404).end();
+      });
+      stopBackend = backend.close;
+      handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+      const response = await fetch(`${handle.localUrl}/api/auth/user`, {
+        headers: {
+          'cf-access-jwt-assertion': 'verified-token',
+          cookie: 'aionui-session=first-token',
+        },
+      });
+
+      expect(response.status).toBe(200);
+      expect(loginUsername).toBe('second@example.com');
+      expect(forwardedCookie).toContain('aionui-session=second-token');
+      expect(forwardedCookie).not.toContain('aionui-session=first-token');
     } finally {
       if (previousUsers === undefined) delete process.env.AIONUI_USERS;
       else process.env.AIONUI_USERS = previousUsers;
