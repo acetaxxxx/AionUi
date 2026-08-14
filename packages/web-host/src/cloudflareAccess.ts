@@ -33,6 +33,7 @@ const AUDIENCE_ENV_NAMES = [
   'CF_ACCESS_AUDIENCE',
   'POLICY_AUD',
 ] as const;
+const CLOUDFLARE_ACCESS_JWKS_TIMEOUT_MS = 5000;
 
 function firstNonEmptyEnvValue(env: NodeJS.ProcessEnv, names: readonly string[]): string | undefined {
   for (const name of names) {
@@ -76,7 +77,11 @@ export function createCloudflareAccessVerifier(
     throw new Error('Cloudflare Access team domain and audience must be configured');
   }
 
-  const jwks = keySet ?? createRemoteJWKSet(new URL(`${teamDomain}/cdn-cgi/access/certs`));
+  const jwks =
+    keySet ??
+    createRemoteJWKSet(new URL(`${teamDomain}/cdn-cgi/access/certs`), {
+      timeoutDuration: CLOUDFLARE_ACCESS_JWKS_TIMEOUT_MS,
+    });
 
   return async (token: string): Promise<CloudflareAccessIdentity | null> => {
     if (!token.trim()) return null;
