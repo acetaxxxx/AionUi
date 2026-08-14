@@ -508,6 +508,34 @@ describe('static-server', () => {
     expect(loginCalls).toBe(0);
   });
 
+  it('falls back to the AION auth flow when Cloudflare verification is unavailable', async () => {
+    let forwardedCookie: string | undefined;
+    vi.mocked(getCloudflareAccessIdentity).mockResolvedValue(null);
+    const backend = await startMockBackend((req, res) => {
+      if (req.url === '/api/auth/user') {
+        forwardedCookie = req.headers.cookie;
+        res.writeHead(401, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Authentication required' }));
+        return;
+      }
+      res.writeHead(404).end();
+    });
+    stopBackend = backend.close;
+    handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+    const response = await fetch(`${handle.localUrl}/api/auth/user`, {
+      headers: {
+        'cf-access-jwt-assertion': 'temporarily-unverifiable-token',
+        cookie: 'aionui-session=existing-token',
+      },
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ error: 'Authentication required' });
+    expect(forwardedCookie).toContain('aionui-session=existing-token');
+    expect(response.headers.get('set-cookie')).toBeNull();
+  });
+
   it('refreshes an expired AION session from the current Cloudflare identity', async () => {
     const previousUsers = process.env.AIONUI_USERS;
     process.env.AIONUI_USERS = 'user@example.com:secret';

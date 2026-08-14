@@ -33,6 +33,8 @@ export type StaticServerHandle = {
 };
 
 const DEFAULT_PORT = 25808;
+const BACKEND_SESSION_LOOKUP_TIMEOUT_MS = 2000;
+const BACKEND_LOGIN_TIMEOUT_MS = 5000;
 
 function getLanIP(): string | null {
   const nets = networkInterfaces();
@@ -232,7 +234,7 @@ function getExpiredAionSessionCookie(req: IncomingMessage): string {
 
 function getBackendSessionUsername(backendPort: number, cookieHeader: string): Promise<string | null> {
   return new Promise((resolve) => {
-    const req = http.request(
+    const authReq = http.request(
       {
         hostname: '127.0.0.1',
         port: backendPort,
@@ -267,8 +269,9 @@ function getBackendSessionUsername(backendPort: number, cookieHeader: string): P
         });
       }
     );
-    req.on('error', () => resolve(null));
-    req.end();
+    authReq.setTimeout(BACKEND_SESSION_LOOKUP_TIMEOUT_MS, () => authReq.destroy());
+    authReq.on('error', () => resolve(null));
+    authReq.end();
   });
 }
 
@@ -278,7 +281,7 @@ function getBackendSessionUsername(backendPort: number, cookieHeader: string): P
 function autoLoginUser(backendPort: number, username: string, password?: string): Promise<string | null> {
   return new Promise((resolve) => {
     const postData = JSON.stringify({ username, password: password || '', remember: true });
-    const req = http.request(
+    const loginReq = http.request(
       {
         hostname: '127.0.0.1',
         port: backendPort,
@@ -303,9 +306,10 @@ function autoLoginUser(backendPort: number, username: string, password?: string)
         resolve(null);
       }
     );
-    req.on('error', () => resolve(null));
-    req.write(postData);
-    req.end();
+    loginReq.setTimeout(BACKEND_LOGIN_TIMEOUT_MS, () => loginReq.destroy());
+    loginReq.on('error', () => resolve(null));
+    loginReq.write(postData);
+    loginReq.end();
   });
 }
 
@@ -315,7 +319,13 @@ function writeCloudflareAuthFailure(
   statusCode: number,
   error: 'CF_ACCESS_UNVERIFIED' | 'CF_IDENTITY_NOT_MAPPED' | 'AION_SESSION_REFRESH_FAILED'
 ): void {
-  res.setHeader('Set-Cookie', getExpiredAionSessionCookie(req));
+  // A transient Cloudflare/JWKS verification failure can finish after a newer
+  // login request. Never let that stale response delete the newer AION session.
+  // A verified identity mismatch still clears the cookie to prevent account
+  // crossover.
+  if (error !== 'CF_ACCESS_UNVERIFIED') {
+    res.setHeader('Set-Cookie', getExpiredAionSessionCookie(req));
+  }
   res.writeHead(statusCode, { 'content-type': 'application/json', 'cache-control': 'no-store' });
   res.end(JSON.stringify({ success: false, error }));
 }
@@ -348,45 +358,17 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
       const isDocumentGet =
         req.method === 'GET' && (!req.url.includes('.') || req.url === '/' || req.url.startsWith('/?'));
 
-      if ((isDocumentGet || isAuthCheck) && extractCloudflareAccessToken(req.headers)) {
+      const cloudflareAccessToken = extractCloudflareAccessToken(req.headers);
+      if ((isDocumentGet || isAuthCheck) && cloudflareAccessToken) {
         const cfIdentity = await getCloudflareAccessIdentity(req.headers);
-        if (!cfIdentity?.email) {
-          if (isAuthCheck) {
-            writeCloudflareAuthFailure(req, res, 401, 'CF_ACCESS_UNVERIFIED');
-          } else {
-            res.setHeader('Set-Cookie', getExpiredAionSessionCookie(req));
-            await serveHandler(req, res, {
-              public: opts.staticDir,
-              rewrites: [{ source: '**', destination: '/index.html' }],
-            });
-          }
-          return;
-        }
-
-        const userMatch = getAionUserForEmail(cfIdentity.email);
-        if (!userMatch) {
-          if (isAuthCheck) {
-            writeCloudflareAuthFailure(req, res, 403, 'CF_IDENTITY_NOT_MAPPED');
-          } else {
-            res.setHeader('Set-Cookie', getExpiredAionSessionCookie(req));
-            await serveHandler(req, res, {
-              public: opts.staticDir,
-              rewrites: [{ source: '**', destination: '/index.html' }],
-            });
-          }
-          return;
-        }
-
-        const currentUsername = hasSessionCookie
-          ? await getBackendSessionUsername(opts.backendPort, req.headers.cookie ?? '')
-          : null;
-        const sessionMatchesCloudflareIdentity = currentUsername === userMatch.username;
-
-        if (!sessionMatchesCloudflareIdentity) {
-          const cookieHeader = await autoLoginUser(opts.backendPort, userMatch.username, userMatch.password);
-          if (!cookieHeader) {
+        // Cloudflare Access remains the outer gate. If origin-side JWT
+        // verification is temporarily unavailable, continue with the normal
+        // AION flow instead of turning a transient edge problem into a logout.
+        if (cfIdentity?.email) {
+          const userMatch = getAionUserForEmail(cfIdentity.email);
+          if (!userMatch) {
             if (isAuthCheck) {
-              writeCloudflareAuthFailure(req, res, 401, 'AION_SESSION_REFRESH_FAILED');
+              writeCloudflareAuthFailure(req, res, 403, 'CF_IDENTITY_NOT_MAPPED');
             } else {
               res.setHeader('Set-Cookie', getExpiredAionSessionCookie(req));
               await serveHandler(req, res, {
@@ -397,25 +379,46 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
             return;
           }
 
-          let formattedCookie = cookieHeader;
-          if (!formattedCookie.toLowerCase().includes('path=')) formattedCookie += '; Path=/';
-          if (!formattedCookie.toLowerCase().includes('samesite=')) formattedCookie += '; SameSite=Lax';
-          if (isHttpsRequest(req) && !formattedCookie.toLowerCase().includes('secure')) {
-            formattedCookie += '; Secure';
-          }
-          res.setHeader('Set-Cookie', formattedCookie);
-          req.headers.cookie = replaceAionSessionCookie(req.headers.cookie, formattedCookie);
+          const currentUsername = hasSessionCookie
+            ? await getBackendSessionUsername(opts.backendPort, req.headers.cookie ?? '')
+            : null;
+          const sessionMatchesCloudflareIdentity = currentUsername === userMatch.username;
 
-          if (isAuthCheck) {
-            forwardToBackend(req, res, opts.backendPort);
+          if (!sessionMatchesCloudflareIdentity) {
+            const cookieHeader = await autoLoginUser(opts.backendPort, userMatch.username, userMatch.password);
+            if (!cookieHeader) {
+              if (isAuthCheck) {
+                writeCloudflareAuthFailure(req, res, 401, 'AION_SESSION_REFRESH_FAILED');
+              } else {
+                res.setHeader('Set-Cookie', getExpiredAionSessionCookie(req));
+                await serveHandler(req, res, {
+                  public: opts.staticDir,
+                  rewrites: [{ source: '**', destination: '/index.html' }],
+                });
+              }
+              return;
+            }
+
+            let formattedCookie = cookieHeader;
+            if (!formattedCookie.toLowerCase().includes('path=')) formattedCookie += '; Path=/';
+            if (!formattedCookie.toLowerCase().includes('samesite=')) formattedCookie += '; SameSite=Lax';
+            if (isHttpsRequest(req) && !formattedCookie.toLowerCase().includes('secure')) {
+              formattedCookie += '; Secure';
+            }
+            res.setHeader('Set-Cookie', formattedCookie);
+            req.headers.cookie = replaceAionSessionCookie(req.headers.cookie, formattedCookie);
+
+            if (isAuthCheck) {
+              forwardToBackend(req, res, opts.backendPort);
+              return;
+            }
+
+            await serveHandler(req, res, {
+              public: opts.staticDir,
+              rewrites: [{ source: '**', destination: '/index.html' }],
+            });
             return;
           }
-
-          await serveHandler(req, res, {
-            public: opts.staticDir,
-            rewrites: [{ source: '**', destination: '/index.html' }],
-          });
-          return;
         }
       }
 
