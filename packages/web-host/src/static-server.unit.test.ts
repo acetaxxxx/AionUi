@@ -536,6 +536,38 @@ describe('static-server', () => {
     expect(response.headers.get('set-cookie')).toBeNull();
   });
 
+  it('proxies collection APIs when Cloudflare verification is temporarily unavailable', async () => {
+    vi.mocked(getCloudflareAccessIdentity).mockResolvedValue(null);
+    const backend = await startMockBackend((req, res) => {
+      if (req.url === '/api/conversations?limit=10000') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ success: true, data: [] }));
+        return;
+      }
+      if (req.url === '/api/teams?user_id=user-1') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ success: true, data: [] }));
+        return;
+      }
+      res.writeHead(404).end();
+    });
+    stopBackend = backend.close;
+    handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+    const headers = { 'cf-access-jwt-assertion': 'temporarily-unverifiable-token' };
+    const [conversationsResponse, teamsResponse] = await Promise.all([
+      fetch(`${handle.localUrl}/api/conversations?limit=10000`, { headers }),
+      fetch(`${handle.localUrl}/api/teams?user_id=user-1`, { headers }),
+    ]);
+
+    expect(conversationsResponse.status).toBe(200);
+    expect(conversationsResponse.headers.get('content-type')).toContain('application/json');
+    expect(await conversationsResponse.json()).toEqual({ success: true, data: [] });
+    expect(teamsResponse.status).toBe(200);
+    expect(teamsResponse.headers.get('content-type')).toContain('application/json');
+    expect(await teamsResponse.json()).toEqual({ success: true, data: [] });
+  });
+
   it('refreshes an expired AION session from the current Cloudflare identity', async () => {
     const previousUsers = process.env.AIONUI_USERS;
     process.env.AIONUI_USERS = 'user@example.com:secret';
