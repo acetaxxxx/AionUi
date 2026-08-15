@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import AppLoader from '@renderer/components/layout/AppLoader';
+import LazyLoadErrorBoundary from '@renderer/components/layout/LazyLoadErrorBoundary';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
 import { TEAM_MODE_ENABLED } from '@/common/config/constants';
 const Conversation = React.lazy(() => import('@renderer/pages/conversation'));
@@ -25,7 +26,9 @@ const TeamIndex = React.lazy(() => import('@renderer/pages/team'));
 
 const withRouteFallback = (Component: React.LazyExoticComponent<React.ComponentType>) => (
   <Suspense fallback={<AppLoader />}>
-    <Component />
+    <LazyLoadErrorBoundary>
+      <Component />
+    </LazyLoadErrorBoundary>
   </Suspense>
 );
 
