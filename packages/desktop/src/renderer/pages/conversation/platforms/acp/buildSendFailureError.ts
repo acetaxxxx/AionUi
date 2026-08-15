@@ -82,11 +82,16 @@ export const buildSendFailureError = (error: unknown, message: string): AgentStr
   }
 
   if (isBackendHttpError(error) && error.code === 'BAD_GATEWAY') {
+    const cleanDetail =
+      error.backendMessage && !error.backendMessage.includes('<html') && !error.backendMessage.includes('<!DOCTYPE')
+        ? error.backendMessage
+        : 'Bad Gateway (502): Connection interrupted. Please retry.';
+
     return {
-      message,
+      message: cleanDetail,
       code: 'UNKNOWN_UPSTREAM_ERROR',
       ownership: 'unknown_upstream',
-      detail: message,
+      detail: cleanDetail,
       retryable: true,
       feedback_recommended: true,
     };

@@ -338,6 +338,29 @@ const LoginPage: React.FC = () => {
             <span>{loading ? t('login.submitting') : t('login.submit')}</span>
           </button>
 
+          {typeof document !== 'undefined' && document.cookie.includes('CF_Authorization') && (
+            <button
+              type='button'
+              onClick={() => {
+                window.location.href = '/cdn-cgi/access/logout';
+              }}
+              style={{
+                width: '100%',
+                marginTop: 12,
+                padding: '10px 16px',
+                borderRadius: 8,
+                border: '1px solid var(--color-border-2, #e5e6eb)',
+                backgroundColor: 'transparent',
+                color: 'var(--color-text-1, #1d2129)',
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            >
+              {t('login.pwaSessionExpiredButton')}
+            </button>
+          )}
+
           <div
             role='alert'
             aria-live='polite'

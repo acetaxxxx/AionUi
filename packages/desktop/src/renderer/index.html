@@ -32,6 +32,28 @@
         padding: 0;
         overflow: hidden;
       }
+
+      /* Use the stable viewport on small screens so the app frame does not
+         resize every time iOS Safari shows or hides its browser chrome. */
+      @media (max-width: 767px) {
+        html,
+        body,
+        #root {
+          height: 100vh;
+          min-height: 100vh;
+        }
+      }
+
+      @supports (height: 100svh) {
+        @media (max-width: 767px) {
+          html,
+          body,
+          #root {
+            height: 100svh;
+            min-height: 100svh;
+          }
+        }
+      }
     </style>
   </head>
   <body>

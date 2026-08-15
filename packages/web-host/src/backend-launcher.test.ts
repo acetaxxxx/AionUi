@@ -353,7 +353,6 @@ describe('BackendLifecycleManager.start (success path)', () => {
       '/log/dir',
       '--work-dir',
       '/w',
-      '--local',
     ]);
 
     fetchSpy.mockRestore();
@@ -407,7 +406,6 @@ describe('BackendLifecycleManager.start (success path)', () => {
         '/log/dir',
         '--work-dir',
         '/w',
-        '--local',
       ]);
       const opts = spawnCall[2] as { cwd?: string; env: NodeJS.ProcessEnv };
       expect(opts.cwd).toBe('/w');

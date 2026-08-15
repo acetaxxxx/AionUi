@@ -316,12 +316,12 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   }, [containerRef]);
 
   const baseDir = useMemo(() => {
-    if (!file_path) return undefined;
+    if (!file_path) return workspace;
     const normalized = file_path.replace(/\\/g, '/');
     const lastSlash = normalized.lastIndexOf('/');
-    if (lastSlash === -1) return undefined;
+    if (lastSlash === -1) return workspace;
     return normalized.slice(0, lastSlash);
-  }, [file_path]);
+  }, [file_path, workspace]);
 
   return (
     <div className='flex flex-col w-full h-full overflow-hidden'>

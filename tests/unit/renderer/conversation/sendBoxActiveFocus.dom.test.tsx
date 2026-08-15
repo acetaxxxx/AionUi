@@ -191,6 +191,15 @@ describe('SendBox active-controlled focus', () => {
     expect(textarea).not.toHaveFocus();
   });
 
+  it('keeps the mobile input at a non-zooming font size', () => {
+    layoutState.isMobile = true;
+    render(<SendBoxHarness active={false} />);
+
+    const textarea = screen.getByTestId('sendbox-input') as HTMLTextAreaElement;
+    expect(textarea).toHaveClass('sendbox-input--mobile');
+    expect(textarea.style.fontSize).toBe('16px');
+  });
+
   it('calls onFocused when the textarea gains focus', () => {
     layoutState.isMobile = false;
     const onFocused = vi.fn();

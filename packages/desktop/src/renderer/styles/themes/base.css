@@ -1,8 +1,16 @@
 /* Base styles - theme-independent */
 
 :root {
-  --app-min-width: 360px;
+  --app-min-width: 320px;
+  --app-viewport-height: 100vh;
   --titlebar-height: 36px;
+}
+
+/* Keep the app frame stable while iOS Safari expands and collapses its browser chrome. */
+@supports (height: 100svh) {
+  :root {
+    --app-viewport-height: 100svh;
+  }
 }
 
 .app-shell {
@@ -41,6 +49,46 @@ body,
 @media (max-width: 767px) {
   html {
     -webkit-text-size-adjust: 100%;
+  }
+
+  html,
+  body,
+  #root {
+    height: var(--app-viewport-height);
+    min-height: var(--app-viewport-height);
+  }
+
+  /* Allow narrow iPhones to use their real width instead of creating a
+     horizontal layout wider than the viewport. */
+  html,
+  body,
+  #root,
+  .layout,
+  .layout-content {
+    min-width: 0;
+  }
+
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  /* iOS Safari zooms focused controls whose computed font size is below 16px.
+     Keep every renderer control at the native readable minimum so focus does
+     not change the page scale or move the surrounding layout. */
+  input,
+  textarea,
+  select,
+  [contenteditable='true'],
+  .arco-input,
+  .arco-textarea,
+  .arco-select-view,
+  .arco-picker,
+  .arco-input-number,
+  .arco-cascader-view,
+  .arco-tree-select-view,
+  .arco-auto-complete-view,
+  .arco-mentions-view {
+    font-size: 16px !important;
   }
 }
 

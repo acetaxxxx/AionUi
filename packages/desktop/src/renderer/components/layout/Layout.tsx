@@ -17,6 +17,7 @@ import { setGlobalNavigate } from '@/renderer/utils/navigation';
 import { usePreviewContext } from '@renderer/pages/conversation/Preview';
 import { ProjectPanelHost } from '@renderer/components/layout/ProjectPanelHost';
 import { ProjectPanelMobileOverlay } from '@renderer/components/layout/ProjectPanelMobileOverlay';
+import { ProjectPreviewMobileOverlay } from '@renderer/components/layout/ProjectPreviewMobileOverlay';
 import { setCurrentProject, useCurrentProject } from '@renderer/pages/conversation/explorer/currentProjectStore';
 import { setCurrentConversation } from '@renderer/pages/conversation/explorer/currentConversationStore';
 import { useContainerWidth } from '@renderer/pages/conversation/hooks/useContainerWidth';
@@ -202,6 +203,7 @@ const Layout: React.FC<{
   // conversations so it is structurally persistent (no remount on same-project
   // switches). ChatLayout renders chat only in that case (previewHosted).
   const previewRegionActive = Boolean(currentProject) && !isMobile && isPreviewOpen;
+  const mobilePreviewActive = Boolean(currentProject) && isMobile && isPreviewOpen;
   const { widthPx: previewWidthPx, createDragHandle: createPreviewRegionDragHandle } = useProjectPreviewRegionWidth(
     mainRowWidth,
     explorerCollapsed ? 0 : explorerWidthPx,
@@ -625,6 +627,11 @@ const Layout: React.FC<{
                 widthPx={explorerMobileWidthPx}
               />
             )}
+
+            {/* Project previews are hosted here on mobile as well. ChatLayout
+                intentionally delegates project previews to Layout, so without
+                this overlay an opened Markdown tab has no visible host. */}
+            {mobilePreviewActive && <ProjectPreviewMobileOverlay onClose={closePreviewOnRouteChange} />}
           </ArcoLayout>
         </div>
       </NavigationHistoryProvider>

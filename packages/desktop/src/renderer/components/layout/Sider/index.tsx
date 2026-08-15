@@ -183,7 +183,7 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
             </LazyLoadErrorBoundary>
           </Suspense>
         ) : (
-          <div className='size-full flex flex-col gap-2px'>
+          <div className='size-full flex flex-col gap-2px min-h-0'>
             <SiderToolbar
               isMobile={isMobile}
               isBatchMode={isBatchMode}

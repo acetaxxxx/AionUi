@@ -34,6 +34,9 @@
 .scrollArea {
   min-height: 0;
   scrollbar-width: none; /* Firefox */
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .scrollArea::-webkit-scrollbar {

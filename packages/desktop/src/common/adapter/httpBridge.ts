@@ -103,9 +103,30 @@ export class BackendHttpError extends Error {
       if (typeof b.error === 'string') backendMessage = b.error;
       details = b.details;
     } else if (typeof body === 'string') {
-      backendMessage = body;
+      const isHtml = body.trim().toLowerCase().startsWith('<!doctype') || body.includes('<html');
+      const is502 =
+        status === 502 || body.includes('502') || body.includes('Bad gateway') || body.includes('Bad Gateway');
+
+      if (is502) {
+        code = 'BAD_GATEWAY';
+        backendMessage = 'Bad Gateway (502): Reverse proxy or server connection interrupted.';
+      } else if (isHtml) {
+        backendMessage = `Server error (${status}): Unexpected HTML response.`;
+      } else {
+        backendMessage = body;
+      }
     }
-    super(`Backend ${method} ${path} failed (${status}): ${JSON.stringify(body)}`);
+    if (status === 502 && !code) {
+      code = 'BAD_GATEWAY';
+      if (!backendMessage || backendMessage.includes('<html')) {
+        backendMessage = 'Bad Gateway (502): Reverse proxy or server connection interrupted.';
+      }
+    }
+    const safeBodySummary =
+      typeof body === 'string' && (body.includes('<html') || body.includes('<!DOCTYPE'))
+        ? '[HTML Document]'
+        : JSON.stringify(body);
+    super(`Backend ${method} ${path} failed (${status}): ${safeBodySummary}`);
     this.name = 'BackendHttpError';
     this.status = status;
     this.code = code;
@@ -172,6 +193,17 @@ function redactForLog(value: unknown, depth = 0): unknown {
   );
 }
 
+function getCsrfTokenFromCookie(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const match = document.cookie.match(/(?:^|;\s*)(?:aionui-csrf-token|csrf-token)\s*=\s*([^;]+)/);
+  if (match) return decodeURIComponent(match[1]);
+  try {
+    return sessionStorage.getItem('aionui-csrf-token') || localStorage.getItem('aionui-csrf-token') || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function httpRequest<T>(
   method: string,
   path: string,
@@ -183,6 +215,14 @@ export async function httpRequest<T>(
 
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
+  }
+
+  if (method !== 'GET' && method !== 'HEAD') {
+    const csrfToken = getCsrfTokenFromCookie();
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+      headers['aionui-csrf-token'] = csrfToken;
+    }
   }
 
   if (options?.headers) {
@@ -197,6 +237,7 @@ export async function httpRequest<T>(
   const response = await fetch(url, {
     method,
     headers,
+    credentials: 'include',
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
@@ -225,6 +266,11 @@ export async function httpRequest<T>(
   }
 
   const json = await response.json();
+  if (json && typeof json === 'object' && 'success' in json && json.success === false) {
+    const isNotFound = (json as { code?: string }).code === 'NOT_FOUND';
+    throw new BackendHttpError({ method, path, status: isNotFound ? 404 : 400, body: json });
+  }
+
   // Backend wraps in { success, data, ... } — unwrap when present
   if (json && typeof json === 'object' && 'data' in json) {
     return json.data as T;

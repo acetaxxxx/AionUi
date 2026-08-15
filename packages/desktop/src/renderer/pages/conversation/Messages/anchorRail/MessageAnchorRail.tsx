@@ -10,6 +10,7 @@ import { IconSearch } from '@arco-design/web-react/icon';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useOptionalPreviewContext } from '@/renderer/pages/conversation/Preview';
 import { useMessageList } from '../hooks';
 import type { MessageAnchorItem } from './anchors';
 import { useConversationAnchors } from './useConversationAnchors';
@@ -197,9 +198,13 @@ const MessageAnchorRail: React.FC = () => {
     [anchors.length, scrollable, viewportHeight]
   );
 
+  const previewContext = useOptionalPreviewContext();
+  const isPreviewOpen = Boolean(previewContext?.isOpen);
+
   // A single anchor carries no navigational value — the whole turn is already on
   // screen — so the rail stays hidden until there is somewhere to jump to.
-  if (anchors.length < 2) return null;
+  // Also hide the rail when preview panel is open so it does not clutter split view.
+  if (anchors.length < 2 || isPreviewOpen) return null;
 
   const activeAnchor = activeIndex === null ? undefined : anchors[activeIndex];
   // The card is positioned against the rail, so the tick's offset within the

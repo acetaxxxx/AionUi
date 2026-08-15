@@ -64,6 +64,15 @@
   overflow-x: hidden;
 }
 
+/* Full-screen mobile drawers use the same stable viewport as the app frame.
+   The safe-area padding is part of the drawer box so its contents stay clear
+   of the status bar and home indicator without changing its measured height. */
+.mobile-viewport-overlay {
+  height: var(--app-viewport-height) !important;
+  min-height: var(--app-viewport-height) !important;
+  box-sizing: border-box;
+}
+
 /* Disable transition during drag for smooth dragging */
 .layout-sider--dragging {
   transition: none !important;
@@ -272,9 +281,8 @@
   .layout-sider {
     /* Fixed positioning from top */
     top: 0 !important;
-    /* dvh automatically accounts for browser chrome on mobile */
-    height: 100vh !important;
-    height: 100dvh !important;
+    height: var(--app-viewport-height) !important;
+    min-height: var(--app-viewport-height) !important;
     /* Use flex layout to manage internal space */
     display: flex !important;
     flex-direction: column !important;
@@ -299,8 +307,12 @@
   /* Footer stays at bottom with extra padding as fallback */
   .sider-footer {
     flex-shrink: 0 !important;
-    /* Extra padding as fallback for iOS Chrome */
-    padding-bottom: 20px;
+    padding-bottom: 8px;
+  }
+
+  .mobile-viewport-overlay {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   /* Match the mobile sider top buttons to the conversation row height (34px)

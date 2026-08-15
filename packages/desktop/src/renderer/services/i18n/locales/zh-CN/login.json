@@ -22,5 +22,8 @@
     "networkError": "连接失败，请稍后重试",
     "serverError": "服务器开小差了，请稍后重试",
     "unknown": "登录失败，请稍后再试"
-  }
+  },
+  "pwaSessionExpiredTitle": "登录验证已过期",
+  "pwaSessionExpiredDesc": "您的登录验证已过期，请点击下方按钮重新登录。",
+  "pwaSessionExpiredButton": "重新验证登录 (SSO)"
 }

@@ -26,7 +26,7 @@ import LocalImageView from '@renderer/components/media/LocalImageView';
 import CodeBlock from './CodeBlock';
 import LocalFileLink from './LocalFileLink';
 import ShadowView from './ShadowView';
-import { resolveLocalFileLinkPath, resolveLocalFileLinkReference } from './markdownUtils';
+import { isImageDataUrl, resolveLocalFileLinkPath, resolveLocalFileLinkReference } from './markdownUtils';
 import type { LocalFileLinkReference } from './markdownUtils';
 
 const REMARK_PLUGINS = [remarkGfm, remarkMath, remarkBreaks];
@@ -160,7 +160,9 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
               remarkPlugins={REMARK_PLUGINS}
               rehypePlugins={rehypePlugins}
               components={components}
-              urlTransform={(url) => (resolveLocalFileLinkPath(url) ? url : defaultUrlTransform(url))}
+              urlTransform={(url) =>
+                isImageDataUrl(url) || resolveLocalFileLinkPath(url) ? url : defaultUrlTransform(url)
+              }
             >
               {normalizedChildren}
             </ReactMarkdown>

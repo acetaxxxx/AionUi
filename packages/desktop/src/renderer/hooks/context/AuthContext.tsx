@@ -6,6 +6,17 @@ const hasValidCsrfToken = (): boolean => true;
 const clearCookie = (_name: string, _path?: string): void => {};
 const CSRF_COOKIE_NAME = 'csrf-token';
 
+function getCsrfTokenFromCookie(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const match = document.cookie.match(/(?:^|;\s*)(?:aionui-csrf-token|csrf-token)\s*=\s*([^;]+)/);
+  if (match) return decodeURIComponent(match[1]);
+  try {
+    return sessionStorage.getItem('aionui-csrf-token') || localStorage.getItem('aionui-csrf-token') || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
 
 export interface AuthUser {
@@ -91,8 +102,38 @@ async function fetchCurrentUser(signal?: AbortSignal): Promise<AuthUser | null> 
       signal,
     });
 
-    if (!response.ok) {
+    const contentType = response.headers.get('content-type') || '';
+    const isHtmlIntercepted = contentType.includes('text/html');
+    const isAuthError = response.status === 401 || response.status === 403;
+
+    if (!response.ok || isHtmlIntercepted || isAuthError) {
+      const isPwaStandalone =
+        typeof window !== 'undefined' &&
+        (Boolean((navigator as any).standalone) ||
+          (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches));
+
+      // Trigger top-level reload only if response was intercepted by Cloudflare Access / SSO returning an HTML login page
+      if (isHtmlIntercepted) {
+        console.warn('[AuthContext] SSO / CloudAccess session expired (HTML intercepted), triggering SSO logout...');
+        if (
+          typeof window !== 'undefined' &&
+          window.location.pathname !== '/login' &&
+          !window.location.hash.includes('/login')
+        ) {
+          window.location.href = '/cdn-cgi/access/logout';
+          return null;
+        }
+      }
       return null;
+    }
+
+    const headerCsrf = response.headers.get('x-csrf-token') || response.headers.get('aionui-csrf-token');
+    const activeCsrf = getCsrfTokenFromCookie() || headerCsrf;
+    if (activeCsrf) {
+      try {
+        sessionStorage.setItem('aionui-csrf-token', activeCsrf);
+        localStorage.setItem('aionui-csrf-token', activeCsrf);
+      } catch {}
     }
 
     const data = (await response.json()) as {
@@ -134,9 +175,15 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     const currentUser = await fetchCurrentUser(controller.signal);
     if (currentUser) {
       setUser(currentUser);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('aion_current_user_id', currentUser.id);
+      }
       setStatus('authenticated');
     } else {
       setUser(null);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('aion_current_user_id');
+      }
       setStatus('unauthenticated');
     }
     setReady(true);
@@ -167,11 +214,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
       // P1 安全修复：登录请求需要 CSRF Token / P1 Security fix: Login needs CSRF token
       // Backend route is /login; web-host's static-server explicitly proxies it.
+      const csrfToken = getCsrfTokenFromCookie();
+      const loginHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (csrfToken) {
+        loginHeaders['X-CSRF-Token'] = csrfToken;
+        loginHeaders['aionui-csrf-token'] = csrfToken;
+      }
+
       const response = await fetch('/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: loginHeaders,
         credentials: 'include',
         body: JSON.stringify(withCsrfToken({ username, password, remember })),
       });
@@ -222,6 +276,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       setStatus('authenticated');
       setReady(true);
 
+      // Persist CSRF token in storage as fallback if cookie path differs
+      const headerCsrf = response.headers.get('x-csrf-token') || response.headers.get('aionui-csrf-token');
+      const activeCsrf = getCsrfTokenFromCookie() || headerCsrf;
+      if (activeCsrf) {
+        try {
+          sessionStorage.setItem('aionui-csrf-token', activeCsrf);
+          localStorage.setItem('aionui-csrf-token', activeCsrf);
+        } catch {}
+      }
+
       // Re-enable WebSocket reconnection after successful login (WebUI mode only)
       if (typeof window !== 'undefined' && (window as any).__websocketReconnect) {
         (window as any).__websocketReconnect();
@@ -261,15 +325,34 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     }
 
     try {
-      await fetch('/logout', {
+      const csrfToken = getCsrfTokenFromCookie();
+      const logoutHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (csrfToken) {
+        logoutHeaders['X-CSRF-Token'] = csrfToken;
+        logoutHeaders['aionui-csrf-token'] = csrfToken;
+      }
+
+      const res = await fetch('/logout', {
         method: 'POST',
-        // Logout also needs CSRF token / 登出同样需要 CSRF Token
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: logoutHeaders,
         credentials: 'include',
         body: JSON.stringify(withCsrfToken({})),
       });
+
+      const isCfLogout =
+        res.headers.get('x-cloudflare-logout') === 'true' ||
+        (typeof document !== 'undefined' && document.cookie.includes('CF_Authorization'));
+      if (isCfLogout) {
+        setUser(null);
+        setStatus('unauthenticated');
+        clearAuthCache();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/cdn-cgi/access/logout';
+        }
+        return;
+      }
     } catch (error) {
       console.error('Logout request failed:', error);
     } finally {

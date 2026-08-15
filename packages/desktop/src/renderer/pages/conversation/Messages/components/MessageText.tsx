@@ -20,6 +20,7 @@ import CollapsibleContent from '@renderer/components/chat/CollapsibleContent';
 import FilePreview from '@renderer/components/media/FilePreview';
 import HorizontalFileList from '@renderer/components/media/HorizontalFileList';
 import MarkdownView from '@renderer/components/Markdown';
+import LocalImageView from '@renderer/components/media/LocalImageView';
 import { stripThinkTags, hasThinkTags } from '@renderer/utils/chat/thinkTagFilter';
 import { buildTurnClipboardText } from '@renderer/utils/chat/turnCopy';
 import { stripSkillSuggest, hasSkillSuggest } from '@renderer/utils/chat/skillSuggestParser';
@@ -315,17 +316,21 @@ const MessageText: React.FC<{
           ) : json ? (
             <CollapsibleContent maxHeight={200} defaultCollapsed={true}>
               <div data-testid='message-text-content'>
-                <MarkdownView
-                  codeStyle={CODE_STYLE}
-                  onLocalFileLink={handleLocalFileLink}
-                >{`\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``}</MarkdownView>
+                <LocalImageView.Provider value={{ root: conversationContext?.workspace ?? '' }}>
+                  <MarkdownView
+                    codeStyle={CODE_STYLE}
+                    onLocalFileLink={handleLocalFileLink}
+                  >{`\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``}</MarkdownView>
+                </LocalImageView.Provider>
               </div>
             </CollapsibleContent>
           ) : (
             <div data-testid='message-text-content'>
-              <MarkdownView codeStyle={CODE_STYLE} onLocalFileLink={handleLocalFileLink}>
-                {data}
-              </MarkdownView>
+              <LocalImageView.Provider value={{ root: conversationContext?.workspace ?? '' }}>
+                <MarkdownView codeStyle={CODE_STYLE} onLocalFileLink={handleLocalFileLink}>
+                  {data}
+                </MarkdownView>
+              </LocalImageView.Provider>
             </div>
           )}
         </div>

@@ -94,7 +94,7 @@ import type {
 import type { AgentMetadata } from '@/renderer/utils/model/agentTypes';
 import type { Theme } from '@/common/theme/types';
 import type { AttachFolderRequest, ProjectDetailDto, ProjectEntryDto } from '@/common/types/project';
-import type { ChatFileRef, ContentEncoding } from '@/common/types/chatFile';
+import { chatFileRefPath, localFileRef, type ChatFileRef, type ContentEncoding } from '@/common/types/chatFile';
 import type { ProtocolDetectionRequest, ProtocolDetectionResponse } from '../utils/protocolDetector';
 import {
   buildCreateConversationBody,
@@ -753,7 +753,27 @@ export const fs = {
     httpPost<Array<RawWorkspaceFlatFile>, { root: string }>('/api/fs/list'),
     fromBackendWorkspaceFlatFiles
   ),
-  getImageBase64: httpPost<string | null, { path: string; workspace?: string }>('/api/fs/image-base64'),
+  getImageBase64: {
+    provider: () => {},
+    invoke: async (params: { path: string; workspace?: string }): Promise<string | null> => {
+      try {
+        const res = await httpRequest<unknown>('POST', '/api/fs/image-base64', params);
+        if (typeof res === 'string' && res) return res;
+        if (res && typeof res === 'object' && 'content' in res)
+          return String((res as { content: unknown }).content ?? '');
+        if (res && typeof res === 'object' && 'data' in res) return String((res as { data: unknown }).data ?? '');
+      } catch (_err) {
+        try {
+          const fileRef: ChatFileRef = localFileRef(params.path);
+          const dataUrl = await fs.readContent.invoke({ file: fileRef, encoding: 'dataurl' });
+          if (dataUrl) return dataUrl;
+        } catch (_fallbackErr) {
+          return null;
+        }
+      }
+      return null;
+    },
+  },
   fetchRemoteImage: httpPost<string, { url: string }>('/api/fs/fetch-remote-image'),
   readFile: httpPost<string | null, { path: string; workspace?: string }>('/api/fs/read'),
   writeFile: httpPost<boolean, { path: string; data: string; workspace?: string }>('/api/fs/write'),
@@ -761,7 +781,30 @@ export const fs = {
   // ── ChatFileRef content endpoints (PR-2: preview I/O by ref identity) ──────
   // Read a file addressed by ChatFileRef; `encoding` selects text (utf8) vs image
   // data URL (dataurl) vs raw base64. Backend: POST /api/fs/content → String.
-  readContent: httpPost<string, { file: ChatFileRef; encoding: ContentEncoding }>('/api/fs/content'),
+  readContent: {
+    provider: () => {},
+    invoke: async (params: { file: ChatFileRef; encoding: ContentEncoding }): Promise<string> => {
+      try {
+        const res = await httpRequest<unknown>('POST', '/api/fs/content', params);
+        if (typeof res === 'string') return res;
+        if (res && typeof res === 'object' && 'content' in res)
+          return String((res as { content: unknown }).content ?? '');
+        if (res && typeof res === 'object' && 'data' in res) return String((res as { data: unknown }).data ?? '');
+        return String(res ?? '');
+      } catch (err: unknown) {
+        if ((err as { status?: number })?.status === 404) {
+          const filePath = chatFileRefPath(params.file);
+          const res = await httpRequest<unknown>('POST', '/api/fs/read', { path: filePath });
+          if (typeof res === 'string') return res;
+          if (res && typeof res === 'object' && 'content' in res)
+            return String((res as { content: unknown }).content ?? '');
+          if (res && typeof res === 'object' && 'data' in res) return String((res as { data: unknown }).data ?? '');
+          return String(res ?? '');
+        }
+        throw err;
+      }
+    },
+  },
   // Write a file addressed by ChatFileRef. Optimistic concurrency: when `ifMatch`
   // (last-known mtime ms) is set it travels as the `If-Match` header, and a stale
   // value yields 409 Conflict (surfaced as BackendHttpError.status). PUT /api/fs/content.
@@ -772,10 +815,22 @@ export const fs = {
   ),
   // Metadata for a ChatFileRef-addressed file; backend snake_case is mapped to the
   // camelCase IFileMetadata the preview layer reads. POST /api/fs/content/metadata.
-  getContentMetadata: withResponseMap(
-    httpPost<RawFileMetadata, { file: ChatFileRef }>('/api/fs/content/metadata'),
-    fromBackendFileMetadata
-  ),
+  getContentMetadata: {
+    provider: () => {},
+    invoke: async (params: { file: ChatFileRef }): Promise<IFileMetadata> => {
+      try {
+        const raw = await httpRequest<RawFileMetadata>('POST', '/api/fs/content/metadata', params);
+        return fromBackendFileMetadata(raw);
+      } catch (err: unknown) {
+        if ((err as { status?: number })?.status === 404) {
+          const filePath = chatFileRefPath(params.file);
+          const raw = await httpRequest<RawFileMetadata>('POST', '/api/fs/metadata', { path: filePath });
+          return fromBackendFileMetadata(raw);
+        }
+        throw err;
+      }
+    },
+  },
   // Import OS files into a project entry's directory (A-paste). `target` is the
   // drop-target pe + relative dir ('' = its root). Name conflicts are reported in
   // `failed_files` (not overwritten); directories are rejected there this round.

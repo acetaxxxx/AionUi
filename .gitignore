@@ -234,7 +234,9 @@ graphify-out/
 
 .snow/
 
-# Local scratch/analysis (wireframes, candidate mockups)
-.analysis/
+# Local deployment and documentation directories
+local/
+docs/
+llm/
 temp/
 .playwright-mcp/
