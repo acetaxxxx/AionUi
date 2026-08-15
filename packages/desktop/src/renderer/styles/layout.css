@@ -278,4 +278,77 @@
     display: none !important;
     pointer-events: none !important;
   }
+  .layout-sider {
+    /* Fixed positioning from top */
+    top: 0 !important;
+    height: var(--app-viewport-height) !important;
+    min-height: var(--app-viewport-height) !important;
+    /* Use flex layout to manage internal space */
+    display: flex !important;
+    flex-direction: column !important;
+    /* Use padding for safe areas instead of height adjustment */
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box !important;
+  }
+
+  .layout-sider-header--mobile {
+    min-height: 56px !important;
+    padding-top: 10px !important;
+    padding-bottom: 8px !important;
+    gap: 8px !important;
+  }
+
+  /* Mobile-only: clip overflow instead of allowing scroll */
+  .layout-sider-content {
+    overflow: hidden !important;
+  }
+
+  /* Footer stays at bottom with extra padding as fallback */
+  .sider-footer {
+    flex-shrink: 0 !important;
+    padding-bottom: 8px;
+  }
+
+  .mobile-viewport-overlay {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Match the mobile sider top buttons to the conversation row height (34px)
+     so the new-chat / search / footer rows form one consistent vertical rhythm. */
+  .sider-action-btn-mobile {
+    height: 34px !important;
+    gap: 8px !important;
+    padding-inline: 10px !important;
+    border-radius: 8px !important;
+  }
+
+  .sider-action-icon-btn-mobile {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 8px !important;
+  }
+
+  .sider-footer-btn-mobile {
+    min-height: 34px !important;
+    padding: 6px 10px !important;
+    border-radius: 8px !important;
+  }
+
+  /* Mobile: remove left padding for message wrapper */
+  .arco-message-wrapper {
+    padding-left: 0;
+  }
+
+  /* Sidebar conversation title + secondary timeline text */
+  .chat-history__item-name {
+    font-size: 15px !important;
+    line-height: 24px !important;
+  }
+
+  .chat-history__section {
+    font-size: 14px !important;
+    line-height: 20px !important;
+  }
 }
