@@ -1,6 +1,7 @@
 import classNames from 'classnames';
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import LazyLoadErrorBoundary from '@renderer/components/layout/LazyLoadErrorBoundary';
 import { usePreviewContext } from '@renderer/pages/conversation/Preview/context/PreviewContext';
 import { cleanupSiderTooltips, getSiderTooltipProps } from '@renderer/utils/ui/siderTooltip';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
@@ -177,7 +178,9 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
       <div className='flex-1 min-h-0 overflow-hidden'>
         {isSettings ? (
           <Suspense fallback={<div className='size-full' />}>
-            <SettingsSider collapsed={collapsed} tooltipEnabled={tooltipEnabled} />
+            <LazyLoadErrorBoundary compact>
+              <SettingsSider collapsed={collapsed} tooltipEnabled={tooltipEnabled} />
+            </LazyLoadErrorBoundary>
           </Suspense>
         ) : (
           <div className='size-full flex flex-col gap-2px min-h-0'>
