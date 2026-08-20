@@ -1,5 +1,118 @@
 # Changelog
 
+## [2.1.59](https://github.com/iOfficeAI/AionUi/compare/v2.1.58...v2.1.59) (2026-08-19)
+
+### Desktop
+
+#### Features
+
+- **explorer:** new file/dir + grouped row menu (#4102)
+- **feedback:** add optional contact email field (#4096)
+- **explorer:** drag-to-transfer files across the project tree (#4090)
+
+#### Bug Fixes
+
+- **markdown:** keep inline markup at the heading's size inside chat headings (#4104)
+- **acp:** render relative images in agent replies (#4103)
+- **desktop:** stop renderer launch-failed reload storm with backoff and throttled relaunch (#4100)
+- **ui:** make monochrome logos follow the theme color (#3614)
+- **security:** block path traversal in HTML renderer resource inlining (#4097)
+- **markdown:** render chat KaTeX formulas once in Shadow DOM (#4091)
+
+#### Refactoring
+
+- **media:** read image root from ConversationContext (#4105)
+
+### Core ([v0.1.70](https://github.com/iOfficeAI/AionCore/releases/tag/v0.1.70))
+
+#### Features
+
+- **monitor:** add fs/createFile command (#891)
+- **monitor:** back explorer drag-transfer with fs/copy and fs/move (#877)
+- **session:** distinguish Task subagents from background tasks (#890)
+
+#### Bug Fixes
+
+- **agent:** pair native media blocks with a link to the same file (#876)
+- **antigravity:** collapse agy's U+FFFD runs at text_delta joins (#888)
+- **antigravity:** route Team over the CLI, which is what agy was already using (#881)
+- **app:** bound the graceful-shutdown tail so the data-dir instance lock is released (#884)
+- **app:** harden the shutdown watchdog force-exit path
+- **app:** harden the shutdown watchdog force-exit path
+- **app:** keep backend_binary_path cmd.exe-launchable on Windows (#887)
+- **app:** reuse the app-level ConversationService in build_cron_state (#885)
+
+---
+
+## [2.1.58](https://github.com/iOfficeAI/AionUi/compare/v2.1.57...v2.1.58) (2026-08-18)
+
+### Desktop
+
+#### Features
+
+- **renderer:** add math formula rendering support for markdown viewer (#4079)
+- **theme:** activate structured token channel and add custom-theme guide (#4081)
+- **team:** runtime restart controls, model refresh button and team UX fixes (#3893)
+- **i18n:** right-to-left layout for Persian (fa-IR) (#4069)
+
+#### Bug Fixes
+
+- **chat:** align compose actions and draft queue draining (#4082)
+- **i18n:** align directory paths to the page direction, not hardcoded end (#4086)
+- **web-host:** stop leaking PREBUILDS_ONLY into aioncore agent subprocesses (#4078)
+- **i18n:** RTL polish pass — LTR paths/file names, shorthand paddings, mirrored chevrons (#4077)
+- **i18n:** locale-aware cron titles and byte sizes, Traditional Chinese mapping (#4075)
+- **i18n:** adopt i18next plural forms for count-bearing strings (#4074)
+- **i18n:** backfill every missing translation and wire webFsPicker into i18n (#4072)
+- **i18n:** quick-wins batch — Arco locales, tray French, hardcoded strings, stale title (#4071)
+- **i18n:** format numbers and dates against the app language, not the host locale (#4068)
+
+### Core ([v0.1.69](https://github.com/iOfficeAI/AionCore/releases/tag/v0.1.69))
+
+#### Features
+
+- **claude:** label tool steps by what they do (#870)
+- **team:** team mode reliability improvements, model switch persistence and runtime restart (#787)
+
+#### Bug Fixes
+
+- **claude:** three follow-ups to the tool-step labels (#872)
+
+---
+
+## [2.1.57](https://github.com/iOfficeAI/AionUi/compare/v2.1.56...v2.1.57) (2026-08-17)
+
+### Desktop
+
+#### Features
+
+- **chat:** mid-turn interjection — allow sending while a turn is in flight (#4012)
+- **explorer:** themed file-tree icons and SCM sidebar polish (#4057)
+
+#### Bug Fixes
+
+- **web-host:** pause client socket before splicing to avoid dropping upload bytes (#4066)
+- **explorer:** remove duplicate desktop toggle (#4065)
+- **web-host:** pick the real LAN IP for the WebUI access URL (#4060)
+
+### Core ([v0.1.68](https://github.com/iOfficeAI/AionCore/releases/tag/v0.1.68))
+
+#### Features
+
+- **codex:** auto-name sessions and label command steps (#868)
+- **conversation:** mid-turn interjection — deliver messages while a turn is in flight (#836)
+
+#### Bug Fixes
+
+- **acp:** give a first-run npx agent room to install before initialize times out (#854)
+- **acp:** stop collapsing agent failures into an opaque -32603 (#869)
+- **agents:** launch omp through its local CLI instead of the npx bridge (#855)
+- **antigravity:** read the HTTP status before parsing the hook decision (#867)
+- **auth:** stop CSRF rejecting agy's PreToolUse callback (#860)
+- **runtime:** find agent CLIs installed by bun and by vendor installers (#856)
+
+---
+
 ## [2.1.56](https://github.com/iOfficeAI/AionUi/compare/v2.1.55...v2.1.56) (2026-08-14)
 
 ### Desktop
