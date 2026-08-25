@@ -300,13 +300,23 @@ const GuidPage: React.FC = () => {
         return;
       }
 
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        if (!guidInput.input.trim()) return;
-        send.sendMessageHandler();
+      if (event.key === 'Enter') {
+        if (isMobile) {
+          if ((event.metaKey || event.ctrlKey) && !event.shiftKey) {
+            event.preventDefault();
+            if (!guidInput.input.trim()) return;
+            send.sendMessageHandler();
+          }
+          return;
+        }
+        if (!event.shiftKey) {
+          event.preventDefault();
+          if (!guidInput.input.trim()) return;
+          send.sendMessageHandler();
+        }
       }
     },
-    [guidInput.input, send.sendMessageHandler, slashController]
+    [guidInput.input, isMobile, send.sendMessageHandler, slashController]
   );
 
   const handleSelectAssistant = useCallback(

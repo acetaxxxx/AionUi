@@ -127,7 +127,7 @@ export const usePreviewLauncher = () => {
               // 超限文件只读：没有内容可编辑，也没有半截内容可被写回。
               // Oversized files are read-only: no content to edit, and no partial
               // content that could be written back over the full file.
-              editable: payload.oversized ? false : editable,
+              editable: payload.oversized || payload.isOverTextEditLimit ? false : editable,
               oversized: payload.oversized,
               sizeBytes: payload.sizeBytes,
               thresholdBytes: payload.thresholdBytes,

@@ -64,18 +64,20 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
         e.stopPropagation();
         const href = (e.currentTarget as HTMLAnchorElement).href;
         if (!href) return;
-        // Prefer the built-in browser tab for http(s) links; fall back to the
-        // system browser for other schemes or when no Preview panel is available.
-        const httpUrl = parseHttpUrl(href);
-        if (httpUrl && preview) {
-          preview.openBrowserTab(httpUrl);
+
+        // Auto-route recognized same-origin/workspace file references into existing Preview
+        const localFileReference = resolveLocalFileLinkReference(href);
+        if (localFileReference && onLocalFileLink) {
+          void onLocalFileLink(localFileReference.filePath, localFileReference);
           return;
         }
+
+        // External http(s) URLs and unmapped internal URLs open system browser / new tab
         openExternalUrl(href).catch((error: unknown) => {
           console.error(t('messages.openLinkFailed'), error);
         });
       },
-      [t, preview]
+      [t, onLocalFileLink]
     );
 
     // Memoize components so React preserves component identity across re-renders.

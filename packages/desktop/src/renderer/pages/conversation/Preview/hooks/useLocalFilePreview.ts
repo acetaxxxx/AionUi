@@ -56,9 +56,15 @@ export const useLocalFilePreview = (workspace?: string) => {
             language: getPreviewLanguage(fileName),
             targetLine: reference?.line,
             targetColumn: reference?.column,
-            // An oversized file is read-only: no content was read, so there is
-            // nothing to edit and no partial content that could be written back.
-            editable: contentType === 'markdown' || contentType === 'image' || payload.oversized ? false : undefined,
+            // An oversized file or file exceeding the text editing limit is read-only in preview:
+            // avoids destructive partial editing / editor degradation on large files.
+            editable:
+              contentType === 'markdown' ||
+              contentType === 'image' ||
+              payload.oversized ||
+              payload.isOverTextEditLimit
+                ? false
+                : undefined,
             oversized: payload.oversized,
             sizeBytes: payload.sizeBytes,
             thresholdBytes: payload.thresholdBytes,

@@ -47,6 +47,13 @@ const BYTES_PER_MB = 1024 * 1024;
 const IMAGE_PREVIEW_MAX_BYTES = 20 * 1024 * 1024;
 
 /**
+ * Size gate for rich HTML and Markdown previews (20 MB).
+ * Unlike raw code/csv editors, HTML and Markdown renderers can display larger
+ * documents safely in preview mode without freezing or corrupting the file.
+ */
+export const HTML_MARKDOWN_PREVIEW_MAX_BYTES = 20 * 1024 * 1024;
+
+/**
  * Timeout for text content reads, so a stuck read cannot leave the panel
  * hanging. Only text is guarded: an image data URL of a near-limit file is tens
  * of megabytes and legitimately slower, and images were never guarded before.
@@ -91,7 +98,11 @@ export const textPreviewLimitBytes = (limitMb: unknown): number =>
  */
 const thresholdBytesFor = (contentType: PreviewContentType, textLimitBytes: number): number | undefined => {
   if (CONTENT_FREE_TYPES.has(contentType)) return undefined;
-  return contentType === 'image' ? IMAGE_PREVIEW_MAX_BYTES : textLimitBytes;
+  if (contentType === 'image') return IMAGE_PREVIEW_MAX_BYTES;
+  if (contentType === 'html' || contentType === 'markdown') {
+    return Math.max(textLimitBytes, HTML_MARKDOWN_PREVIEW_MAX_BYTES);
+  }
+  return textLimitBytes;
 };
 
 /** Resolved payload for one preview tab. */
@@ -118,6 +129,11 @@ export type PreviewPayload = {
    * no size gate.
    */
   lastModified: number;
+  /**
+   * File exceeded the standard text editing ceiling (e.g. 1 MB).
+   * Used to keep large HTML/Markdown files read-only in preview to avoid destructive partial editing.
+   */
+  isOverTextEditLimit?: boolean;
 };
 
 /**
@@ -166,15 +182,18 @@ export const resolvePreviewPayload = async (
   ]);
 
   const sizeBytes = metadata.size;
-  const thresholdBytes = thresholdBytesFor(contentType, textPreviewLimitBytes(storedLimitMb));
+  const configuredTextLimit = textPreviewLimitBytes(storedLimitMb);
+  const thresholdBytes = thresholdBytesFor(contentType, configuredTextLimit);
   // `>` not `>=`: a file of exactly the limit is within it, not over it.
   const oversized = thresholdBytes !== undefined && sizeBytes > thresholdBytes;
+  const isOverTextEditLimit = sizeBytes > configuredTextLimit;
 
   const base = {
     oversized,
     sizeBytes,
     thresholdBytes,
     lastModified: metadata.lastModified,
+    isOverTextEditLimit,
   };
 
   // Oversized, or a type that renders without content: read nothing.

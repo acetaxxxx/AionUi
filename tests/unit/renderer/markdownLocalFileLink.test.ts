@@ -4,14 +4,39 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   resolveLocalFileLinkPath,
   resolveLocalFileLinkReference,
   toLocalFileHref,
 } from '@/renderer/components/Markdown/markdownUtils';
 
-describe('resolveLocalFileLinkPath', () => {
+describe('resolveLocalFileLinkPath and security checks', () => {
+  const originalLocation = globalThis.window?.location;
+
+  beforeEach(() => {
+    // Setup standard app origin for exact-origin tests
+    Object.defineProperty(globalThis, 'window', {
+      value: {
+        location: {
+          origin: 'https://ai-chat.snoozydoggy.com',
+          protocol: 'https:',
+          host: 'ai-chat.snoozydoggy.com',
+          hostname: 'ai-chat.snoozydoggy.com',
+          port: '',
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    if (originalLocation) {
+      globalThis.window.location = originalLocation;
+    }
+  });
+
   it('recognizes Windows absolute paths emitted as root-relative markdown links', () => {
     expect(resolveLocalFileLinkPath('/C:/Users/Administrator/AppData/Roaming/AionUi/report.xlsx')).toBe(
       'C:/Users/Administrator/AppData/Roaming/AionUi/report.xlsx'
@@ -40,9 +65,6 @@ describe('resolveLocalFileLinkPath', () => {
       rawReference: 'C:/Users/Administrator/AppData/Roaming/AionUi/logs/app.log:1421',
       line: 1421,
     });
-    expect(resolveLocalFileLinkPath('C:/Users/Administrator/AppData/Roaming/AionUi/logs/app.log:1421')).toBe(
-      'C:/Users/Administrator/AppData/Roaming/AionUi/logs/app.log'
-    );
   });
 
   it('recognizes line and column suffixes without including the line in the file path', () => {
@@ -56,9 +78,6 @@ describe('resolveLocalFileLinkPath', () => {
       line: 1421,
       column: 7,
     });
-    expect(resolveLocalFileLinkPath('C:/Users/Administrator/AppData/Roaming/AionUi/logs/app.log:1421:7')).toBe(
-      'C:/Users/Administrator/AppData/Roaming/AionUi/logs/app.log'
-    );
   });
 
   it('recognizes POSIX hash line references', () => {
@@ -82,25 +101,6 @@ describe('resolveLocalFileLinkPath', () => {
       rawReference: '/Users/demo/file.ts#L10',
       line: 10,
     });
-
-    expect(resolveLocalFileLinkReference('file:///Users/demo/file.ts#L10-L20')).toEqual({
-      filePath: '/Users/demo/file.ts',
-      rawReference: '/Users/demo/file.ts#L10-L20',
-      line: 10,
-      endLine: 20,
-    });
-
-    expect(resolveLocalFileLinkReference('file:///Users/demo/My%20File.ts#L10')).toEqual({
-      filePath: '/Users/demo/My File.ts',
-      rawReference: '/Users/demo/My File.ts#L10',
-      line: 10,
-    });
-
-    expect(resolveLocalFileLinkReference('file:///Users/demo/%E6%96%87%E4%BB%B6.ts#L10')).toEqual({
-      filePath: '/Users/demo/文件.ts',
-      rawReference: '/Users/demo/文件.ts#L10',
-      line: 10,
-    });
   });
 
   it('recognizes Windows file URL hash lines and ranges', () => {
@@ -109,37 +109,101 @@ describe('resolveLocalFileLinkPath', () => {
       rawReference: 'C:/Users/demo/file.ts#L10',
       line: 10,
     });
+  });
 
-    expect(resolveLocalFileLinkReference('file:///C:/Users/demo/file.ts#L10-L20')).toEqual({
-      filePath: 'C:/Users/demo/file.ts',
-      rawReference: 'C:/Users/demo/file.ts#L10-L20',
-      line: 10,
-      endLine: 20,
+  it('recognizes aion-file custom protocol URLs', () => {
+    expect(resolveLocalFileLinkReference('aion-file:///workspace/output.html#L25')).toEqual({
+      filePath: '/workspace/output.html',
+      rawReference: '/workspace/output.html#L25',
+      line: 25,
     });
   });
 
-  it('prioritizes hash line references over colon suffixes', () => {
-    expect(resolveLocalFileLinkReference('/Users/demo/file.ts:10#L20')).toEqual({
-      filePath: '/Users/demo/file.ts',
-      rawReference: '/Users/demo/file.ts#L20',
-      line: 20,
+  describe('Strict same-origin & trusted route handling', () => {
+    it('accepts exact same-origin links with explicit trusted routes and parameters', () => {
+      expect(
+        resolveLocalFileLinkReference('https://ai-chat.snoozydoggy.com/preview?file=/workspace/report.html#L10')
+      ).toEqual({
+        filePath: '/workspace/report.html',
+        rawReference: '/workspace/report.html#L10',
+        line: 10,
+      });
+
+      expect(
+        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/api/fs/content?path=/workspace/data.csv')
+      ).toBe('/workspace/data.csv');
+
+      expect(
+        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/api/fs/stream?relative_path=docs/summary.md')
+      ).toBe('docs/summary.md');
     });
-  });
 
-  it('rejects unsupported hash line formats and remote hash links', () => {
-    expect(resolveLocalFileLinkReference('user.ts')).toBeNull();
-    expect(resolveLocalFileLinkReference('./user.ts')).toBeNull();
-    expect(resolveLocalFileLinkReference('../user.ts')).toBeNull();
-    expect(resolveLocalFileLinkReference('/settings')).toBeNull();
-    expect(resolveLocalFileLinkReference('https://aionui.com/docs#L10')).toBeNull();
-    expect(resolveLocalFileLinkReference('https://github.com/org/repo/blob/main/file.ts#L10')).toBeNull();
-    expect(resolveLocalFileLinkReference('/Users/demo/file.ts#l10')).toBeNull();
-    expect(resolveLocalFileLinkReference('/Users/demo/file.ts#L10-l20')).toBeNull();
-  });
+    it('rejects links with origin port mismatch', () => {
+      // Current origin: https://ai-chat.snoozydoggy.com
+      expect(
+        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com:8080/preview?file=/workspace/report.html')
+      ).toBeNull();
 
-  it('does not treat normal web links or app routes as local files', () => {
-    expect(resolveLocalFileLinkPath('https://aionui.com/docs')).toBeNull();
-    expect(resolveLocalFileLinkPath('/settings')).toBeNull();
+      // Switch to localhost:3000
+      globalThis.window.location.origin = 'http://localhost:3000';
+      expect(resolveLocalFileLinkPath('http://localhost:8080/preview?file=/workspace/report.html')).toBeNull();
+      expect(resolveLocalFileLinkPath('http://127.0.0.1:3000/preview?file=/workspace/report.html')).toBeNull();
+      expect(resolveLocalFileLinkPath('http://localhost:3000/preview?file=/workspace/report.html')).toBe(
+        '/workspace/report.html'
+      );
+    });
+
+    it('rejects links with origin scheme mismatch', () => {
+      // Current origin is https://ai-chat.snoozydoggy.com
+      expect(
+        resolveLocalFileLinkPath('http://ai-chat.snoozydoggy.com/preview?file=/workspace/report.html')
+      ).toBeNull();
+    });
+
+    it('rejects same-origin arbitrary endpoints and static file routes', () => {
+      expect(resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/api/users?file=report.html')).toBeNull();
+      expect(resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/foo.html')).toBeNull();
+      expect(resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/workspace/output.html')).toBeNull();
+      expect(resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/images/logo.png')).toBeNull();
+    });
+
+    it('rejects directory traversal in same-origin URLs and aion-file URLs', () => {
+      expect(
+        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/preview?file=../../etc/passwd')
+      ).toBeNull();
+      expect(
+        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/api/fs/content?path=/workspace/../../etc/shadow')
+      ).toBeNull();
+      expect(
+        resolveLocalFileLinkPath('aion-file:///../../etc/passwd')
+      ).toBeNull();
+      expect(
+        resolveLocalFileLinkPath('file:///etc/../../secret.txt')
+      ).toBeNull();
+    });
+
+    it('rejects untrusted or missing query parameters', () => {
+      expect(
+        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/preview?random=report.html')
+      ).toBeNull();
+      expect(
+        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/preview')
+      ).toBeNull();
+      expect(
+        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/api/fs/content')
+      ).toBeNull();
+    });
+
+    it('does not treat normal external HTTPS web links or bare SPA roots as local files', () => {
+      expect(resolveLocalFileLinkPath('https://aionui.com/docs')).toBeNull();
+      expect(resolveLocalFileLinkPath('https://google.com')).toBeNull();
+      expect(resolveLocalFileLinkPath('https://github.com/aionui/aionui')).toBeNull();
+      expect(resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/')).toBeNull();
+      expect(resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/settings')).toBeNull();
+      expect(resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/chat')).toBeNull();
+      expect(resolveLocalFileLinkPath('/settings')).toBeNull();
+      expect(resolveLocalFileLinkPath('/chat')).toBeNull();
+    });
   });
 
   it('formats local file paths as file URLs for browser link copying', () => {

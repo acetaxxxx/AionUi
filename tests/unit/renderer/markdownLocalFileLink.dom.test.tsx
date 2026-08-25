@@ -182,18 +182,31 @@ describe('MarkdownView local file links', () => {
     expect(copyTextMock).toHaveBeenCalledWith('C:/Users/Administrator/AppData/Roaming/AionUi/report.xlsx');
   });
 
-  it('keeps ordinary http links as browser anchors', () => {
-    render(<MarkdownView>{'[docs](https://aionui.com/docs)'}</MarkdownView>);
+  it('keeps ordinary http links as browser anchors and routes click to openExternalUrl', async () => {
+    const { openExternalUrl } = await import('@/renderer/utils/platform');
+    render(<MarkdownView>{'[docs](https://example.com/docs)'}</MarkdownView>);
 
     const link = screen.getByRole('link', { name: 'docs' });
-    expect(link).toHaveAttribute('href', 'https://aionui.com/docs');
+    expect(link).toHaveAttribute('href', 'https://example.com/docs');
+
+    fireEvent.click(link);
+    expect(openExternalUrl).toHaveBeenCalledWith('https://example.com/docs');
   });
 
-  it('keeps http hash links as browser anchors', () => {
-    render(<MarkdownView>{'[docs](https://aionui.com/docs#L10)'}</MarkdownView>);
+  it('routes same-origin generated preview file links into onLocalFileLink', () => {
+    const onLocalFileLink = vi.fn();
+    render(
+      <MarkdownView onLocalFileLink={onLocalFileLink}>
+        {'[report](http://localhost:3000/preview?file=/workspace/report.html)'}
+      </MarkdownView>
+    );
 
-    const link = screen.getByRole('link', { name: 'docs' });
-    expect(link).toHaveAttribute('href', 'https://aionui.com/docs#L10');
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'report' }));
+    expect(onLocalFileLink).toHaveBeenCalledWith(
+      '/workspace/report.html',
+      expect.objectContaining({ filePath: '/workspace/report.html' })
+    );
   });
 
   it('adds empty alt text to external raw HTML images without alt text', () => {

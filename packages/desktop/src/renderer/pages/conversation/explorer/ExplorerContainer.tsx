@@ -163,7 +163,7 @@ export const buildExplorerPreviewPayload = async (
       // fragment reach a saveable editor is what destroyed files before. Tightening is
       // the only direction available here, so this can restrict what the table allows
       // and can never contradict it.
-      editable: payload.oversized ? false : editable,
+      editable: payload.oversized || payload.isOverTextEditLimit ? false : editable,
       oversized: payload.oversized,
       sizeBytes: payload.sizeBytes,
       thresholdBytes: payload.thresholdBytes,
