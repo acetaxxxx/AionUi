@@ -100,6 +100,38 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
         a: ({ node: _node, ...rest }: Record<string, unknown>) => {
           const anchorProps = rest as React.AnchorHTMLAttributes<HTMLAnchorElement>;
           const rawHref = typeof anchorProps.href === 'string' ? anchorProps.href : '';
+          const isFragment = rawHref.startsWith('#');
+          if (isFragment) {
+            const fragmentId = rawHref.slice(1);
+            return (
+              <a
+                {...anchorProps}
+                href={rawHref}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!fragmentId) return;
+                  let decodedId = fragmentId;
+                  try {
+                    decodedId = decodeURIComponent(fragmentId);
+                  } catch {
+                    decodedId = fragmentId;
+                  }
+                  let target: Element | null = null;
+                  try {
+                    target =
+                      document.getElementById(decodedId) ||
+                      (CSS && CSS.escape ? document.querySelector(`[name="${CSS.escape(decodedId)}"]`) : null);
+                  } catch {
+                    target = document.getElementById(decodedId);
+                  }
+                  if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+              />
+            );
+          }
           const localFileReference = resolveLocalFileLinkReference(rawHref);
           if (localFileReference) {
             return (
