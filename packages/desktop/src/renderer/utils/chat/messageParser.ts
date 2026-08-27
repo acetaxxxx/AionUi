@@ -11,8 +11,13 @@ export type ParsedFileMarker = {
   files: string[];
 };
 
+type FilePathOptions = {
+  allowAbsolute?: boolean;
+};
+
 const URL_SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
 const WINDOWS_DRIVE_PATTERN = /^[A-Za-z]:[\\/]/;
+const MARKDOWN_ATTACHMENT_LINE_PATTERN = /^(#{1,6}\s|[-*+]\s|\d+[.)]\s|>\s?|```|~~~|\|)/;
 
 const safeDecodePath = (path: string): string => {
   try {
@@ -75,20 +80,36 @@ export const isValidWorkspaceRelativePath = (filePath: string): boolean => {
   return validSegments.length > 0;
 };
 
+const isValidAbsoluteLocalPath = (filePath: string): boolean => {
+  const trimmed = filePath.trim();
+  const isAbsolute = trimmed.startsWith('/') || trimmed.startsWith('\\\\') || WINDOWS_DRIVE_PATTERN.test(trimmed);
+  if (!isAbsolute || trimmed.includes('\0') || trimmed.toLowerCase().includes('%00')) return false;
+
+  const decoded = safeDecodePath(trimmed);
+  if (decoded.includes('\0')) return false;
+
+  const segments = decoded.replace(/\\/g, '/').split('/');
+  return !segments.some((segment) => segment === '..');
+};
+
+const isValidMessageFilePath = (filePath: string, options?: FilePathOptions): boolean =>
+  isValidWorkspaceRelativePath(filePath) || (options?.allowAbsolute === true && isValidAbsoluteLocalPath(filePath));
+
 /**
- * Validates whether a user-provided client file reference is a valid workspace-relative path.
+ * Validates a user-provided client file reference. Workspace-relative paths are
+ * accepted by default; trusted desktop message paths may opt into absolute paths.
  */
-export const validateUserFileReference = (item: unknown): string | null => {
+export const validateUserFileReference = (item: unknown, options?: FilePathOptions): string | null => {
   if (!item) return null;
   if (typeof item === 'string') {
-    return isValidWorkspaceRelativePath(item) ? item.trim() : null;
+    return isValidMessageFilePath(item, options) ? item.trim() : null;
   }
   if (typeof item === 'object' && item !== null) {
     const obj = item as Record<string, unknown>;
-    if (typeof obj.path === 'string' && isValidWorkspaceRelativePath(obj.path)) {
+    if (typeof obj.path === 'string' && isValidMessageFilePath(obj.path, options)) {
       return obj.path.trim();
     }
-    if (typeof obj.relative_path === 'string' && isValidWorkspaceRelativePath(obj.relative_path)) {
+    if (typeof obj.relative_path === 'string' && isValidMessageFilePath(obj.relative_path, options)) {
       return obj.relative_path.trim();
     }
   }
@@ -101,10 +122,14 @@ const isFileMarkerLine = (line: string): boolean => {
 };
 
 /**
- * Parses in-message file marker and extracts only validated workspace-relative paths.
- * Rejects raw absolute host paths, URLs, and traversal paths.
+ * Parses an in-message file marker only when every trailing line is a valid
+ * path. Invalid blocks remain ordinary text so message content is never lost.
  */
-export const parseFileMarker = (content: string, canParseFileMarker: boolean): ParsedFileMarker => {
+export const parseFileMarker = (
+  content: string,
+  canParseFileMarker: boolean,
+  options?: FilePathOptions
+): ParsedFileMarker => {
   if (!canParseFileMarker || typeof content !== 'string') {
     return { text: content || '', files: [] };
   }
@@ -123,14 +148,17 @@ export const parseFileMarker = (content: string, canParseFileMarker: boolean): P
   }
 
   const rawLines = lines.slice(markerLineIndex + 1);
-  const files: string[] = [];
+  const files = rawLines.map((line) => line.trim()).filter(Boolean);
 
-  for (const line of rawLines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (isValidWorkspaceRelativePath(trimmed)) {
-      files.push(trimmed);
-    }
+  // A marker is structural only when every trailing line is a valid file path.
+  // Otherwise it is ordinary message text and must be preserved verbatim.
+  if (
+    !files.length ||
+    files.some(
+      (filePath) => MARKDOWN_ATTACHMENT_LINE_PATTERN.test(filePath) || !isValidMessageFilePath(filePath, options)
+    )
+  ) {
+    return { text: content, files: [] };
   }
 
   return {
@@ -140,13 +168,20 @@ export const parseFileMarker = (content: string, canParseFileMarker: boolean): P
 };
 
 /**
- * Resolves a validated workspace-relative path against the conversation workspace,
- * strictly guaranteeing that the resolved path is contained within the workspace root.
- * Returns null if the path is invalid, escapes containment, or workspace is missing.
+ * Resolves a validated relative path within the conversation workspace. Trusted
+ * desktop message paths can opt into already-absolute local paths.
  */
-export const resolveMessageFilePath = (file_path: string, workspace?: string): string | null => {
-  if (!file_path || !isValidWorkspaceRelativePath(file_path)) {
+export const resolveMessageFilePath = (
+  file_path: string,
+  workspace?: string,
+  options?: FilePathOptions
+): string | null => {
+  if (!file_path || !isValidMessageFilePath(file_path, options)) {
     return null;
+  }
+
+  if (options?.allowAbsolute === true && isValidAbsoluteLocalPath(file_path)) {
+    return file_path.trim();
   }
 
   if (!workspace || !workspace.trim()) {
@@ -204,7 +239,7 @@ export const extractMessageFiles = (
 
   if (contentObj && Array.isArray(contentObj.files)) {
     for (const item of contentObj.files) {
-      const validated = validateUserFileReference(item);
+      const validated = validateUserFileReference(item, { allowAbsolute: true });
       if (validated && !list.includes(validated)) {
         list.push(validated);
       }
@@ -213,7 +248,7 @@ export const extractMessageFiles = (
 
   if (contentObj && Array.isArray(contentObj.attachments)) {
     for (const item of contentObj.attachments) {
-      const validated = validateUserFileReference(item);
+      const validated = validateUserFileReference(item, { allowAbsolute: true });
       if (validated && !list.includes(validated)) {
         list.push(validated);
       }
@@ -221,7 +256,7 @@ export const extractMessageFiles = (
   }
 
   for (const pf of parsedFiles) {
-    if (isValidWorkspaceRelativePath(pf) && !list.includes(pf)) {
+    if (isValidMessageFilePath(pf, { allowAbsolute: true }) && !list.includes(pf)) {
       list.push(pf);
     }
   }

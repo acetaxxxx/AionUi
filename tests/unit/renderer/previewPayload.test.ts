@@ -24,7 +24,12 @@ vi.mock('@/common', () => ({
   },
 }));
 
-import { formatSizeAboveLimit, resolvePreviewPayload, upgradeFileRef } from '@/renderer/utils/file/previewPayload';
+import {
+  formatSizeAboveLimit,
+  HTML_MARKDOWN_PREVIEW_MAX_BYTES,
+  resolvePreviewPayload,
+  upgradeFileRef,
+} from '@/renderer/utils/file/previewPayload';
 
 const TEXT_CEILING = 1024 * 1024;
 const IMAGE_CEILING = 20 * 1024 * 1024;
@@ -67,18 +72,18 @@ describe('resolvePreviewPayload', () => {
     expect(out.lastModified).toBe(1_777_000_000_999);
   });
 
-  it.each<[string, 'code' | 'markdown' | 'html' | 'diff']>([
-    ['code', 'code'],
-    ['markdown', 'markdown'],
-    ['html', 'html'],
-    ['diff', 'diff'],
-  ])('reads %s as utf8 when within the ceiling', async (_label, contentType) => {
+  it.each<[string, 'code' | 'markdown' | 'html' | 'diff', number]>([
+    ['code', 'code', TEXT_CEILING],
+    ['markdown', 'markdown', HTML_MARKDOWN_PREVIEW_MAX_BYTES],
+    ['html', 'html', HTML_MARKDOWN_PREVIEW_MAX_BYTES],
+    ['diff', 'diff', TEXT_CEILING],
+  ])('reads %s as utf8 when within the ceiling', async (_label, contentType, expectedCeiling) => {
     const out = await resolvePreviewPayload(ref, contentType);
 
     expect(h.readContent).toHaveBeenCalledWith({ file: ref, encoding: 'utf8' });
     expect(out.content).toBe('content');
     expect(out.oversized).toBe(false);
-    expect(out.thresholdBytes).toBe(TEXT_CEILING);
+    expect(out.thresholdBytes).toBe(expectedCeiling);
   });
 
   it('reads images as a data URL and applies the 20MB ceiling', async () => {

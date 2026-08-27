@@ -142,7 +142,10 @@ const MessageText: React.FC<MessageTextProps> = ({
   const senderName = message.content.senderName;
   const senderAgentType = message.content.senderAgentType;
   const senderConversationId = message.content.senderConversationId;
-  const { text, files: parsedFiles } = useMemo(() => parseFileMarker(contentToRender, true), [contentToRender]);
+  const { text, files: parsedFiles } = useMemo(
+    () => parseFileMarker(contentToRender, isUserMessage, { allowAbsolute: true }),
+    [contentToRender, isUserMessage]
+  );
   const files = useMemo(
     () => extractMessageFiles(message.content as Record<string, unknown>, parsedFiles, { isUserMessage }),
     [isUserMessage, message.content, parsedFiles]
@@ -169,7 +172,7 @@ const MessageText: React.FC<MessageTextProps> = ({
   const resolvedFiles = useMemo(
     () =>
       files
-        .map((file_path) => resolveMessageFilePath(file_path, conversationContext?.workspace))
+        .map((file_path) => resolveMessageFilePath(file_path, conversationContext?.workspace, { allowAbsolute: true }))
         .filter((resolved): resolved is string => Boolean(resolved)),
     [conversationContext?.workspace, files]
   );

@@ -97,7 +97,7 @@ describe('Assistant workspace-file references and attachments security gate', ()
   });
 
   describe('parseFileMarker security gate', () => {
-    it('parses valid workspace-relative files and rejects absolute host paths & traversal', () => {
+    it('preserves the entire marker block when any trailing line is not a safe relative path', () => {
       const rawContent = `Here is your report:
 
 __AIONUI_FILES__
@@ -109,8 +109,8 @@ docs/summary.md`;
 
       const { text, files } = parseFileMarker(rawContent, true);
 
-      expect(text.trim()).toBe('Here is your report:');
-      expect(files).toEqual(['output/itinerary.html', 'docs/summary.md']);
+      expect(text).toBe(rawContent);
+      expect(files).toEqual([]);
     });
   });
 

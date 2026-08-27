@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MarkdownView from '@/renderer/components/Markdown';
 
 const copyTextMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const openExternalUrlMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 vi.mock('@/renderer/components/Markdown/ShadowView', () => ({
   __esModule: true,
@@ -31,7 +32,7 @@ vi.mock('@/renderer/utils/chat/latexDelimiters', () => ({
 }));
 
 vi.mock('@/renderer/utils/platform', () => ({
-  openExternalUrl: vi.fn(),
+  openExternalUrl: openExternalUrlMock,
 }));
 
 vi.mock('@/renderer/utils/ui/clipboard', () => ({
@@ -68,6 +69,7 @@ vi.mock('react-i18next', () => ({
 describe('MarkdownView local file links', () => {
   beforeEach(() => {
     copyTextMock.mockClear();
+    openExternalUrlMock.mockClear();
   });
 
   it('renders local file links as app controls instead of browser anchors', () => {
