@@ -14,6 +14,7 @@ import type { AssistantDetail } from '@/common/types/agent/assistantTypes';
 import { useInputFocusRing } from '@/renderer/hooks/chat/useInputFocusRing';
 import { appendPromptToDraft } from '@/renderer/hooks/chat/useSendBoxDraft';
 import { getFuzzyMatchIndices, useSlashCommandController } from '@/renderer/hooks/chat/useSlashCommandController';
+import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { openExternalUrl } from '@/renderer/utils/platform';
 import SlashCommandMenu, { type SlashCommandMenuItem } from '@/renderer/components/chat/SlashCommandMenu';
 import AssistantSelectionArea from './components/AssistantSelectionArea';
@@ -59,6 +60,8 @@ const GuidPage: React.FC = () => {
   const location = useLocation();
   const guidContainerRef = useRef<HTMLDivElement>(null);
   const { activeBorderColor, inactiveBorderColor, activeShadow } = useInputFocusRing();
+  const layout = useLayoutContext();
+  const isMobile = layout?.isMobile ?? false;
 
   const localeKey = resolveLocaleKey(i18n.language);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
