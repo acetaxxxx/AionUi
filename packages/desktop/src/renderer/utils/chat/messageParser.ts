@@ -153,8 +153,14 @@ export const resolveMessageFilePath = (file_path: string, workspace?: string): s
     return null;
   }
 
-  const normalizedWorkspace = workspace.trim().replace(/[\\/]+$/, '').replace(/\\/g, '/');
-  const normalizedFilePath = file_path.trim().replace(/^\.?[\\/]+/, '').replace(/\\/g, '/');
+  const normalizedWorkspace = workspace
+    .trim()
+    .replace(/[\\/]+$/, '')
+    .replace(/\\/g, '/');
+  const normalizedFilePath = file_path
+    .trim()
+    .replace(/^\.?[\\/]+/, '')
+    .replace(/\\/g, '/');
 
   // Verify normalizedFilePath does not contain any traversal
   const segments = normalizedFilePath.split('/');

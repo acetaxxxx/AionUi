@@ -14,7 +14,8 @@ import { resolveLocalFileLinkReference } from '@/renderer/components/Markdown/ma
 describe('HTML and Markdown preview fragment link navigation', () => {
   describe('injectFragmentNavScript for HTML preview iframe/webview', () => {
     it('injects fragment navigation script into HTML with <head>', () => {
-      const html = '<!DOCTYPE html><html><head><title>Test</title></head><body><a href="#section">Jump</a></body></html>';
+      const html =
+        '<!DOCTYPE html><html><head><title>Test</title></head><body><a href="#section">Jump</a></body></html>';
       const result = injectFragmentNavScript(html);
 
       expect(result).toContain('__aionui_preview_fragment_nav__');

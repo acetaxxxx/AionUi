@@ -86,23 +86,13 @@ describe('Assistant workspace-file references and attachments security gate', ()
     it('user message: accepts user-uploaded files and user markers', () => {
       const userContent = {
         content: 'My uploaded files',
-        files: [
-          'user/upload.pdf',
-          { path: 'user/document.docx' },
-        ],
-        attachments: [
-          { path: 'user/attachment.xlsx' },
-        ],
+        files: ['user/upload.pdf', { path: 'user/document.docx' }],
+        attachments: [{ path: 'user/attachment.xlsx' }],
       };
 
       const extracted = extractMessageFiles(userContent, ['user/marker.png'], { isUserMessage: true });
 
-      expect(extracted).toEqual([
-        'user/upload.pdf',
-        'user/document.docx',
-        'user/attachment.xlsx',
-        'user/marker.png',
-      ]);
+      expect(extracted).toEqual(['user/upload.pdf', 'user/document.docx', 'user/attachment.xlsx', 'user/marker.png']);
     });
   });
 
@@ -120,17 +110,16 @@ docs/summary.md`;
       const { text, files } = parseFileMarker(rawContent, true);
 
       expect(text.trim()).toBe('Here is your report:');
-      expect(files).toEqual([
-        'output/itinerary.html',
-        'docs/summary.md',
-      ]);
+      expect(files).toEqual(['output/itinerary.html', 'docs/summary.md']);
     });
   });
 
   describe('resolveMessageFilePath containment', () => {
     it('resolves validated relative paths strictly contained within workspace root', () => {
       const workspace = '/workspace/project';
-      expect(resolveMessageFilePath('output/itinerary.html', workspace)).toBe('/workspace/project/output/itinerary.html');
+      expect(resolveMessageFilePath('output/itinerary.html', workspace)).toBe(
+        '/workspace/project/output/itinerary.html'
+      );
       expect(resolveMessageFilePath('./docs/guide.md', workspace)).toBe('/workspace/project/docs/guide.md');
     });
 

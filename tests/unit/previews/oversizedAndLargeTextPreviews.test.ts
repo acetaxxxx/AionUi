@@ -35,7 +35,8 @@ vi.mock('@/renderer/services/clientBusinessSettings', () => ({
 describe('resolvePreviewPayload for large HTML/Markdown and distinct states', () => {
   it('allows HTML files above 1 MB to remain previewable with full utf8 content', async () => {
     const fileRef: ChatFileRef = { kind: 'local', path: '/workspace/big_report.html' };
-    const htmlContent = '<html><body><h1>Large Generated Report</h1><p>' + 'a'.repeat(2 * 1024 * 1024) + '</p></body></html>';
+    const htmlContent =
+      '<html><body><h1>Large Generated Report</h1><p>' + 'a'.repeat(2 * 1024 * 1024) + '</p></body></html>';
     getContentMetadataMock.mockResolvedValueOnce({
       size: 2 * 1024 * 1024 + 100, // ~2 MB
       lastModified: 1700000000,

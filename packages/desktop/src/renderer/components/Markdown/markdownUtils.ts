@@ -108,11 +108,7 @@ const hasPathTraversal = (filePath: string): boolean => {
   return /(?:^|[/\\])\.\.(?:[/\\]|$)/.test(decoded) || decoded.includes('/../') || decoded.includes('\\..\\');
 };
 
-const TRUSTED_INTERNAL_ROUTES = new Set([
-  '/api/fs/content',
-  '/api/fs/stream',
-  '/preview',
-]);
+const TRUSTED_INTERNAL_ROUTES = new Set(['/api/fs/content', '/api/fs/stream', '/preview']);
 
 const isExactSameOrigin = (url: URL): boolean => {
   if (typeof window !== 'undefined' && window.location?.origin && window.location.origin !== 'null') {

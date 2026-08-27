@@ -375,9 +375,7 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
   // 用于 browser iframe 的最终 HTML 内容
   // Final HTML content for browser iframe
   const browserHtmlContent = useMemo(() => {
-    const raw = hasRelativeResources && file_path
-      ? (inlinedHtmlContent || content)
-      : displayedContent;
+    const raw = hasRelativeResources && file_path ? inlinedHtmlContent || content : displayedContent;
     return injectFragmentNavScript(raw);
   }, [hasRelativeResources, file_path, inlinedHtmlContent, content, displayedContent]);
 

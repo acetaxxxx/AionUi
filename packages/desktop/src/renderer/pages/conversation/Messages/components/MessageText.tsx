@@ -26,11 +26,7 @@ import { stripSkillSuggest, hasSkillSuggest } from '@renderer/utils/chat/skillSu
 import { isForkEnabled } from '@/common/chat/forkConversation';
 import { useForkConversation } from '@/renderer/hooks/chat/useForkConversation';
 import ForkBranchIcon from '@renderer/components/base/ForkBranchIcon';
-import {
-  parseFileMarker,
-  resolveMessageFilePath,
-  extractMessageFiles,
-} from '@renderer/utils/chat/messageParser';
+import { parseFileMarker, resolveMessageFilePath, extractMessageFiles } from '@renderer/utils/chat/messageParser';
 
 /**
  * Format a timestamp for message display.
@@ -109,7 +105,13 @@ interface MessageTextProps {
   turnTexts?: string[];
 }
 
-const MessageText: React.FC<MessageTextProps> = ({ message, showCopyRow = true, isLastMessage = false, hasForkAnchor = false, turnTexts }) => {
+const MessageText: React.FC<MessageTextProps> = ({
+  message,
+  showCopyRow = true,
+  isLastMessage = false,
+  hasForkAnchor = false,
+  turnTexts,
+}) => {
   const logos = useAgentLogos();
   // Filter think tags from content before rendering
   // 在渲染前过滤 think 标签
@@ -140,10 +142,7 @@ const MessageText: React.FC<MessageTextProps> = ({ message, showCopyRow = true, 
   const senderName = message.content.senderName;
   const senderAgentType = message.content.senderAgentType;
   const senderConversationId = message.content.senderConversationId;
-  const { text, files: parsedFiles } = useMemo(
-    () => parseFileMarker(contentToRender, true),
-    [contentToRender]
-  );
+  const { text, files: parsedFiles } = useMemo(() => parseFileMarker(contentToRender, true), [contentToRender]);
   const files = useMemo(
     () => extractMessageFiles(message.content as Record<string, unknown>, parsedFiles, { isUserMessage }),
     [isUserMessage, message.content, parsedFiles]

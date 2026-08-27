@@ -129,9 +129,9 @@ describe('resolveLocalFileLinkPath and security checks', () => {
         line: 10,
       });
 
-      expect(
-        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/api/fs/content?path=/workspace/data.csv')
-      ).toBe('/workspace/data.csv');
+      expect(resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/api/fs/content?path=/workspace/data.csv')).toBe(
+        '/workspace/data.csv'
+      );
 
       expect(
         resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/api/fs/stream?relative_path=docs/summary.md')
@@ -155,9 +155,7 @@ describe('resolveLocalFileLinkPath and security checks', () => {
 
     it('rejects links with origin scheme mismatch', () => {
       // Current origin is https://ai-chat.snoozydoggy.com
-      expect(
-        resolveLocalFileLinkPath('http://ai-chat.snoozydoggy.com/preview?file=/workspace/report.html')
-      ).toBeNull();
+      expect(resolveLocalFileLinkPath('http://ai-chat.snoozydoggy.com/preview?file=/workspace/report.html')).toBeNull();
     });
 
     it('rejects same-origin arbitrary endpoints and static file routes', () => {
@@ -168,30 +166,18 @@ describe('resolveLocalFileLinkPath and security checks', () => {
     });
 
     it('rejects directory traversal in same-origin URLs and aion-file URLs', () => {
-      expect(
-        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/preview?file=../../etc/passwd')
-      ).toBeNull();
+      expect(resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/preview?file=../../etc/passwd')).toBeNull();
       expect(
         resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/api/fs/content?path=/workspace/../../etc/shadow')
       ).toBeNull();
-      expect(
-        resolveLocalFileLinkPath('aion-file:///../../etc/passwd')
-      ).toBeNull();
-      expect(
-        resolveLocalFileLinkPath('file:///etc/../../secret.txt')
-      ).toBeNull();
+      expect(resolveLocalFileLinkPath('aion-file:///../../etc/passwd')).toBeNull();
+      expect(resolveLocalFileLinkPath('file:///etc/../../secret.txt')).toBeNull();
     });
 
     it('rejects untrusted or missing query parameters', () => {
-      expect(
-        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/preview?random=report.html')
-      ).toBeNull();
-      expect(
-        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/preview')
-      ).toBeNull();
-      expect(
-        resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/api/fs/content')
-      ).toBeNull();
+      expect(resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/preview?random=report.html')).toBeNull();
+      expect(resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/preview')).toBeNull();
+      expect(resolveLocalFileLinkPath('https://ai-chat.snoozydoggy.com/api/fs/content')).toBeNull();
     });
 
     it('does not treat normal external HTTPS web links or bare SPA roots as local files', () => {
