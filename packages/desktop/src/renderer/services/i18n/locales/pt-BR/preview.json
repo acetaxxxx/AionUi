@@ -24,6 +24,8 @@
   "closeTabMessage": "O conteúdo atual não foi salvo. Deseja salvar antes de fechar?",
   "closeTabsTitle": "Fechar abas",
   "closeTabsMessage": "{{count}} abas têm alterações não salvas. Salvar antes de fechar?",
+  "closeTabsMessage_one": "{{count}} aba tem alterações não salvas. Salvar antes de fechar?",
+  "closeTabsMessage_other": "{{count}} abas têm alterações não salvas. Salvar antes de fechar?",
   "saveAndClose": "Salvar e Fechar",
   "closeWithoutSave": "Não Salvar",
   "pptTitle": "Apresentação do PowerPoint",
@@ -146,6 +148,10 @@
   },
   "saveConflict": "Não foi possível salvar: este arquivo mudou no disco depois que você o abriu. Recarregue para ver as outras alterações — suas edições continuam aqui, não salvas.",
   "persistQuotaExceeded": "O armazenamento local está cheio, então as abas abertas deste projeto não podem mais ser lembradas. Feche algumas abas ou limpe os dados do site.",
+  "save": {
+    "tooltip": "Salvar alterações (Ctrl/Cmd+S)",
+    "clean": "Nenhuma alteração não salva"
+  },
   "refresh": {
     "label": "Atualizar",
     "tooltip": "Recarregar do disco",
@@ -157,5 +163,8 @@
     "confirmMessage": "Esta aba tem alterações não salvas. Recarregar as substitui pelo conteúdo do disco.",
     "discardAndRefresh": "Descartar alterações e recarregar",
     "officeNotWired": "A atualização de documentos do Office ainda não está disponível — feche e reabra o arquivo para ver as alterações."
-  }
+  },
+  "zoomIn": "Ampliar",
+  "zoomOut": "Reduzir",
+  "zoomReset": "Redefinir visualização"
 }

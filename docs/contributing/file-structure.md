@@ -11,7 +11,6 @@ Rules for organizing files and directories across the entire Electron project.
 - **Contributor documentation** (dev setup, code style, file structure, PR workflow) belongs in `docs/contributing/`
 - **Architecture documentation** belongs in `docs/architecture/` (research notes under `docs/architecture/research/`)
 - **Feature specs / PRDs / design drafts** belong in `docs/specs/` (or `docs/prds/` for formal PRDs maintained by the product team)
-- **Private design discussions / agent handoffs** belong in the gitignored `docs/superpowers/` workspace. Do not place them in `docs/design/` or `llm/`; those paths are reserved for local working notes and must never be committed.
 - **Config files** (`tsconfig.json`, `package.json`, etc.) stay at root — Node.js/Electron ecosystem convention
 - **New documentation** should be placed under the appropriate `docs/` subdirectory, not at project root
 

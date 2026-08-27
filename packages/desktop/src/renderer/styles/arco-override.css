@@ -436,7 +436,7 @@ body[arco-theme='dark'] .arco-message-error {
    and expresses nesting with in-row indent blocks, so these 8px are a single constant
    offset per level rather than something that accumulates with depth. */
 .workspace-tree .arco-tree-node {
-  padding-left: 8px;
+  padding-inline-start: 8px;
 }
 
 .workspace-tree .arco-tree-node:hover {
@@ -479,7 +479,7 @@ body[arco-theme='dark'] .arco-message-error {
   }
 
   .arco-tabs-nav-tab:first-child {
-    margin-left: 0;
+    margin-inline-start: 0;
   }
 
   .arco-tabs-nav-tab-active {
@@ -559,8 +559,8 @@ body[arco-theme='dark'] .arco-message-error {
  * ~12px each side, leaving a visible ~24px chasm even with gap:0. */
 [data-mobile='true'] [data-testid='guid-model-selector'].arco-btn-shape-round,
 [data-mobile='true'] [data-testid='mode-selector'] .arco-btn-shape-round {
-  padding-left: 4px !important;
-  padding-right: 4px !important;
+  padding-inline-start: 4px !important;
+  padding-inline-end: 4px !important;
 }
 
 /* Searchable dropdown lists (RuntimeSelectorModelList, DropdownSearchList) own
@@ -585,6 +585,16 @@ body[arco-theme='dark'] .arco-message-error {
 .arco-dropdown-menu.explorer-context-menu {
   max-height: none;
   overflow: visible;
+}
+
+/* Divider between the menu's action sections (add-to-chat | locate/copy |
+   create/rename/delete). A plain <div role='separator'> emitted by ExplorerPanel
+   between two non-empty sections; theme-aware border token so it adapts to dark
+   mode. Vertical margin gives the sections breathing room without item padding. */
+.arco-dropdown-menu.explorer-context-menu .explorer-context-menu-divider {
+  height: 1px;
+  margin: 4px 8px;
+  background-color: var(--color-border-2);
 }
 
 /* Provider group titles pin to the top of the inner scroll container. It has no

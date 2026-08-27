@@ -83,7 +83,6 @@ See the `testing` skill (`.claude/skills/testing/SKILL.md`) for complete workflo
 - **Ratchet rules**: existing directory size or single-file-directory violations do not require cleanup during ordinary feature work or bugfixes, but the current change must not make them worse.
 - **No scope expansion**: implementation plans and reviews must not create extra tasks, phases, or acceptance criteria for cleanup unless the user asks for that scope.
 - **Ignored working docs**: `docs/superpowers/` is intentionally gitignored for local Superpowers specs and plans. Do not force-add or otherwise commit files from this directory.
-- **Private working docs**: `docs/design/` and `llm/` are gitignored for local design discussions, deployment notes, and AI handoffs. Keep public documentation in the tracked `docs/guides/`, `docs/specs/`, `docs/prds/`, or other appropriate public documentation directories. Never force-add private working docs.
 
 ### During Development
 
@@ -104,20 +103,17 @@ node scripts/check-i18n.js
 
 ### Before Pushing
 
-AI agents must not push unless explicitly asked. Before pushing, run the required checks manually, then commit and push directly with Git:
+AI agents must not push unless explicitly asked. When pushing, prefer `just push` because it runs the pre-push checks; if `just` is unavailable, run the equivalent checks manually and use `git push`:
 
 ```bash
-bun run lint:fix
-bun run format
-bunx tsc --noEmit
-bun run test
-git add <intended-files>
-git commit -m "<type>(<scope>): <subject>"
-git push                         # existing upstream branch
-git push -u origin feat/branch   # first push for a new branch
+just push                          # lint → format-check → typecheck → test → git push
+just push -u origin feat/branch    # same checks, with extra git push args
+git push -u origin feat/branch     # fallback when just is unavailable after running the checks
 ```
 
 Any step that fails aborts the push. Fix the issue, commit, then retry.
+
+> **Note for AI agents**: `just push` uses `--quiet` for lint — only errors cause failure. The project has many pre-existing lint _warnings_ which do NOT indicate failure. Judge success by exit code, not by output volume.
 
 ### Before PR (optional stricter check)
 

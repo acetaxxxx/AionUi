@@ -236,7 +236,7 @@ graphify-out/
 
 # Local deployment and documentation directories
 local/
-/docs/design/
+docs/
 llm/
 temp/
 .playwright-mcp/

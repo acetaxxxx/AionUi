@@ -245,6 +245,19 @@ describe('MarkdownViewer', () => {
     expect(link).toHaveAttribute('href', 'https://aionui.com/docs');
   });
 
+  it('sanitizes raw HTML in preview mode (drops <script>, keeps benign markup)', () => {
+    const { container } = render(
+      <MarkdownViewer content={'before<script>window.__xss = 1</script>after and <b>bold</b>'} />
+    );
+    expect(container.querySelectorAll('script')).toHaveLength(0);
+    expect(container.querySelector('b')?.textContent).toBe('bold');
+  });
+
+  it('renders math via KaTeX in preview mode', () => {
+    const { container } = render(<MarkdownViewer content='inline $x + y = z$ done' />);
+    expect(container.querySelectorAll('.katex')).toHaveLength(1);
+  });
+
   it('continues rendering local image markdown inline', async () => {
     const filePath = '/Users/demo/Desktop/chart.jpg';
     vi.mocked(ipcBridge.fs.getImageBase64.invoke).mockResolvedValue('data:image/jpeg;base64,abc123');

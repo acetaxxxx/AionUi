@@ -20,8 +20,7 @@ import {
 } from '@renderer/pages/conversation/Messages/hooks';
 import { usePendingConfirmationsRecovery } from '@renderer/pages/conversation/Messages/usePendingConfirmationsRecovery';
 import HOC from '@renderer/utils/ui/HOC';
-import React, { useEffect, useMemo } from 'react';
-import LocalImageView from '@renderer/components/media/LocalImageView';
+import React, { useMemo } from 'react';
 import type { TeamSendBoxRuntime } from '@/renderer/pages/team/components/teamSendRuntime';
 import AionrsSendBox from './AionrsSendBox';
 import type { AionrsModelSelection } from './useAionrsModelSelection';
@@ -40,6 +39,7 @@ const AionrsChat: React.FC<{
   teamSendMessage?: (payload: { input: string; files: ChatFileRef[] }) => Promise<void>;
   teamRuntime?: TeamSendBoxRuntime;
   assistantId?: string;
+  forkCapability?: { at_turn: boolean };
 }> = ({
   conversation_id,
   workspace,
@@ -54,13 +54,10 @@ const AionrsChat: React.FC<{
   teamSendMessage,
   teamRuntime,
   assistantId,
+  forkCapability,
 }) => {
   useMessageLstCache(conversation_id);
   usePendingConfirmationsRecovery(conversation_id);
-  const updateLocalImage = LocalImageView.useUpdateLocalImage();
-  useEffect(() => {
-    updateLocalImage({ root: workspace });
-  }, [workspace]);
   const conversationValue = useMemo<ConversationContextValue>(() => {
     return {
       conversation_id: conversation_id,
@@ -71,8 +68,18 @@ const AionrsChat: React.FC<{
       loadedMcpServers,
       loadedMcpStatuses,
       assistantId,
+      forkCapability,
     };
-  }, [conversation_id, workspace, cron_job_id, loadedSkills, loadedMcpServers, loadedMcpStatuses, assistantId]);
+  }, [
+    conversation_id,
+    workspace,
+    cron_job_id,
+    loadedSkills,
+    loadedMcpServers,
+    loadedMcpStatuses,
+    assistantId,
+    forkCapability,
+  ]);
 
   return (
     <ConversationProvider value={conversationValue}>
@@ -95,9 +102,4 @@ const AionrsChat: React.FC<{
   );
 };
 
-export default HOC.Wrapper(
-  MessageListProvider,
-  MessageListLoadingProvider,
-  MessagePaginationProvider,
-  LocalImageView.Provider
-)(AionrsChat);
+export default HOC.Wrapper(MessageListProvider, MessageListLoadingProvider, MessagePaginationProvider)(AionrsChat);

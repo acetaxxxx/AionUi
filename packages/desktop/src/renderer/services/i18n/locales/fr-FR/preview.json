@@ -24,6 +24,8 @@
   "closeTabMessage": "Le contenu actuel n'a pas été enregistré. Voulez-vous enregistrer avant de fermer ?",
   "closeTabsTitle": "Fermer les onglets",
   "closeTabsMessage": "{{count}} onglets contiennent des modifications non enregistrées. Les enregistrer avant de fermer ?",
+  "closeTabsMessage_one": "{{count}} onglet contient des modifications non enregistrées. L'enregistrer avant de fermer ?",
+  "closeTabsMessage_other": "{{count}} onglets contiennent des modifications non enregistrées. Les enregistrer avant de fermer ?",
   "saveAndClose": "Enregistrer et fermer",
   "closeWithoutSave": "Ne pas enregistrer",
   "pptTitle": "Présentation PowerPoint",
@@ -146,6 +148,10 @@
   },
   "saveConflict": "Échec de l'enregistrement : ce fichier a changé sur le disque depuis que vous l'avez ouvert. Rechargez pour voir les autres modifications — vos modifications sont toujours là, non enregistrées.",
   "persistQuotaExceeded": "Le stockage local est plein : les onglets ouverts de ce projet ne peuvent plus être mémorisés. Fermez des onglets ou effacez les données du site.",
+  "save": {
+    "tooltip": "Enregistrer les modifications (Ctrl/Cmd+S)",
+    "clean": "Aucune modification non enregistrée"
+  },
   "refresh": {
     "label": "Actualiser",
     "tooltip": "Recharger depuis le disque",
@@ -157,5 +163,8 @@
     "confirmMessage": "Cet onglet contient des modifications non enregistrées. Recharger les remplacera par le contenu du disque.",
     "discardAndRefresh": "Abandonner les modifications et actualiser",
     "officeNotWired": "L'actualisation des documents Office n'est pas encore disponible — fermez puis rouvrez le fichier pour voir les modifications."
-  }
+  },
+  "zoomIn": "Zoom avant",
+  "zoomOut": "Zoom arrière",
+  "zoomReset": "Réinitialiser la vue"
 }

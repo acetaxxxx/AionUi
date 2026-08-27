@@ -1,8 +1,9 @@
 import React, { Suspense } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import AppLoader from '@renderer/components/layout/AppLoader';
-import PwaAuthExpiredModal from '@renderer/components/layout/PwaAuthExpiredModal';
 import LazyLoadErrorBoundary from '@renderer/components/layout/LazyLoadErrorBoundary';
+import PwaAuthExpiredModal from '@renderer/components/layout/PwaAuthExpiredModal';
+import DocumentTitle from '@renderer/components/layout/DocumentTitle';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
 import { TEAM_MODE_ENABLED } from '@/common/config/constants';
 const Conversation = React.lazy(() => import('@renderer/pages/conversation'));
@@ -63,6 +64,7 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
   return (
     <HashRouter>
       <PwaAuthExpiredModal />
+      <DocumentTitle />
       <Routes>
         <Route
           path='/login'
