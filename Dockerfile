@@ -1,3 +1,21 @@
+FROM node:22-slim AS self-host-builder
+WORKDIR /app
+
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates python3 build-essential \
+    && rm -rf /var/lib/apt/lists/*
+RUN npm install --global bun@1.3.11
+
+COPY . .
+RUN bun install --frozen-lockfile --ignore-scripts
+RUN bun run package
+
+# The private package carries the prebuilt app consumed by aion-self-deploy.
+FROM scratch AS self-host-artifact
+COPY --from=self-host-builder /app /app/AionUi
+
 FROM node:20-slim AS builder
 WORKDIR /app
 
