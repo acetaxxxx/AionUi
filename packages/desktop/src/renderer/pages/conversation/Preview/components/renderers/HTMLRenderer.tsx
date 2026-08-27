@@ -9,6 +9,7 @@ import { useTypingAnimation } from '@/renderer/hooks/chat/useTypingAnimation';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useScrollSyncTarget } from '../../hooks/useScrollSyncHelpers';
 import { generateInspectScript } from './htmlInspectScript';
+import { HTML_FRAGMENT_NAV_SCRIPT, injectFragmentNavScript } from './htmlFragmentNavScript';
 
 /** 选中元素的数据结构 / Selected element data structure */
 export interface InspectedElement {
@@ -374,10 +375,8 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
   // 用于 browser iframe 的最终 HTML 内容
   // Final HTML content for browser iframe
   const browserHtmlContent = useMemo(() => {
-    if (hasRelativeResources && file_path) {
-      return inlinedHtmlContent || content; // 在内联化完成前显示原始内容 / Show original content before inlining completes
-    }
-    return displayedContent;
+    const raw = hasRelativeResources && file_path ? inlinedHtmlContent || content : displayedContent;
+    return injectFragmentNavScript(raw);
   }, [hasRelativeResources, file_path, inlinedHtmlContent, content, displayedContent]);
 
   // 计算 webview 的 src
@@ -391,7 +390,7 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
 
     // 否则使用 data URL（适用于动态生成的 HTML 或没有外部资源的情况）
     // Otherwise use data URL (for dynamically generated HTML or no external resources)
-    let html = htmlContent;
+    let html = injectFragmentNavScript(htmlContent);
 
     // 注入 base 标签支持相对路径 / Inject base tag for relative paths
     if (file_path) {
@@ -654,6 +653,26 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
       webview.removeEventListener('did-finish-load', injectScrollSync);
     };
   }, [scrollSyncScript, onScroll]);
+
+  // 注入片段导航拦截脚本到 webview / Inject fragment navigation script into webview
+  useEffect(() => {
+    const webview = webviewRef.current;
+    if (!webview) return;
+
+    const injectFragmentNav = () => {
+      void webview.executeJavaScript(HTML_FRAGMENT_NAV_SCRIPT).catch(() => {});
+    };
+
+    if (webviewLoadedRef.current) {
+      injectFragmentNav();
+    }
+
+    webview.addEventListener('did-finish-load', injectFragmentNav);
+
+    return () => {
+      webview.removeEventListener('did-finish-load', injectFragmentNav);
+    };
+  }, []);
 
   // 监听外部滚动同步请求 / Listen for external scroll sync requests
   const handleTargetScroll = useCallback((targetPercent: number) => {

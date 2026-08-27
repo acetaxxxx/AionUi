@@ -319,7 +319,56 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
         <CodeBlock {...(props as Parameters<typeof CodeBlock>[0])} mermaidPanZoom />
       ),
       a({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) {
-        const localFileReference = resolveLocalFileLinkReference(typeof href === 'string' ? href : '');
+        const rawHref = typeof href === 'string' ? href : '';
+        const isFragment = rawHref.startsWith('#');
+        if (isFragment) {
+          const fragmentId = rawHref.slice(1);
+          return (
+            <a
+              href={rawHref}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!fragmentId) {
+                  const container = containerRef.current;
+                  if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+                  return;
+                }
+                let decodedId = fragmentId;
+                try {
+                  decodedId = decodeURIComponent(fragmentId);
+                } catch {
+                  decodedId = fragmentId;
+                }
+                const container = containerRef.current;
+                let target: Element | null = null;
+                if (container) {
+                  try {
+                    target =
+                      container.querySelector(`[id="${CSS.escape(decodedId)}"]`) ||
+                      container.querySelector(`[name="${CSS.escape(decodedId)}"]`);
+                  } catch {
+                    target = null;
+                  }
+                }
+                if (!target) {
+                  target = document.getElementById(decodedId);
+                }
+                if (target) {
+                  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else if (decodedId === 'top') {
+                  const container = containerRef.current;
+                  if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              {...props}
+            >
+              {children}
+            </a>
+          );
+        }
+
+        const localFileReference = resolveLocalFileLinkReference(rawHref);
         if (localFileReference) {
           return (
             <LocalFileLink reference={localFileReference} onOpen={handleLocalFileLink}>

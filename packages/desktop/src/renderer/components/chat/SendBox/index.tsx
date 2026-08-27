@@ -1882,14 +1882,18 @@ const SendBox: React.FC<{
               }}
               {...compositionHandlers}
               autoSize={isSingleLine ? false : { minRows: 1, maxRows: 10 }}
-              onKeyDown={createKeyDownHandler(handlePrimaryAction, (event) => {
-                return (
-                  handleAddToDraftShortcut(event) ||
-                  handleAtFileMenuKeyDown(event) ||
-                  handleOverlayKeyDown(event) ||
-                  handleHistoryKeyDown(event)
-                );
-              })}
+              onKeyDown={createKeyDownHandler(
+                handlePrimaryAction,
+                (event) => {
+                  return (
+                    handleAddToDraftShortcut(event) ||
+                    handleAtFileMenuKeyDown(event) ||
+                    handleOverlayKeyDown(event) ||
+                    handleHistoryKeyDown(event)
+                  );
+                },
+                { isMobile }
+              )}
             ></Input.TextArea>
           </div>
           {isSingleLine && (

@@ -103,13 +103,128 @@ const normalizeFilePath = (path: string): string => {
   return /^\/[A-Za-z]:[\\/]/.test(path) ? path.slice(1) : path;
 };
 
+const hasPathTraversal = (filePath: string): boolean => {
+  const decoded = safeDecodeURIComponent(filePath).replace(/\\/g, '/');
+  return /(?:^|[/\\])\.\.(?:[/\\]|$)/.test(decoded) || decoded.includes('/../') || decoded.includes('\\..\\');
+};
+
+const TRUSTED_INTERNAL_ROUTES = new Set(['/api/fs/content', '/api/fs/stream', '/preview']);
+
+const isExactSameOrigin = (url: URL): boolean => {
+  if (typeof window !== 'undefined' && window.location?.origin && window.location.origin !== 'null') {
+    return url.origin === window.location.origin;
+  }
+  return false;
+};
+
+const extractFileFromHttpUrl = (url: URL): LocalFilePathCandidate | null => {
+  // 1. Must be exact same origin (matching protocol, hostname, and port)
+  if (!isExactSameOrigin(url)) return null;
+
+  // 2. Must match an explicit trusted internal route
+  const pathname = safeDecodeURIComponent(url.pathname).replace(/\/+$/, '') || '/';
+  if (!TRUSTED_INTERNAL_ROUTES.has(pathname)) {
+    return null; // Reject non-trusted routes (e.g. /foo.html, /api/users, /settings, /chat)
+  }
+
+  // 3. Strictly trusted query keys: 'file' or 'path' (or 'relative_path' for stream)
+  let queryFile = url.searchParams.get('file') || url.searchParams.get('path');
+  if (!queryFile && pathname === '/api/fs/stream') {
+    queryFile = url.searchParams.get('relative_path');
+  }
+
+  if (!queryFile) {
+    return null; // Reject untrusted/missing queries
+  }
+
+  const decodedFile = safeDecodeURIComponent(queryFile).trim();
+  if (!decodedFile || hasPathTraversal(decodedFile)) {
+    return null; // Reject empty or directory traversal (../)
+  }
+
+  const rawHash = safeDecodeURIComponent(url.hash);
+  const hashLocation = rawHash ? parseHashLocation(rawHash) : null;
+  const pathCandidate = normalizeFilePath(decodedFile);
+
+  return hashLocation
+    ? { filePath: pathCandidate, hashLocation }
+    : { filePath: pathCandidate, hasInvalidHash: Boolean(rawHash && !hashLocation) };
+};
+
 const normalizeLocalFileHrefToPath = (href: string): LocalFilePathCandidate | null => {
-  if (/^https?:\/\//i.test(href)) return null;
+  if (hasPathTraversal(href)) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(href)) {
+    try {
+      const url = new URL(href);
+      return extractFileFromHttpUrl(url);
+    } catch {
+      return null;
+    }
+  }
+
+  if (href.startsWith('?') || href.startsWith('/preview?') || href.startsWith('/api/fs/')) {
+    try {
+      const baseOrigin =
+        typeof window !== 'undefined' && window.location?.origin && window.location.origin !== 'null'
+          ? window.location.origin
+          : 'http://localhost';
+      const url = new URL(href, baseOrigin);
+      const pathname = safeDecodeURIComponent(url.pathname).replace(/\/+$/, '') || '/';
+      if (!TRUSTED_INTERNAL_ROUTES.has(pathname)) return null;
+
+      let queryFile = url.searchParams.get('file') || url.searchParams.get('path');
+      if (!queryFile && pathname === '/api/fs/stream') {
+        queryFile = url.searchParams.get('relative_path');
+      }
+      if (!queryFile) return null;
+
+      const decodedFile = safeDecodeURIComponent(queryFile).trim();
+      if (!decodedFile || hasPathTraversal(decodedFile)) return null;
+
+      const rawHash = safeDecodeURIComponent(url.hash);
+      const hashLocation = rawHash ? parseHashLocation(rawHash) : null;
+      const pathCandidate = normalizeFilePath(decodedFile);
+
+      return hashLocation
+        ? { filePath: pathCandidate, hashLocation }
+        : { filePath: pathCandidate, hasInvalidHash: Boolean(rawHash && !hashLocation) };
+    } catch {
+      return null;
+    }
+  }
+
+  if (/^aion-file:/i.test(href)) {
+    try {
+      const url = new URL(href);
+      const rawPath = safeDecodeURIComponent(url.pathname || url.hostname + url.pathname);
+      const path = normalizeFilePath(rawPath.replace(/^\/+/, '/'));
+      if (hasPathTraversal(path)) return null;
+
+      const rawHash = safeDecodeURIComponent(url.hash);
+      if (!rawHash) return { filePath: path };
+
+      const hashLocation = parseHashLocation(rawHash);
+      return hashLocation ? { filePath: path, hashLocation } : { filePath: path, hasInvalidHash: true };
+    } catch {
+      const stripped = href.replace(/^aion-file:(?:\/\/)?/i, '');
+      const candidate = splitHashLocation(stripped);
+      if (hasPathTraversal(candidate.filePath)) return null;
+      return {
+        ...candidate,
+        filePath: normalizeFilePath(candidate.filePath),
+      };
+    }
+  }
 
   if (/^file:/i.test(href)) {
     try {
       const url = new URL(href);
       const path = normalizeFilePath(safeDecodeURIComponent(url.pathname));
+      if (hasPathTraversal(path)) return null;
+
       const rawHash = safeDecodeURIComponent(url.hash);
       if (!rawHash) return { filePath: path };
 
@@ -118,6 +233,7 @@ const normalizeLocalFileHrefToPath = (href: string): LocalFilePathCandidate | nu
     } catch {
       const stripped = href.replace(/^file:(?:\/\/)?/i, '');
       const candidate = splitHashLocation(stripped);
+      if (hasPathTraversal(candidate.filePath)) return null;
       return {
         ...candidate,
         filePath: normalizeFilePath(candidate.filePath),
@@ -127,6 +243,7 @@ const normalizeLocalFileHrefToPath = (href: string): LocalFilePathCandidate | nu
 
   const candidate = splitHashLocation(href);
   const path = candidate.filePath;
+  if (hasPathTraversal(path)) return null;
 
   if (/^[A-Za-z]:[\\/]/.test(path)) {
     return {
@@ -207,7 +324,7 @@ export const resolveLocalFileLinkReference = (
           filePath: colonReference.filePath,
         };
 
-  if (!normalizeLocalFileHrefToPath(reference.filePath)) return null;
+  if (!reference.filePath) return null;
 
   const source = candidate.hashLocation?.line == null ? colonReference.source : 'hash';
   const { source: _source, ...publicReference } = reference;

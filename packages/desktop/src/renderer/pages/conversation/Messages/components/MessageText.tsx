@@ -26,6 +26,7 @@ import { stripSkillSuggest, hasSkillSuggest } from '@renderer/utils/chat/skillSu
 import { isForkEnabled } from '@/common/chat/forkConversation';
 import { useForkConversation } from '@/renderer/hooks/chat/useForkConversation';
 import ForkBranchIcon from '@renderer/components/base/ForkBranchIcon';
+import { parseFileMarker, resolveMessageFilePath, extractMessageFiles } from '@renderer/utils/chat/messageParser';
 
 /**
  * Format a timestamp for message display.
@@ -56,11 +57,6 @@ import { useTeammateColor } from '@/renderer/pages/team/identity/TeamIdentityCon
 
 const CODE_STYLE = { marginTop: 4, marginBlock: 4 };
 
-type ParsedFileMarker = {
-  text: string;
-  files: string[];
-};
-
 type TeamContextResetNotice = {
   kind: 'context_reset';
   member_name: string;
@@ -82,95 +78,24 @@ export const parseTeamContextResetNotice = (content: string): TeamContextResetNo
   }
   return null;
 };
-
-const URL_SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:\/\//i;
-const MARKDOWN_ATTACHMENT_LINE_PATTERN = /^(#{1,6}\s|[-*+]\s|\d+[.)]\s|>\s?|```|~~~|\|)/;
-
-const parseFileMarker = (content: string, canParseFileMarker: boolean): ParsedFileMarker => {
-  if (!canParseFileMarker) {
-    return { text: content, files: [] };
-  }
-
-  const lines = content.split(/\r?\n/);
-  let markerLineIndex = -1;
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    if (lines[index].trim() === AIONUI_FILES_MARKER) {
-      markerLineIndex = index;
-      break;
-    }
-  }
-
-  if (markerLineIndex === -1) {
-    return { text: content, files: [] };
-  }
-
-  const files = lines
-    .slice(markerLineIndex + 1)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (!files.length || files.some((file_path) => !isLocalMessageFilePath(file_path))) {
-    return { text: content, files: [] };
-  }
-
-  return {
-    text: lines.slice(0, markerLineIndex).join('\n').trimEnd(),
-    files,
-  };
-};
-
-const isAbsoluteMessageFilePath = (file_path: string): boolean =>
-  file_path.startsWith('/') || file_path.startsWith('\\\\') || /^[A-Za-z]:[\\/]/.test(file_path);
-
-const isWorkspaceRelativeMessageFilePath = (file_path: string): boolean => {
-  const normalizedFilePath = file_path.replace(/\\/g, '/');
-  return (
-    normalizedFilePath.startsWith('./') ||
-    normalizedFilePath.startsWith('../') ||
-    normalizedFilePath.includes('/') ||
-    /(?:^|\/)[^/]+\.[^./\s][^/]*$/.test(normalizedFilePath)
-  );
-};
-
-const isLocalMessageFilePath = (file_path: string): boolean => {
-  const trimmedFilePath = file_path.trim();
-  if (
-    !trimmedFilePath ||
-    URL_SCHEME_PATTERN.test(trimmedFilePath) ||
-    MARKDOWN_ATTACHMENT_LINE_PATTERN.test(trimmedFilePath)
-  ) {
-    return false;
-  }
-
-  return isAbsoluteMessageFilePath(trimmedFilePath) || isWorkspaceRelativeMessageFilePath(trimmedFilePath);
-};
-
-export const resolveMessageFilePath = (file_path: string, workspace?: string): string => {
-  if (!file_path || isAbsoluteMessageFilePath(file_path) || !workspace) {
-    return file_path;
-  }
-
-  const normalizedWorkspace = workspace.replace(/[\\/]+$/, '').replace(/\\/g, '/');
-  const normalizedFilePath = file_path.replace(/^\.?[\\/]+/, '').replace(/\\/g, '/');
-  return `${normalizedWorkspace}/${normalizedFilePath}`.replace(/\/+/g, '/');
-};
-
 const useFormatContent = (content: string) => {
   return useMemo(() => {
     try {
       const json = JSON.parse(content);
-      const isJson = typeof json === 'object';
       return {
-        json: isJson,
-        data: isJson ? json : content,
+        data: json,
+        json: true,
       };
     } catch {
-      return { data: content };
+      return {
+        data: content,
+        json: false,
+      };
     }
   }, [content]);
 };
 
-const MessageText: React.FC<{
+interface MessageTextProps {
   message: IMessageText;
   showCopyRow?: boolean;
   isLastMessage?: boolean;
@@ -178,7 +103,15 @@ const MessageText: React.FC<{
   /** All text segments of this message's turn, in order — the copy button
    * copies the whole reply, not just the segment it happens to sit on. */
   turnTexts?: string[];
-}> = ({ message, showCopyRow = true, isLastMessage = false, hasForkAnchor = false, turnTexts }) => {
+}
+
+const MessageText: React.FC<MessageTextProps> = ({
+  message,
+  showCopyRow = true,
+  isLastMessage = false,
+  hasForkAnchor = false,
+  turnTexts,
+}) => {
   const logos = useAgentLogos();
   // Filter think tags from content before rendering
   // 在渲染前过滤 think 标签
@@ -209,9 +142,13 @@ const MessageText: React.FC<{
   const senderName = message.content.senderName;
   const senderAgentType = message.content.senderAgentType;
   const senderConversationId = message.content.senderConversationId;
-  const { text, files } = useMemo(
-    () => parseFileMarker(contentToRender, isUserMessage),
+  const { text, files: parsedFiles } = useMemo(
+    () => parseFileMarker(contentToRender, isUserMessage, { allowAbsolute: true }),
     [contentToRender, isUserMessage]
+  );
+  const files = useMemo(
+    () => extractMessageFiles(message.content as Record<string, unknown>, parsedFiles, { isUserMessage }),
+    [isUserMessage, message.content, parsedFiles]
   );
   const contextResetNotice = useMemo(
     () => (isTeammateMessage && senderName === 'team_system' ? parseTeamContextResetNotice(text) : null),
@@ -233,7 +170,10 @@ const MessageText: React.FC<{
   const isMobile = layout?.isMobile ?? false;
   const handleLocalFileLink = useLocalFilePreview(conversationContext?.workspace);
   const resolvedFiles = useMemo(
-    () => files.map((file_path) => resolveMessageFilePath(file_path, conversationContext?.workspace)),
+    () =>
+      files
+        .map((file_path) => resolveMessageFilePath(file_path, conversationContext?.workspace, { allowAbsolute: true }))
+        .filter((resolved): resolved is string => Boolean(resolved)),
     [conversationContext?.workspace, files]
   );
 
@@ -319,12 +259,23 @@ const MessageText: React.FC<{
           <div className={classNames('mt-6px min-w-0 max-w-full', { 'self-end': isUserMessage })}>
             {resolvedFiles.length === 1 ? (
               <div className='flex items-center'>
-                <FilePreview path={resolvedFiles[0]} onRemove={() => undefined} readonly />
+                <FilePreview
+                  path={resolvedFiles[0]}
+                  onRemove={() => undefined}
+                  readonly
+                  onClick={() => handleLocalFileLink(resolvedFiles[0])}
+                />
               </div>
             ) : (
               <HorizontalFileList>
                 {resolvedFiles.map((path) => (
-                  <FilePreview key={path} path={path} onRemove={() => undefined} readonly />
+                  <FilePreview
+                    key={path}
+                    path={path}
+                    onRemove={() => undefined}
+                    readonly
+                    onClick={() => handleLocalFileLink(path)}
+                  />
                 ))}
               </HorizontalFileList>
             )}

@@ -64,18 +64,20 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
         e.stopPropagation();
         const href = (e.currentTarget as HTMLAnchorElement).href;
         if (!href) return;
-        // Prefer the built-in browser tab for http(s) links; fall back to the
-        // system browser for other schemes or when no Preview panel is available.
-        const httpUrl = parseHttpUrl(href);
-        if (httpUrl && preview) {
-          preview.openBrowserTab(httpUrl);
+
+        // Auto-route recognized same-origin/workspace file references into existing Preview
+        const localFileReference = resolveLocalFileLinkReference(href);
+        if (localFileReference && onLocalFileLink) {
+          void onLocalFileLink(localFileReference.filePath, localFileReference);
           return;
         }
+
+        // External http(s) URLs and unmapped internal URLs open system browser / new tab
         openExternalUrl(href).catch((error: unknown) => {
           console.error(t('messages.openLinkFailed'), error);
         });
       },
-      [t, preview]
+      [t, onLocalFileLink]
     );
 
     // Memoize components so React preserves component identity across re-renders.
@@ -98,6 +100,38 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
         a: ({ node: _node, ...rest }: Record<string, unknown>) => {
           const anchorProps = rest as React.AnchorHTMLAttributes<HTMLAnchorElement>;
           const rawHref = typeof anchorProps.href === 'string' ? anchorProps.href : '';
+          const isFragment = rawHref.startsWith('#');
+          if (isFragment) {
+            const fragmentId = rawHref.slice(1);
+            return (
+              <a
+                {...anchorProps}
+                href={rawHref}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!fragmentId) return;
+                  let decodedId = fragmentId;
+                  try {
+                    decodedId = decodeURIComponent(fragmentId);
+                  } catch {
+                    decodedId = fragmentId;
+                  }
+                  let target: Element | null = null;
+                  try {
+                    target =
+                      document.getElementById(decodedId) ||
+                      (CSS && CSS.escape ? document.querySelector(`[name="${CSS.escape(decodedId)}"]`) : null);
+                  } catch {
+                    target = document.getElementById(decodedId);
+                  }
+                  if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+              />
+            );
+          }
           const localFileReference = resolveLocalFileLinkReference(rawHref);
           if (localFileReference) {
             return (

@@ -8,6 +8,7 @@ import { Message } from '@arco-design/web-react';
 import MonacoEditor from '@monaco-editor/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { injectFragmentNavScript } from '../renderers/htmlFragmentNavScript';
 
 interface HTMLPreviewProps {
   content: string;
@@ -89,6 +90,7 @@ const HTMLPreview: React.FC<HTMLPreviewProps> = ({ content, file_path, hideToolb
       }
     }
 
+    finalHtml = injectFragmentNavScript(finalHtml);
     iframeDoc.write(finalHtml);
     iframeDoc.close();
 
