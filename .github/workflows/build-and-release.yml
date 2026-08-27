@@ -5,10 +5,11 @@ permissions:
   issues: read
   pull-requests: read
   actions: write
+  packages: write
 
 on:
   push:
-    branches: [dev]
+    branches: [main, dev]
     tags:
       - '*'
 
@@ -16,6 +17,51 @@ env:
   BUN_INSTALL_REGISTRY: 'https://registry.npmjs.org/'
 
 jobs:
+  publish-self-host-builder:
+    name: Publish self-host builder image
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      IMAGE: ghcr.io/acetaxxxx/aionui-builder
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and publish the AionUI artifact
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: self-host-artifact
+          platforms: linux/amd64
+          push: true
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:main
+
+      - name: Publish image summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## AionUI self-host artifact ready
+
+          - immutable: \`$IMAGE:${{ github.sha }}\`
+          - current main: \`$IMAGE:main\`
+          EOF
+
   # 独立 code-quality job,供桌面构建和 web-cli 打包共用,避免重复跑
   code-quality:
     name: Code Quality
