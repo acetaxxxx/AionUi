@@ -74,17 +74,8 @@ jobs:
       - name: TypeScript type check
         run: bunx tsc --noEmit
 
-      - name: Run Unit & PWA Tests
-        run: |
-          bun test \
-            tests/unit/chat/ \
-            tests/unit/previews/ \
-            tests/unit/renderer/markdownLocalFileLink.test.ts \
-            packages/desktop/src/renderer/components/Markdown/markdownUtils.test.ts \
-            packages/web-host/src/cloudflareAccess.test.ts
-          bun x vitest run \
-            packages/web-host/src/static-server.unit.test.ts \
-            tests/unit/web-cli/ensureUsers.test.ts
+      - name: Run unit tests
+        run: bunx vitest run
 
   build-pwa:
     name: Build PWA WebUI & Container Artifact
