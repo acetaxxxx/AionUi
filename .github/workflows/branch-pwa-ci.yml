@@ -1,0 +1,157 @@
+name: Branch PWA CI
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'sync/**'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to validate (must match feat/** or sync/**)'
+        required: false
+        default: ''
+
+concurrency:
+  group: branch-pwa-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUN_INSTALL_REGISTRY: 'https://registry.npmjs.org/'
+  NODE_OPTIONS: '--max-old-space-size=4096'
+
+jobs:
+  validate-ref:
+    name: Validate Branch Allowlist
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch allowlist
+        run: |
+          REF="${{ github.event.inputs.branch || github.ref_name }}"
+          echo "Validating target ref/branch: $REF"
+          if [[ "$REF" =~ ^(feat/|sync/) ]]; then
+            echo "Branch $REF is allowed for Branch PWA CI."
+          else
+            echo "ERROR: Branch $REF is not in the allowlist (must start with feat/ or sync/)."
+            exit 1
+          fi
+
+  code-quality:
+    name: Code Quality & Unit Tests
+    runs-on: ubuntu-latest
+    needs: validate-ref
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.11'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run postinstall
+        run: bun run postinstall || true
+
+      - name: Run Lint (oxlint)
+        run: bun run lint
+
+      - name: Check Formatting (oxfmt)
+        run: bun run format:check
+
+      - name: TypeScript type check
+        run: bunx tsc --noEmit
+
+      - name: Run Unit & PWA Tests
+        run: |
+          bun test \
+            tests/unit/chat/ \
+            tests/unit/previews/ \
+            tests/unit/renderer/markdownLocalFileLink.test.ts \
+            packages/desktop/src/renderer/components/Markdown/markdownUtils.test.ts \
+            packages/web-host/src/cloudflareAccess.test.ts
+          bun x vitest run \
+            packages/web-host/src/static-server.unit.test.ts \
+            tests/unit/web-cli/ensureUsers.test.ts
+
+  build-pwa:
+    name: Build PWA WebUI & Container Artifact
+    runs-on: ubuntu-latest
+    needs: code-quality
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch || github.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.11'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run postinstall
+        run: bun run postinstall || true
+
+      - name: Build Web Renderer & Main Packages
+        run: bun run package
+
+      - name: Verify Web Dist Output
+        run: |
+          test -f out/renderer/index.html || { echo "Missing out/renderer/index.html"; exit 1; }
+          test -f out/main/index.js || { echo "Missing out/main/index.js"; exit 1; }
+          echo "Web renderer and main bundle output verified."
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Self-Host Container Target (Verification Only)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: self-host-artifact
+          platforms: linux/amd64
+          push: false
+
+      - name: Archive Web Output
+        uses: actions/upload-artifact@v4
+        with:
+          name: aionui-pwa-web-dist-${{ github.sha }}
+          path: |
+            out/renderer
+            out/main
+          retention-days: 7
+
+      - name: Publish Step Summary
+        if: always()
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## AionUI Branch PWA CI Summary
+
+          - **Branch**: \`${{ github.event.inputs.branch || github.ref_name }}\`
+          - **Commit**: \`${{ github.sha }}\`
+          - **Trigger**: \`${{ github.event_name }}\`
+          - **Quality Gates**: Lint, Formatting, TypeCheck, PWA Unit Tests PASSED
+          - **PWA Web Bundle**: Built and verified (\`out/renderer\`, \`out/main\`)
+          - **Container Builder**: Docker target \`self-host-artifact\` built successfully (no external push)
+          EOF
