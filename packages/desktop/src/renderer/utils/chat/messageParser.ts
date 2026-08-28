@@ -143,6 +143,10 @@ export const parseFileMarker = (
     }
   }
 
+  if (markerLineIndex === -1) {
+    return { text: content, files: [] };
+  }
+
   let blockEndIndex = lines.length;
   for (let index = markerLineIndex + 1; index < lines.length; index += 1) {
     const trimmed = lines[index].trim();

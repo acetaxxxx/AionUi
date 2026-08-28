@@ -14,6 +14,19 @@ describe('parseFileMarker', () => {
     expect(parseFileMarker(content, false)).toEqual({ text: content, files: [] });
   });
 
+  it('preserves text and extracts no files when message contains a path without a marker', () => {
+    const pathContent = '/var/folders/gd/6bb7q8jd1ll0g17q5gly4flw0000gn/T/aionui/0265f4a8/image-xxxxxxxxxxxxxxxxxx';
+    expect(parseFileMarker(pathContent, true, { allowAbsolute: true })).toEqual({
+      text: pathContent,
+      files: [],
+    });
+    const relPathContent = 'src/components/Button.tsx';
+    expect(parseFileMarker(relPathContent, true)).toEqual({
+      text: relPathContent,
+      files: [],
+    });
+  });
+
   it('splits the text from the attachment paths', () => {
     const { text, files } = parseFileMarker(`看下这个\n\n${FILES}\n/abs/a.rs\n/abs/b.rs`, true);
     expect(text).toBe('看下这个');
