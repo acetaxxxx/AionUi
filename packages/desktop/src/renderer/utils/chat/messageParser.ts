@@ -147,7 +147,16 @@ export const parseFileMarker = (
     return { text: content, files: [] };
   }
 
-  const rawLines = lines.slice(markerLineIndex + 1);
+  let blockEndIndex = lines.length;
+  for (let index = markerLineIndex + 1; index < lines.length; index += 1) {
+    const trimmed = lines[index].trim();
+    if (trimmed.startsWith('[[') && trimmed.endsWith(']]')) {
+      blockEndIndex = index;
+      break;
+    }
+  }
+
+  const rawLines = lines.slice(markerLineIndex + 1, blockEndIndex);
   const files = rawLines.map((line) => line.trim()).filter(Boolean);
 
   // A marker is structural only when every trailing line is a valid file path.
@@ -161,8 +170,11 @@ export const parseFileMarker = (
     return { text: content, files: [] };
   }
 
+  const before = lines.slice(0, markerLineIndex);
+  const after = lines.slice(blockEndIndex);
+  const text = after.length > 0 ? [...before, ...after].join('\n').trim() : before.join('\n').trimEnd();
   return {
-    text: lines.slice(0, markerLineIndex).join('\n').trimEnd(),
+    text,
     files,
   };
 };

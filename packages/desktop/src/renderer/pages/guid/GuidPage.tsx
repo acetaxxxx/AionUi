@@ -265,7 +265,6 @@ const GuidPage: React.FC = () => {
     selectedMode: agentSelection.selectedMode,
     selectedAcpModel: agentSelection.selectedAcpModel,
     selectedThoughtLevelValue: agentSelection.selectedThoughtLevelValue,
-    currentAcpCachedModelInfo: agentSelection.currentAcpCachedModelInfo,
     current_model: modelSelection.current_model,
 
     guidDisabledBuiltinSkills,
@@ -307,19 +306,22 @@ const GuidPage: React.FC = () => {
         if (isMobile) {
           if ((event.metaKey || event.ctrlKey) && !event.shiftKey) {
             event.preventDefault();
-            if (!guidInput.input.trim()) return;
+            if (send.isButtonDisabled) return;
             send.sendMessageHandler();
           }
           return;
         }
         if (!event.shiftKey) {
           event.preventDefault();
-          if (!guidInput.input.trim()) return;
+          // Empty input is allowed — it creates an empty conversation ("start
+          // chat"). Mirror the send button's gate so Enter and click behave
+          // identically (blocked only while loading or with no assistant).
+          if (send.isButtonDisabled) return;
           send.sendMessageHandler();
         }
       }
     },
-    [guidInput.input, isMobile, send.sendMessageHandler, slashController]
+    [isMobile, send.isButtonDisabled, send.sendMessageHandler, slashController]
   );
 
   const handleSelectAssistant = useCallback(

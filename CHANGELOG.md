@@ -1,5 +1,87 @@
 # Changelog
 
+## [2.1.61](https://github.com/iOfficeAI/AionUi/compare/v2.1.60...v2.1.61) (2026-08-25)
+
+### Desktop
+
+#### Features
+
+- **preview:** fix off-screen tab context menu and add tab actions (#4164)
+- **renderer:** render WaveDrom timing diagrams in markdown (#4135)
+- **chat:** accept slash command with Tab and fix Enter send race (#4154)
+- **preview:** add maximize toggle for the preview panel (#4153)
+- **settings:** add font weight selection (#4152)
+- **plan:** pin the plan above the send box and fix the duplicate-card merge (#4133)
+- **settings:** add font family selection (#4138)
+- **settings:** page archived groups with load-more (#4137)
+
+#### Bug Fixes
+
+- **markdown:** align table header with body rows (#4167)
+- **conversation:** make empty conversation title clickable to rename (#4169)
+- **guid:** stop turning "no model picked" into a silent pick (#4162)
+
+### Core ([v0.1.72](https://github.com/iOfficeAI/AionCore/releases/tag/v0.1.72))
+
+#### Features
+
+- **auth:** account/secret CLI and decoupled encryption root (#917)
+- **conversation:** persist plan snapshots and expose them for rehydration (#916)
+- **sidebar:** tear down agent processes on archive (#925)
+
+#### Bug Fixes
+
+- **auth:** extend JWT TTL to 30d to match cookie (#918)
+- **claude:** apply model selection in-band so it matches the claude CLI (#928)
+- **cli:** register unindexed top-level subcommands in the capability index (#929)
+
+#### Performance Improvements
+
+- slim auto-inject skill descriptions to the injection budget (#930)
+
+---
+
+## [2.1.60](https://github.com/iOfficeAI/AionUi/compare/v2.1.59...v2.1.60) (2026-08-21)
+
+### Desktop
+
+#### Features
+
+- **chat:** @@ conversation mentions and cross-conversation delivery UI (#4131)
+- **conversation:** allow empty-input start with assistant empty state (#4127)
+- **layout:** resizable desktop sider with snap-collapse (#4128)
+- **sidebar:** archive-first UI and archived page (#4126)
+- **explorer:** refresh a root via backend remount (#4121)
+- **renderer:** enable mermaid pan/zoom in chat markdown (#4108)
+
+#### Bug Fixes
+
+- **desktop:** log attribution for uncaught main-process errors (#4112)
+
+#### Refactoring
+
+- **feedback:** attach account email automatically (#4117)
+
+### Core ([v0.1.71](https://github.com/iOfficeAI/AionCore/releases/tag/v0.1.71))
+
+#### Features
+
+- **project:** add fs/remount to rebuild stale mounts (#910)
+- **session-message:** deliver messages across a user's conversations (#914)
+- **sidebar:** archive foundation and aggregated read model (#911)
+
+#### Bug Fixes
+
+- **app:** fall back to default log dir when custom log dir is unusable (AIONUI-231) (#898)
+- **claude:** append the assistant preset instead of replacing the system prompt (#900)
+- **codex:** send the assistant preset as developerInstructions, not baseInstructions (#897)
+- **conversation:** apply agent session titles at the relay level (#896)
+- **extension:** bound the builtin-skills materialize lock acquisition (AIONUI-168) (#903)
+- **project:** keep mounted targets when one fs/subscribe target fails (AIONUI-236) (#902)
+- **runtime:** log npm/npx probe stderr and missing-executable snapshot (AIONUI-62) (#904)
+
+---
+
 ## [2.1.59](https://github.com/iOfficeAI/AionUi/compare/v2.1.58...v2.1.59) (2026-08-19)
 
 ### Desktop
