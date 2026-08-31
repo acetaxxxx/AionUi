@@ -1,5 +1,12 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { httpRequest } from '@/common/adapter/httpBridge';
 import { PREVIEW_SCOPE_KEY_PREFIX } from '@/renderer/pages/conversation/Preview/context/previewScope';
+import {
+  clearPushSubscriptionId,
+  disableBrowserPush,
+  getAionServiceWorkerRegistration,
+  readPushSubscriptionId,
+} from '@/renderer/hooks/system/notification/browserPush';
 // M6: CSRF removed with legacy webserver — stub functions for compatibility, re-implement in M7
 const withCsrfToken = <T extends Record<string, unknown>>(data: T): T => data;
 const hasValidCsrfToken = (): boolean => true;
@@ -60,6 +67,16 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const AUTH_USER_ENDPOINT = '/api/auth/user';
 
 const isDesktopRuntime = typeof window !== 'undefined' && Boolean(window.electronAPI);
+
+async function cleanupBrowserPushSubscription(userId: string): Promise<void> {
+  await disableBrowserPush({
+    subscriptionId: readPushSubscriptionId(userId),
+    deleteSubscription: (subscriptionId) =>
+      httpRequest<void>('DELETE', `/api/push/subscription/${encodeURIComponent(subscriptionId)}`),
+    getRegistration: getAionServiceWorkerRegistration,
+    clearSubscriptionId: () => clearPushSubscriptionId(userId),
+  });
+}
 
 // Clear expired auth cache including cookies and localStorage
 // 清除过期的认证缓存，包括 Cookie 和 localStorage
@@ -325,6 +342,10 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     }
 
     try {
+      if (user?.id) {
+        await cleanupBrowserPushSubscription(user.id);
+      }
+
       const csrfToken = getCsrfTokenFromCookie();
       const logoutHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -361,7 +382,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       // Clear cache on logout for security
       clearAuthCache();
     }
-  }, []);
+  }, [user]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
