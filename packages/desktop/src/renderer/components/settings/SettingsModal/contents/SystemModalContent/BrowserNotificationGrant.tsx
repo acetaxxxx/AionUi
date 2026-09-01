@@ -5,12 +5,16 @@
  */
 
 import { Button } from '@arco-design/web-react';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { httpRequest } from '@/common/adapter/httpBridge';
 import { useAuth } from '@/renderer/hooks/context/AuthContext';
 import {
+  clearPushSubscriptionId,
+  disableBrowserPush,
   enableBrowserPush,
+  getAionServiceWorkerRegistration,
+  readPushSubscriptionId,
   registerAionServiceWorker,
   storePushSubscriptionId,
 } from '@/renderer/hooks/system/notification/browserPush';
@@ -32,7 +36,16 @@ const BrowserNotificationGrant: React.FC = () => {
     window.isSecureContext;
   const [permission, setPermission] = useState<NotificationPermission>(supported ? Notification.permission : 'denied');
   const [enabled, setEnabled] = useState(false);
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [disableFailed, setDisableFailed] = useState(false);
+
+  useEffect(() => {
+    const storedSubscriptionId = user ? readPushSubscriptionId(user.id) : null;
+    setSubscriptionId(storedSubscriptionId);
+    setEnabled(Boolean(storedSubscriptionId && permission === 'granted'));
+    setDisableFailed(false);
+  }, [permission, user]);
 
   const handleRequest = useCallback(async () => {
     if (!supported || !user || busy) return;
@@ -56,22 +69,51 @@ const BrowserNotificationGrant: React.FC = () => {
           p256dh: subscription.keys.p256dh,
           auth: subscription.keys.auth,
         }),
-      storeSubscriptionId: (subscriptionId) => storePushSubscriptionId(user.id, subscriptionId),
+      storeSubscriptionId: (storedSubscriptionId) => storePushSubscriptionId(user.id, storedSubscriptionId),
     });
     setBusy(false);
     if (result.enabled) {
       setPermission('granted');
       setEnabled(true);
+      setSubscriptionId(result.subscriptionId);
+      setDisableFailed(false);
     } else if (result.reason === 'permission-denied') {
       setPermission('denied');
     }
   }, [busy, supported, user]);
 
+  const handleDisable = useCallback(async () => {
+    if (!user || busy) return;
+    setBusy(true);
+    const result = await disableBrowserPush({
+      subscriptionId,
+      deleteSubscription: (id) => httpRequest<void>('DELETE', `/api/push/subscription/${encodeURIComponent(id)}`),
+      getRegistration: getAionServiceWorkerRegistration,
+      clearSubscriptionId: () => clearPushSubscriptionId(user.id),
+    });
+    setBusy(false);
+    if (result.serverDeleted && result.browserUnsubscribed) {
+      setEnabled(false);
+      setSubscriptionId(null);
+      setDisableFailed(false);
+    } else {
+      setDisableFailed(true);
+    }
+  }, [busy, subscriptionId, user]);
+
   if (!supported) {
     return <div className='ps-12px text-12px text-3'>{t('settings.browserNotification.insecureContext')}</div>;
   }
   if (permission === 'granted' && enabled) {
-    return <div className='ps-12px text-12px text-3'>{t('settings.browserNotification.granted')}</div>;
+    return (
+      <div className='ps-12px flex items-center gap-8px'>
+        <span className='text-12px text-3'>{t('settings.browserNotification.granted')}</span>
+        <Button type='outline' size='small' onClick={handleDisable}>
+          {busy ? t('settings.browserNotification.loading') : t('settings.browserNotification.disable')}
+        </Button>
+        {disableFailed && <span className='text-12px text-3'>{t('settings.browserNotification.disableFailed')}</span>}
+      </div>
+    );
   }
   if (permission === 'denied') {
     return <div className='ps-12px text-12px text-3'>{t('settings.browserNotification.denied')}</div>;
@@ -79,7 +121,7 @@ const BrowserNotificationGrant: React.FC = () => {
   return (
     <div className='ps-12px'>
       <Button type='outline' size='small' onClick={handleRequest}>
-        {busy ? '…' : t('settings.browserNotification.enable')}
+        {busy ? t('settings.browserNotification.loading') : t('settings.browserNotification.enable')}
       </Button>
     </div>
   );

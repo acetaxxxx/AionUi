@@ -342,7 +342,10 @@
     "denied": "Notifications bloquées : activez-les dans les paramètres du site de votre navigateur",
     "insecureContext": "Les notifications du navigateur nécessitent un accès HTTPS ou localhost",
     "bodyConfirmation": "Un agent attend votre confirmation",
-    "bodyTurnCompleted": "L'agent a fini de répondre"
+    "bodyTurnCompleted": "L'agent a fini de répondre",
+    "disable": "Désactiver les notifications du navigateur",
+    "loading": "Mise à jour des notifications du navigateur…",
+    "disableFailed": "Impossible de désactiver complètement les notifications du navigateur. Réessayez."
   },
   "notification": "Notifications",
   "cronNotificationEnabled": "Fin de tâche planifiée",

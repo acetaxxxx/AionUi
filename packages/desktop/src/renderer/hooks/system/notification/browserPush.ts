@@ -42,6 +42,45 @@ export type BrowserPushDisableDeps = {
   clearSubscriptionId: () => void;
 };
 
+export type BrowserPushDisableResult = {
+  serverDeleted: boolean;
+  browserUnsubscribed: boolean;
+};
+
+const BROWSER_PUSH_CLEANUP_TIMEOUT_MS = 2_000;
+
+function withTimeout<T>(operation: () => Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const timeoutId = setTimeout(() => {
+      settled = true;
+      reject(new Error('browser push cleanup timed out'));
+    }, timeoutMs);
+
+    try {
+      operation().then(
+        (value) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutId);
+          resolve(value);
+        },
+        (error: unknown) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutId);
+          reject(error);
+        }
+      );
+    } catch (error) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      reject(error);
+    }
+  });
+}
+
 /**
  * Enables browser push from an explicit user gesture. All browser APIs and
  * network calls are injected so denied/unsupported browsers remain a normal
@@ -73,25 +112,36 @@ export async function enableBrowserPush(deps: BrowserPushEnableDeps): Promise<Br
 }
 
 /** Best-effort removal used by the disable control and before logout. */
-export async function disableBrowserPush(deps: BrowserPushDisableDeps): Promise<void> {
+export async function disableBrowserPush(deps: BrowserPushDisableDeps): Promise<BrowserPushDisableResult> {
+  let serverDeleted = !deps.subscriptionId;
   try {
     if (deps.subscriptionId) {
-      await deps.deleteSubscription(deps.subscriptionId);
+      await withTimeout(() => deps.deleteSubscription(deps.subscriptionId!), BROWSER_PUSH_CLEANUP_TIMEOUT_MS);
+      serverDeleted = true;
     }
   } catch {
-    // A logout must not be blocked by an unavailable backend. The browser
-    // subscription is still unsubscribed and the local reference is removed.
+    // A logout must not be blocked by an unavailable backend. Keep the local
+    // reference so the server-side record can be retried or reconciled later.
   }
 
+  let browserUnsubscribed = true;
   try {
-    const registration = await deps.getRegistration();
+    const registration = await withTimeout(deps.getRegistration, BROWSER_PUSH_CLEANUP_TIMEOUT_MS);
     const subscription = await registration.pushManager.getSubscription();
-    await subscription?.unsubscribe();
+    if (subscription) {
+      browserUnsubscribed = await withTimeout(() => subscription.unsubscribe(), BROWSER_PUSH_CLEANUP_TIMEOUT_MS);
+    }
   } catch {
-    // Service-worker teardown is also best effort.
-  } finally {
+    browserUnsubscribed = false;
+    // Service-worker teardown is also best effort, but the local reference
+    // remains available when teardown did not complete.
+  }
+
+  if (serverDeleted && browserUnsubscribed) {
     deps.clearSubscriptionId();
   }
+
+  return { serverDeleted, browserUnsubscribed };
 }
 
 export function pushSubscriptionStorageKey(userId: string): string {

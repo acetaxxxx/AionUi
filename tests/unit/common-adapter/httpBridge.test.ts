@@ -485,6 +485,29 @@ describe('httpBridge', () => {
       expect(fetchSpy.mock.calls[0][1]?.body).toBe('{"key":"value"}');
       expect(fetchSpy.mock.calls[0][1]?.headers).toEqual({ 'Content-Type': 'application/json' });
     });
+
+    it('does not log browser Push subscription material', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ data: { id: 'push-1' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+      const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+      const pushSubscription = {
+        endpoint: 'https://push.example/subscription-secret',
+        p256dh: 'browser-public-key-secret',
+        auth: 'browser-auth-secret',
+      };
+
+      await httpRequest('PUT', '/api/push/subscription', pushSubscription);
+
+      const debugOutput = debugSpy.mock.calls.flat().join(' ');
+      expect(debugOutput).not.toContain(pushSubscription.endpoint);
+      expect(debugOutput).not.toContain(pushSubscription.p256dh);
+      expect(debugOutput).not.toContain(pushSubscription.auth);
+    });
   });
 
   describe('httpPut', () => {

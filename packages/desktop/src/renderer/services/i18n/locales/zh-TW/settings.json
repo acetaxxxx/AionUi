@@ -342,7 +342,10 @@
     "denied": "通知已被封鎖 —— 請在瀏覽器的網站設定中開啟",
     "insecureContext": "瀏覽器通知需要透過 HTTPS 或 localhost 存取",
     "bodyConfirmation": "有一個 agent 正在等待你的確認",
-    "bodyTurnCompleted": "agent 已完成本輪回覆"
+    "bodyTurnCompleted": "agent 已完成本輪回覆",
+    "disable": "關閉瀏覽器通知",
+    "loading": "正在更新瀏覽器通知…",
+    "disableFailed": "無法完整關閉瀏覽器通知，請再試一次。"
   },
   "notification": "通知",
   "cronNotificationEnabled": "定時任務完成通知",

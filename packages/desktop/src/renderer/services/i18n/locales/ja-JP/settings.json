@@ -342,7 +342,10 @@
     "denied": "通知がブロックされています — ブラウザのサイト設定から有効にしてください",
     "insecureContext": "ブラウザ通知には HTTPS または localhost からのアクセスが必要です",
     "bodyConfirmation": "エージェントが確認を待っています",
-    "bodyTurnCompleted": "エージェントが応答を完了しました"
+    "bodyTurnCompleted": "エージェントが応答を完了しました",
+    "disable": "ブラウザ通知を無効にする",
+    "loading": "ブラウザ通知を更新しています…",
+    "disableFailed": "ブラウザ通知を完全に無効にできませんでした。もう一度お試しください。"
   },
   "notification": "通知",
   "cronNotificationEnabled": "定期タスク完了通知",

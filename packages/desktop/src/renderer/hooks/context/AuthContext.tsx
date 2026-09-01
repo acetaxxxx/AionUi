@@ -111,7 +111,13 @@ function clearAuthCache(): void {
   }
 }
 
-async function fetchCurrentUser(signal?: AbortSignal): Promise<AuthUser | null> {
+type CurrentUserFetchResult = {
+  user: AuthUser | null;
+  authExpired: boolean;
+  ssoIntercepted: boolean;
+};
+
+async function fetchCurrentUser(signal?: AbortSignal): Promise<CurrentUserFetchResult> {
   try {
     const response = await fetch(AUTH_USER_ENDPOINT, {
       method: 'GET',
@@ -124,24 +130,7 @@ async function fetchCurrentUser(signal?: AbortSignal): Promise<AuthUser | null> 
     const isAuthError = response.status === 401 || response.status === 403;
 
     if (!response.ok || isHtmlIntercepted || isAuthError) {
-      const isPwaStandalone =
-        typeof window !== 'undefined' &&
-        (Boolean((navigator as any).standalone) ||
-          (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches));
-
-      // Trigger top-level reload only if response was intercepted by Cloudflare Access / SSO returning an HTML login page
-      if (isHtmlIntercepted) {
-        console.warn('[AuthContext] SSO / CloudAccess session expired (HTML intercepted), triggering SSO logout...');
-        if (
-          typeof window !== 'undefined' &&
-          window.location.pathname !== '/login' &&
-          !window.location.hash.includes('/login')
-        ) {
-          window.location.href = '/cdn-cgi/access/logout';
-          return null;
-        }
-      }
-      return null;
+      return { user: null, authExpired: isHtmlIntercepted || isAuthError, ssoIntercepted: isHtmlIntercepted };
     }
 
     const headerCsrf = response.headers.get('x-csrf-token') || response.headers.get('aionui-csrf-token');
@@ -158,16 +147,16 @@ async function fetchCurrentUser(signal?: AbortSignal): Promise<AuthUser | null> 
       user?: AuthUser;
     };
     if (data.success && data.user) {
-      return data.user;
+      return { user: data.user, authExpired: false, ssoIntercepted: false };
     }
   } catch (error) {
     if ((error as Error).name === 'AbortError') {
-      return null;
+      return { user: null, authExpired: false, ssoIntercepted: false };
     }
     console.error('Failed to fetch current user:', error);
   }
 
-  return null;
+  return { user: null, authExpired: false, ssoIntercepted: false };
 }
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
@@ -175,6 +164,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const [status, setStatus] = useState<AuthStatus>('checking');
   const [ready, setReady] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const previousUserRef = useRef<AuthUser | null>(null);
 
   const refresh = useCallback(async () => {
     if (isDesktopRuntime) {
@@ -189,19 +179,36 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     abortRef.current = controller;
     setStatus('checking');
 
-    const currentUser = await fetchCurrentUser(controller.signal);
-    if (currentUser) {
-      setUser(currentUser);
+    const result = await fetchCurrentUser(controller.signal);
+    if (result.user) {
+      previousUserRef.current = result.user;
+      setUser(result.user);
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('aion_current_user_id', currentUser.id);
+        localStorage.setItem('aion_current_user_id', result.user.id);
       }
       setStatus('authenticated');
     } else {
+      const previousUser = previousUserRef.current;
+      if (result.authExpired && previousUser?.id) {
+        await cleanupBrowserPushSubscription(previousUser.id);
+      }
+      previousUserRef.current = null;
       setUser(null);
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('aion_current_user_id');
       }
       setStatus('unauthenticated');
+
+      if (
+        result.ssoIntercepted &&
+        typeof window !== 'undefined' &&
+        window.location.pathname !== '/login' &&
+        !window.location.hash.includes('/login')
+      ) {
+        console.warn('[AuthContext] SSO / CloudAccess session expired (HTML intercepted), triggering SSO logout...');
+        window.location.href = '/cdn-cgi/access/logout';
+        return;
+      }
     }
     setReady(true);
   }, []);
@@ -290,6 +297,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       }
 
       setUser(data.user);
+      previousUserRef.current = data.user;
       setStatus('authenticated');
       setReady(true);
 
@@ -335,6 +343,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const logout = useCallback(async () => {
     if (isDesktopRuntime) {
+      previousUserRef.current = null;
       setUser(null);
       setStatus('authenticated');
       setReady(true);
@@ -342,8 +351,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     }
 
     try {
-      if (user?.id) {
-        await cleanupBrowserPushSubscription(user.id);
+      const activeUserId = user?.id ?? previousUserRef.current?.id;
+      if (activeUserId) {
+        await cleanupBrowserPushSubscription(activeUserId);
       }
 
       const csrfToken = getCsrfTokenFromCookie();
@@ -366,6 +376,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         res.headers.get('x-cloudflare-logout') === 'true' ||
         (typeof document !== 'undefined' && document.cookie.includes('CF_Authorization'));
       if (isCfLogout) {
+        previousUserRef.current = null;
         setUser(null);
         setStatus('unauthenticated');
         clearAuthCache();
@@ -377,6 +388,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     } catch (error) {
       console.error('Logout request failed:', error);
     } finally {
+      previousUserRef.current = null;
       setUser(null);
       setStatus('unauthenticated');
       // Clear cache on logout for security

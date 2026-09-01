@@ -63,7 +63,7 @@ describe('enableBrowserPush', () => {
 });
 
 describe('disableBrowserPush', () => {
-  it('best-effort removes the server record and browser subscription before clearing local state', async () => {
+  it('keeps the local reference when server deletion fails so cleanup can be retried', async () => {
     const unsubscribe = vi.fn().mockResolvedValue(true);
     const deleteSubscription = vi.fn().mockRejectedValue(new Error('session expired'));
     const clearSubscriptionId = vi.fn();
@@ -81,6 +81,30 @@ describe('disableBrowserPush', () => {
 
     expect(deleteSubscription).toHaveBeenCalledWith('push-1');
     expect(unsubscribe).toHaveBeenCalledOnce();
-    expect(clearSubscriptionId).toHaveBeenCalledOnce();
+    expect(clearSubscriptionId).not.toHaveBeenCalled();
+  });
+
+  it('does not block cleanup forever when the server request hangs', async () => {
+    vi.useFakeTimers();
+    try {
+      const unsubscribe = vi.fn().mockResolvedValue(true);
+      const resultPromise = disableBrowserPush({
+        subscriptionId: 'push-1',
+        deleteSubscription: () => new Promise<void>(() => {}),
+        getRegistration: vi.fn().mockResolvedValue({
+          pushManager: {
+            getSubscription: vi.fn().mockResolvedValue({ unsubscribe }),
+          },
+        }),
+        clearSubscriptionId: vi.fn(),
+      });
+
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      await expect(resultPromise).resolves.toEqual({ serverDeleted: false, browserUnsubscribed: true });
+      expect(unsubscribe).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
