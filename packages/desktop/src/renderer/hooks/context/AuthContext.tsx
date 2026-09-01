@@ -66,7 +66,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const AUTH_USER_ENDPOINT = '/api/auth/user';
 
-const isDesktopRuntime = typeof window !== 'undefined' && Boolean(window.electronAPI);
+function isDesktopRuntime(): boolean {
+  return typeof window !== 'undefined' && Boolean(window.electronAPI);
+}
 
 async function cleanupBrowserPushSubscription(userId: string): Promise<void> {
   await disableBrowserPush({
@@ -167,7 +169,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const previousUserRef = useRef<AuthUser | null>(null);
 
   const refresh = useCallback(async () => {
-    if (isDesktopRuntime) {
+    if (isDesktopRuntime()) {
       setStatus('authenticated');
       setUser(null);
       setReady(true);
@@ -222,7 +224,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const login = useCallback(async ({ username, password, remember }: LoginParams): Promise<LoginResult> => {
     try {
-      if (isDesktopRuntime) {
+      if (isDesktopRuntime()) {
         setReady(true);
         return { success: true };
       }
@@ -342,7 +344,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   }, []);
 
   const logout = useCallback(async () => {
-    if (isDesktopRuntime) {
+    if (isDesktopRuntime()) {
       previousUserRef.current = null;
       setUser(null);
       setStatus('authenticated');

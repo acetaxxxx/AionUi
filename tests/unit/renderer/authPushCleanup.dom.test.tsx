@@ -1,5 +1,5 @@
 import React from 'react';
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -27,6 +27,7 @@ const Probe = () => {
 };
 
 beforeEach(() => {
+  Reflect.deleteProperty(window, 'electronAPI');
   httpMocks.httpRequest.mockReset().mockResolvedValue(undefined);
   httpMocks.unsubscribe.mockReset().mockResolvedValue(true);
   Object.defineProperty(navigator, 'serviceWorker', {
@@ -45,6 +46,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   localStorage.clear();
 });
 

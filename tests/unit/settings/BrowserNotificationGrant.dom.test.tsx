@@ -13,10 +13,11 @@ vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (k: string) => k }
 const browserMocks = vi.hoisted(() => ({
   httpRequest: vi.fn(),
   unsubscribe: vi.fn(),
+  user: { id: 'user-1', username: 'tester' },
 }));
 
 vi.mock('@/renderer/hooks/context/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 'user-1', username: 'tester' } }),
+  useAuth: () => ({ user: browserMocks.user }),
 }));
 vi.mock('@/common/adapter/httpBridge', () => ({ httpRequest: browserMocks.httpRequest }));
 
