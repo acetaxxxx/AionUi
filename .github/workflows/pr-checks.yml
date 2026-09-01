@@ -271,7 +271,10 @@ jobs:
   # Job 4: Build test across representative PR platforms (parallel with code-quality and unit-tests)
   build-test:
     name: Build Test (${{ matrix.platform }})
-    if: github.event.action != 'closed' && github.event.pull_request.draft == false && inputs.skip_build_test != true
+    # Desktop installer builds are release/manual-build concerns. Keep this
+    # expensive validation available on demand, but do not run it for every PR
+    # (the pinned AionCore release may not have platform bundles available).
+    if: github.event_name == 'workflow_dispatch' && inputs.skip_build_test != true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:

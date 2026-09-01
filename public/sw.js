@@ -12,6 +12,14 @@ const PRECACHE_URLS = [
   new URL('./pwa/icon-192.png', self.location.href).toString(),
   new URL('./pwa/icon-512.png', self.location.href).toString(),
 ];
+const PUSH_SCHEMA_VERSION = 1;
+const PUSH_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+const PUSH_TEMPLATES = Object.freeze({
+  success: Object.freeze({ title: 'Aion turn completed', body: 'Your task has finished.' }),
+  failed: Object.freeze({ title: 'Aion turn needs attention', body: 'Your task ended with an error.' }),
+  cancelled: Object.freeze({ title: 'Aion turn cancelled', body: 'The task was cancelled before completion.' }),
+  timeout: Object.freeze({ title: 'Aion turn timed out', body: 'The task did not finish in time.' }),
+});
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -48,6 +56,69 @@ self.addEventListener('activate', (event) => {
           }
         })
       )
+  );
+});
+
+function pushRoute(data) {
+  if (!data || data.schema_version !== PUSH_SCHEMA_VERSION) return null;
+  if (data.target_kind !== 'team' && data.target_kind !== 'conversation') return null;
+  if (typeof data.target_id !== 'string' || !PUSH_ID_PATTERN.test(data.target_id)) return null;
+
+  const appUrl = new URL('./', self.location.href);
+  appUrl.hash = `#/${data.target_kind}/${encodeURIComponent(data.target_id)}`;
+  return appUrl.toString();
+}
+
+function pushTemplate(data) {
+  if (!data || data.schema_version !== PUSH_SCHEMA_VERSION) return null;
+  if (typeof data.status !== 'string' || !Object.prototype.hasOwnProperty.call(PUSH_TEMPLATES, data.status))
+    return null;
+  const route = pushRoute(data);
+  if (!route) return null;
+  return { route, ...PUSH_TEMPLATES[data.status] };
+}
+
+self.addEventListener('push', (event) => {
+  let data;
+  try {
+    data = event.data?.json();
+  } catch {
+    return;
+  }
+  const notification = pushTemplate(data);
+  if (!notification) return;
+
+  event.waitUntil(
+    self.registration.showNotification(notification.title, {
+      body: notification.body,
+      data: {
+        schema_version: data.schema_version,
+        target_kind: data.target_kind,
+        target_id: data.target_id,
+      },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const route = pushRoute(event.notification.data);
+  if (!route) return;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const sameOriginClient = clients.find((client) => {
+        try {
+          return new URL(client.url).origin === self.location.origin;
+        } catch {
+          return false;
+        }
+      });
+      if (sameOriginClient) {
+        return sameOriginClient.focus().then(() => sameOriginClient.navigate(route));
+      }
+      return self.clients.openWindow(route);
+    })
   );
 });
 
