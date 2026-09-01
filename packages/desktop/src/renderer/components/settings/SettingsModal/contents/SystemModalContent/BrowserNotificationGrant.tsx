@@ -77,7 +77,7 @@ const BrowserNotificationGrant: React.FC = () => {
       setEnabled(true);
       setSubscriptionId(result.subscriptionId);
       setDisableFailed(false);
-    } else if (result.reason === 'permission-denied') {
+    } else if ('reason' in result && result.reason === 'permission-denied') {
       setPermission('denied');
     }
   }, [busy, supported, user]);

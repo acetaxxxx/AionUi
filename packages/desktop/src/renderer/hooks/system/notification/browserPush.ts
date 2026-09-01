@@ -12,7 +12,7 @@ export type BrowserPushConfig = {
 };
 
 type PushManagerLike = {
-  subscribe: (options: { userVisibleOnly: true; applicationServerKey: Uint8Array }) => Promise<unknown>;
+  subscribe: (options?: PushSubscriptionOptionsInit) => Promise<unknown>;
 };
 
 type ServiceWorkerRegistrationLike = {
@@ -227,11 +227,11 @@ function normalizeSubscription(value: unknown): BrowserPushSubscription {
   };
 }
 
-function decodeBase64Url(value: string): Uint8Array {
+function decodeBase64Url(value: string): ArrayBuffer {
   const normalized = value
     .replace(/-/g, '+')
     .replace(/_/g, '/')
     .padEnd(Math.ceil(value.length / 4) * 4, '=');
   const binary = atob(normalized);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0)).buffer as ArrayBuffer;
 }
