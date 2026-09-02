@@ -8,7 +8,7 @@ import React from 'react';
 import { useFloating, offset, flip, shift, autoUpdate } from '@floating-ui/react';
 import { usePreviewContext } from '../../context/PreviewContext';
 import type { SelectionPosition } from '@/renderer/hooks/ui/useTextSelection';
-import { openExternalUrl } from '@/renderer/utils/platform';
+import { isElectronDesktop, openExternalUrl } from '@/renderer/utils/platform';
 import { useTranslation } from 'react-i18next';
 
 interface SelectionToolbarProps {
@@ -28,6 +28,7 @@ interface SelectionToolbarProps {
 const SelectionToolbar: React.FC<SelectionToolbarProps> = ({ selectedText, selectedUrl, position, onClear }) => {
   const { t } = useTranslation();
   const { addToSendBox, openBrowserTab } = usePreviewContext();
+  const canUseBuiltinBrowser = isElectronDesktop();
 
   // 使用 Floating UI 定位工具栏（跟随鼠标位置）/ Use Floating UI to position toolbar (follow mouse position)
   const { refs, floatingStyles } = useFloating({
@@ -97,7 +98,7 @@ const SelectionToolbar: React.FC<SelectionToolbarProps> = ({ selectedText, selec
         <span className={itemClassName} onMouseDown={handleAddToChat}>
           {t('preview.addToChat')}
         </span>
-        {url && (
+        {url && canUseBuiltinBrowser && (
           <span className={itemClassName} onMouseDown={handleOpenBuiltin}>
             {t('common.openInBuiltinBrowser')}
           </span>
