@@ -330,6 +330,18 @@ describe('MessageList', () => {
     expect(messageRow.className).not.toContain('pt-10px');
   });
 
+  it('keeps horizontal overflow inside the message list on narrow screens', () => {
+    render(<MessageList />, {
+      wrapper: ({ children }) => <Wrapper>{children}</Wrapper>,
+    });
+
+    const scroller = screen.getByTestId('message-list-scroller');
+    expect(scroller.className).toContain('overflow-x-hidden');
+    expect(scroller.className).toContain('-mx-12px');
+    expect(scroller.className).toContain('md:-mx-20px');
+    expect(scroller.className).toContain('md:px-20px');
+  });
+
   it('uses container-responsive fluid width for standalone message rows', () => {
     render(<MessageList />, {
       wrapper: ({ children }) => <Wrapper>{children}</Wrapper>,
