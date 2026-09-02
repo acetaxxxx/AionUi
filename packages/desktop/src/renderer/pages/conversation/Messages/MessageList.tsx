@@ -734,16 +734,16 @@ const MessageList: React.FC<{ className?: string; emptySlot?: React.ReactNode }>
   }
 
   return (
-    <div className='relative flex-1 h-full'>
+    <div className='relative flex-1 h-full min-w-0 max-w-full'>
       {/* Use PreviewGroup to wrap all messages for cross-message image preview */}
       <Image.PreviewGroup actionsLayout={['zoomIn', 'zoomOut', 'originalSize', 'rotateLeft', 'rotateRight']}>
         <ImagePreviewContext.Provider value={{ inPreviewGroup: true }}>
           <div
             ref={setScrollerRef}
             data-testid='message-list-scroller'
-            // Break out of the parent's 20px horizontal padding so the scrollbar hugs the
+            // Break out of the parent's responsive horizontal padding so the scrollbar hugs the
             // window edge, while re-applying that padding inside to keep message content inset.
-            className='flex-1 h-full overflow-y-auto pb-10px box-border -mx-20px px-20px'
+            className='flex-1 h-full min-w-0 max-w-full overflow-x-hidden overflow-y-auto pb-10px box-border -mx-12px px-12px md:-mx-20px md:px-20px'
             style={{ overflowAnchor: 'none' }}
             onPointerDown={handlePointerDown}
             onScroll={handleMessageListScroll}

@@ -32,7 +32,7 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { describe, expect, it } from 'vitest';
 
-import { MARKDOWN_REMARK_PLUGINS } from '@renderer/components/Markdown/markdownComponents';
+import { MARKDOWN_REMARK_PLUGINS, MarkdownTable } from '@renderer/components/Markdown/markdownComponents';
 import { createInitStyle } from '@renderer/components/Markdown/ShadowView';
 
 const PREVIEW_CSS_PATH = path.resolve(__dirname, '../../../packages/desktop/src/renderer/styles/markdown.css');
@@ -110,5 +110,28 @@ describe('GFM alignment markers survive the new default', () => {
 
     const headers = [...container.querySelectorAll('th')].map((cell) => cell.style.textAlign);
     expect(headers).toEqual(['', '']);
+  });
+});
+
+describe('markdown table overflow containment', () => {
+  it('keeps the table scrollable without widening its message container', () => {
+    const { container } = render(
+      <MarkdownTable>
+        <tbody>
+          <tr>
+            <td>wide content</td>
+          </tr>
+        </tbody>
+      </MarkdownTable>
+    );
+
+    const wrapper = container.firstElementChild as HTMLDivElement;
+    const table = wrapper.querySelector('table');
+
+    expect(wrapper.style.width).toBe('100%');
+    expect(wrapper.style.minWidth).toBe('0px');
+    expect(wrapper.style.maxWidth).toBe('100%');
+    expect(wrapper.style.overflowX).toBe('auto');
+    expect(table?.style.minWidth).toBe('100%');
   });
 });

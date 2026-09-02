@@ -38,7 +38,7 @@ export const SANITIZED_HTML_REHYPE_PLUGINS = [rehypeRaw, rehypeSanitize, rehypeK
 
 /** Table override shared by the chat and preview renderers: horizontal scroll + collapsed borders. */
 export const MarkdownTable = ({ node: _node, ...rest }: Record<string, unknown>) => (
-  <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+  <div style={{ width: '100%', minWidth: 0, maxWidth: '100%', overflowX: 'auto' }}>
     <table
       {...(rest as React.TableHTMLAttributes<HTMLTableElement>)}
       style={{
