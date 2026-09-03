@@ -21,6 +21,8 @@ function port(): LiveViewControlPort {
     start: vi.fn().mockResolvedValue(snapshot),
     stop: vi.fn().mockResolvedValue({ ...snapshot, status: 'session_ended' }),
     reauthenticate: vi.fn().mockResolvedValue(snapshot),
+    renew: vi.fn().mockResolvedValue(snapshot),
+    revoke: vi.fn().mockResolvedValue({ ...snapshot, status: 'session_ended' }),
   };
 }
 

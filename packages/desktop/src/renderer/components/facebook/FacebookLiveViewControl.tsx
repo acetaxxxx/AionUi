@@ -73,8 +73,14 @@ const FacebookLiveViewControl: React.FC<FacebookLiveViewControlProps> = ({
           <Button disabled={busy} onClick={() => void invoke(client.reauthenticate)}>
             Reauthenticate
           </Button>
+          <Button disabled={busy} onClick={() => void invoke(client.renew)}>
+            Renew Session
+          </Button>
           <Button disabled={busy} onClick={() => void invoke(client.stop)}>
             End Live View
+          </Button>
+          <Button status='danger' disabled={busy} onClick={() => void invoke(client.revoke)}>
+            Revoke Session
           </Button>
         </Space>
         <Typography.Text type='secondary'>
