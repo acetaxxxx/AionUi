@@ -26,10 +26,10 @@ const PUSH_SECRET_LIKE_PATTERN =
 const PUSH_JWT_LIKE_PATTERN =
   /(?:^|[^A-Za-z0-9_=-])[A-Za-z0-9_=-]{8,}\.[A-Za-z0-9_=-]{8,}\.[A-Za-z0-9_=-]{8,}(?:[^A-Za-z0-9_=-]|$)/;
 const PUSH_TEMPLATES = Object.freeze({
-  success: Object.freeze({ title: 'Aion 任務已完成', body: '這項任務已完成。' }),
-  failed: Object.freeze({ title: 'Aion 任務需要處理', body: '這項任務執行失敗，請查看詳情。' }),
-  cancelled: Object.freeze({ title: 'Aion 任務已取消', body: '這項任務在完成前已取消。' }),
-  timeout: Object.freeze({ title: 'Aion 任務逾時', body: '這項任務未在時限內完成。' }),
+  success: Object.freeze({ title: 'Aion turn completed', body: 'Your task has finished.' }),
+  failed: Object.freeze({ title: 'Aion turn needs attention', body: 'Your task ended with an error.' }),
+  cancelled: Object.freeze({ title: 'Aion turn cancelled', body: 'The task was cancelled before completion.' }),
+  timeout: Object.freeze({ title: 'Aion turn timed out', body: 'The task did not finish in time.' }),
 });
 
 self.addEventListener('install', (event) => {

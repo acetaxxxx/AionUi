@@ -51,8 +51,8 @@ describe('PWA service worker push notifications', () => {
       json: () => ({
         schema_version: 1,
         status: 'success',
-        title: 'Aion 任務已完成：部署',
-        body: '「部署」已完成。',
+        title: 'Aion turn completed: Deploy',
+        body: '"Deploy" has completed.',
         target_kind: 'team',
         target_id: 'team_01',
       }),
@@ -61,13 +61,13 @@ describe('PWA service worker push notifications', () => {
     worker.listeners.get('push')?.(pushEvent);
     await pushEvent.promise;
 
-    expect(worker.showNotification).toHaveBeenCalledWith('Aion 任務已完成：部署', {
-      body: '「部署」已完成。',
+    expect(worker.showNotification).toHaveBeenCalledWith('Aion turn completed: Deploy', {
+      body: '"Deploy" has completed.',
       data: { schema_version: 1, target_kind: 'team', target_id: 'team_01' },
     });
   });
 
-  it('falls back to safe Traditional Chinese copy when payload text is invalid', async () => {
+  it('falls back to safe English copy when payload text is invalid', async () => {
     const worker = loadWorker();
     const pushEvent = event();
     pushEvent.data = {
@@ -84,8 +84,8 @@ describe('PWA service worker push notifications', () => {
     worker.listeners.get('push')?.(pushEvent);
     await pushEvent.promise;
 
-    expect(worker.showNotification).toHaveBeenCalledWith('Aion 任務需要處理', {
-      body: '這項任務執行失敗，請查看詳情。',
+    expect(worker.showNotification).toHaveBeenCalledWith('Aion turn needs attention', {
+      body: 'Your task ended with an error.',
       data: { schema_version: 1, target_kind: 'conversation', target_id: 'conversation-7' },
     });
   });
@@ -112,8 +112,8 @@ describe('PWA service worker push notifications', () => {
     worker.listeners.get('push')?.(pushEvent);
     await pushEvent.promise;
 
-    expect(worker.showNotification).toHaveBeenCalledWith('Aion 任務需要處理', {
-      body: '這項任務執行失敗，請查看詳情。',
+    expect(worker.showNotification).toHaveBeenCalledWith('Aion turn needs attention', {
+      body: 'Your task ended with an error.',
       data: { schema_version: 1, target_kind: 'conversation', target_id: 'conversation-7' },
     });
   });
