@@ -19,8 +19,7 @@ const MAX_PUSH_BODY_CHARS = 50;
 const MAX_PUSH_COPY_CHARS = 80;
 const PUSH_SENSITIVE_PATTERN =
   /(?:https?:\/\/|www\.|token\s*=|bearer\s+|sk-|(?:api[_-]?key|access[_-]?token|secret|password)\s*[=:])/i;
-const PUSH_URL_LIKE_PATTERN =
-  /(?:^|[^a-z0-9.-])(?:[a-z0-9-]+\.)+[a-z]{2,24}(?:[^a-z0-9.-]|$)/i;
+const PUSH_URL_LIKE_PATTERN = /(?:^|[^a-z0-9.-])(?:[a-z0-9-]+\.)+[a-z]{2,24}(?:[^a-z0-9.-]|$)/i;
 const PUSH_SECRET_LIKE_PATTERN =
   /(?:^|[^A-Za-z0-9_-])(?=[A-Za-z0-9_-]{32,}(?:[^A-Za-z0-9_-]|$))(?=[A-Za-z0-9_-]*[A-Za-z])(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{32,}(?:[^A-Za-z0-9_-]|$)/;
 const PUSH_JWT_LIKE_PATTERN =

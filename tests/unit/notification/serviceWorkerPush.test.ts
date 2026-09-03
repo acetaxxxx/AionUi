@@ -146,9 +146,7 @@ describe('PWA service worker push notifications', () => {
     const worker = loadWorker();
     const focus = vi.fn().mockRejectedValue(new Error('focus failed'));
     const navigate = vi.fn();
-    worker.self.clients.matchAll.mockResolvedValue([
-      { url: 'https://aion.test/#/guid', focus, navigate },
-    ]);
+    worker.self.clients.matchAll.mockResolvedValue([{ url: 'https://aion.test/#/guid', focus, navigate }]);
     const clickEvent = event();
     clickEvent.notification = {
       data: { schema_version: 1, target_kind: 'team', target_id: 'team_01' },
@@ -166,9 +164,7 @@ describe('PWA service worker push notifications', () => {
     const worker = loadWorker();
     const focus = vi.fn().mockResolvedValue(undefined);
     const navigate = vi.fn().mockResolvedValue(null);
-    worker.self.clients.matchAll.mockResolvedValue([
-      { url: 'https://aion.test/#/guid', focus, navigate },
-    ]);
+    worker.self.clients.matchAll.mockResolvedValue([{ url: 'https://aion.test/#/guid', focus, navigate }]);
     const clickEvent = event();
     clickEvent.notification = {
       data: { schema_version: 1, target_kind: 'conversation', target_id: 'conversation-7' },
@@ -179,9 +175,7 @@ describe('PWA service worker push notifications', () => {
     await clickEvent.promise;
 
     expect(navigate).toHaveBeenCalledWith('https://aion.test/#/conversation/conversation-7');
-    expect(worker.self.clients.openWindow).toHaveBeenCalledWith(
-      'https://aion.test/#/conversation/conversation-7'
-    );
+    expect(worker.self.clients.openWindow).toHaveBeenCalledWith('https://aion.test/#/conversation/conversation-7');
   });
 
   it('drops malformed or untrusted destinations without opening the application home', async () => {
