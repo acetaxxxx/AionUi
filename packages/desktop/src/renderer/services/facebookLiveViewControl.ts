@@ -1,12 +1,6 @@
 import { httpRequest } from '@/common/adapter/httpBridge';
 
-export type LiveViewStatus =
-  | 'ready'
-  | 'auth_paused'
-  | 'checkpoint'
-  | 'captcha'
-  | 'profile_busy'
-  | 'session_ended';
+export type LiveViewStatus = 'ready' | 'auth_paused' | 'checkpoint' | 'captcha' | 'profile_busy' | 'session_ended';
 
 export interface LiveViewScope {
   user_id: string;

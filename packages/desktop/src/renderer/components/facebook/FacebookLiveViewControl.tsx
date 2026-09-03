@@ -62,7 +62,9 @@ const FacebookLiveViewControl: React.FC<FacebookLiveViewControlProps> = ({
         {snapshot?.detail && <Typography.Text type='secondary'>{snapshot.detail}</Typography.Text>}
         {snapshot?.approval_required && <Tag color='orange'>Approval required</Tag>}
         {snapshot?.next_scheduled_run_at && (
-          <Typography.Text type='secondary'>Next scheduled run: {new Date(snapshot.next_scheduled_run_at).toLocaleString()}</Typography.Text>
+          <Typography.Text type='secondary'>
+            Next scheduled run: {new Date(snapshot.next_scheduled_run_at).toLocaleString()}
+          </Typography.Text>
         )}
         <Space>
           <Button disabled={busy} onClick={() => void invoke(client.start)}>
@@ -75,7 +77,9 @@ const FacebookLiveViewControl: React.FC<FacebookLiveViewControlProps> = ({
             End Live View
           </Button>
         </Space>
-        <Typography.Text type='secondary'>Passwords, MFA seeds, and bearer tokens are never handled or stored by AionUI.</Typography.Text>
+        <Typography.Text type='secondary'>
+          Passwords, MFA seeds, and bearer tokens are never handled or stored by AionUI.
+        </Typography.Text>
       </Space>
     </Card>
   );

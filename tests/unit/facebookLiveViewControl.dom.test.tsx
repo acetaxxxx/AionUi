@@ -26,12 +26,7 @@ function port(): LiveViewControlPort {
 describe('FacebookLiveViewControl', () => {
   it('shows checkpoint and approval/next-run guidance at the public UI seam', async () => {
     render(
-      <FacebookLiveViewControl
-        userId='user-1'
-        conversationId='conversation-1'
-        monitorId='monitor-1'
-        client={port()}
-      />
+      <FacebookLiveViewControl userId='user-1' conversationId='conversation-1' monitorId='monitor-1' client={port()} />
     );
 
     expect(await screen.findByText(/checkpoint/i)).toBeInTheDocument();
