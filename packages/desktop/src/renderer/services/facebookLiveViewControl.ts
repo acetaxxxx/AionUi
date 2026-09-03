@@ -78,10 +78,11 @@ export type LiveViewRelayEvent =
   | { type: 'error'; code: 'expired' | 'revoked' | 'transport_unavailable' | 'invalid_message' };
 
 export const LIVE_VIEW_LIMITS = {
-  maxFrameBytes: 4 * 1024 * 1024,
-  maxWidth: 4096,
-  maxHeight: 4096,
-  maxMessageBytes: 5 * 1024 * 1024,
+  // Must not exceed AionCore Ticket 12A's authoritative bounds.
+  maxFrameBytes: 1024 * 1024,
+  maxWidth: 1920,
+  maxHeight: 1080,
+  maxMessageBytes: 1024 * 1024,
 } as const;
 
 const RELAY_EVENTS = new Set(['status', 'frame', 'expired', 'revoked', 'transport_unavailable']);
@@ -134,15 +135,18 @@ export type LiveViewRelaySocket = Pick<WebSocket, 'send' | 'close'> & {
 
 export interface LiveViewRelay {
   sendPointer(event: {
-    action: 'down' | 'up' | 'move';
-    x: number;
-    y: number;
+    action: 'mouse_move' | 'mouse_down' | 'mouse_up' | 'click' | 'wheel';
+    x?: number;
+    y?: number;
     button?: 'left' | 'middle' | 'right';
+    delta_x?: number;
+    delta_y?: number;
   }): void;
   sendKeyboard(event: {
-    action: 'down' | 'up';
-    key: string;
-    modifiers?: Array<'Alt' | 'Control' | 'Meta' | 'Shift'>;
+    action: 'key_down' | 'key_up' | 'text_input';
+    key?: string;
+    code?: string;
+    text?: string;
   }): void;
   close(): void;
 }
@@ -193,13 +197,11 @@ export function connectFacebookLiveViewRelay(
   return {
     sendPointer: (event) => {
       if (
-        !['down', 'up', 'move'].includes(event.action) ||
-        !Number.isFinite(event.x) ||
-        !Number.isFinite(event.y) ||
-        event.x < 0 ||
-        event.y < 0 ||
-        event.x > LIVE_VIEW_LIMITS.maxWidth ||
-        event.y > LIVE_VIEW_LIMITS.maxHeight ||
+        !['mouse_move', 'mouse_down', 'mouse_up', 'click', 'wheel'].includes(event.action) ||
+        (event.x !== undefined && (!Number.isFinite(event.x) || event.x < 0 || event.x > LIVE_VIEW_LIMITS.maxWidth)) ||
+        (event.y !== undefined && (!Number.isFinite(event.y) || event.y < 0 || event.y > LIVE_VIEW_LIMITS.maxHeight)) ||
+        (event.action !== 'wheel' && (event.x === undefined || event.y === undefined)) ||
+        (event.action === 'wheel' && (!Number.isFinite(event.delta_x) || !Number.isFinite(event.delta_y))) ||
         (event.button && !['left', 'middle', 'right'].includes(event.button))
       ) {
         return fail();
@@ -208,10 +210,10 @@ export function connectFacebookLiveViewRelay(
     },
     sendKeyboard: (event) => {
       if (
-        !['down', 'up'].includes(event.action) ||
-        !event.key ||
-        event.key.length > 64 ||
-        event.modifiers?.some((modifier) => !['Alt', 'Control', 'Meta', 'Shift'].includes(modifier))
+        !['key_down', 'key_up', 'text_input'].includes(event.action) ||
+        (event.action !== 'text_input' &&
+          (!event.key || !event.code || event.key.length > 64 || event.code.length > 64)) ||
+        (event.action === 'text_input' && (!event.text || event.text.length > 1024))
       ) {
         return fail();
       }

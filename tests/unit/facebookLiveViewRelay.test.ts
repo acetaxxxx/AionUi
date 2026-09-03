@@ -31,10 +31,13 @@ describe('Facebook LiveView relay protocol', () => {
       events,
       () => socket
     );
-    relay.sendPointer({ action: 'move', x: 1, y: 2 });
-    relay.sendKeyboard({ action: 'down', key: 'Enter' });
-    expect(socket.send).toHaveBeenNthCalledWith(1, '{"type":"pointer","action":"move","x":1,"y":2}');
-    expect(socket.send).toHaveBeenNthCalledWith(2, '{"type":"keyboard","action":"down","key":"Enter"}');
+    relay.sendPointer({ action: 'mouse_move', x: 1, y: 2 });
+    relay.sendKeyboard({ action: 'key_down', key: 'Enter', code: 'Enter' });
+    expect(socket.send).toHaveBeenNthCalledWith(1, '{"type":"pointer","action":"mouse_move","x":1,"y":2}');
+    expect(socket.send).toHaveBeenNthCalledWith(
+      2,
+      '{"type":"keyboard","action":"key_down","key":"Enter","code":"Enter"}'
+    );
     socketMessage?.({ data: '{bad' } as MessageEvent<string>);
     expect(events).toHaveBeenCalledWith({ type: 'error', code: 'transport_unavailable' });
     expect(socket.close).toHaveBeenCalled();
