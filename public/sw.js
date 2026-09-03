@@ -14,6 +14,16 @@ const PRECACHE_URLS = [
 ];
 const PUSH_SCHEMA_VERSION = 1;
 const PUSH_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+const MAX_PUSH_TITLE_CHARS = 30;
+const MAX_PUSH_BODY_CHARS = 50;
+const MAX_PUSH_COPY_CHARS = 80;
+const PUSH_SENSITIVE_PATTERN =
+  /(?:https?:\/\/|www\.|token\s*=|bearer\s+|sk-|(?:api[_-]?key|access[_-]?token|secret|password)\s*[=:])/i;
+const PUSH_URL_LIKE_PATTERN = /(?:^|[^a-z0-9.-])(?:[a-z0-9-]+\.)+[a-z]{2,24}(?:[^a-z0-9.-]|$)/i;
+const PUSH_SECRET_LIKE_PATTERN =
+  /(?:^|[^A-Za-z0-9_-])(?=[A-Za-z0-9_-]{32,}(?:[^A-Za-z0-9_-]|$))(?=[A-Za-z0-9_-]*[A-Za-z])(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{32,}(?:[^A-Za-z0-9_-]|$)/;
+const PUSH_JWT_LIKE_PATTERN =
+  /(?:^|[^A-Za-z0-9_=-])[A-Za-z0-9_=-]{8,}\.[A-Za-z0-9_=-]{8,}\.[A-Za-z0-9_=-]{8,}(?:[^A-Za-z0-9_=-]|$)/;
 const PUSH_TEMPLATES = Object.freeze({
   success: Object.freeze({ title: 'Aion turn completed', body: 'Your task has finished.' }),
   failed: Object.freeze({ title: 'Aion turn needs attention', body: 'Your task ended with an error.' }),
@@ -69,13 +79,52 @@ function pushRoute(data) {
   return appUrl.toString();
 }
 
+function safePushText(value, maxChars) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim();
+  const characters = Array.from(normalized);
+  if (
+    !normalized ||
+    characters.length > maxChars ||
+    PUSH_SENSITIVE_PATTERN.test(normalized) ||
+    PUSH_URL_LIKE_PATTERN.test(normalized) ||
+    PUSH_SECRET_LIKE_PATTERN.test(normalized) ||
+    PUSH_JWT_LIKE_PATTERN.test(normalized)
+  ) {
+    return null;
+  }
+  if (
+    characters.some((character) => {
+      const codePoint = character.codePointAt(0);
+      return (
+        codePoint <= 0x1f ||
+        (codePoint >= 0x7f && codePoint <= 0x9f) ||
+        character === '\u2028' ||
+        character === '\u2029'
+      );
+    })
+  ) {
+    return null;
+  }
+  return normalized;
+}
+
 function pushTemplate(data) {
   if (!data || data.schema_version !== PUSH_SCHEMA_VERSION) return null;
   if (typeof data.status !== 'string' || !Object.prototype.hasOwnProperty.call(PUSH_TEMPLATES, data.status))
     return null;
   const route = pushRoute(data);
   if (!route) return null;
-  return { route, ...PUSH_TEMPLATES[data.status] };
+  const fallback = PUSH_TEMPLATES[data.status];
+  const safeTitle = safePushText(data.title, MAX_PUSH_TITLE_CHARS);
+  const safeBody = safePushText(data.body, MAX_PUSH_BODY_CHARS);
+  if (!safeTitle || !safeBody) {
+    return { route, title: fallback.title, body: fallback.body };
+  }
+  if (Array.from(safeTitle).length + Array.from(safeBody).length > MAX_PUSH_COPY_CHARS) {
+    return { route, title: fallback.title, body: fallback.body };
+  }
+  return { route, title: safeTitle, body: safeBody };
 }
 
 self.addEventListener('push', (event) => {
@@ -106,7 +155,7 @@ self.addEventListener('notificationclick', (event) => {
   if (!route) return;
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clients) => {
       const sameOriginClient = clients.find((client) => {
         try {
           return new URL(client.url).origin === self.location.origin;
@@ -115,7 +164,13 @@ self.addEventListener('notificationclick', (event) => {
         }
       });
       if (sameOriginClient) {
-        return sameOriginClient.focus().then(() => sameOriginClient.navigate(route));
+        try {
+          await sameOriginClient.focus();
+          const navigatedClient = await sameOriginClient.navigate(route);
+          if (navigatedClient) return navigatedClient;
+        } catch {
+          // Fall through to opening a fresh same-origin window.
+        }
       }
       return self.clients.openWindow(route);
     })

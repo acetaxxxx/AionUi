@@ -44,15 +44,15 @@ function event(): WorkerEvent & { promise: Promise<unknown> } {
 }
 
 describe('PWA service worker push notifications', () => {
-  it('uses fixed templates and preserves an exact same-origin team hash route', async () => {
+  it('uses the bounded backend title and body for an exact same-origin team hash route', async () => {
     const worker = loadWorker();
     const pushEvent = event();
     pushEvent.data = {
       json: () => ({
         schema_version: 1,
         status: 'success',
-        title: 'attacker-controlled title',
-        body: 'attacker-controlled body',
+        title: 'Aion turn completed: Deploy',
+        body: '"Deploy" has completed.',
         target_kind: 'team',
         target_id: 'team_01',
       }),
@@ -61,16 +61,67 @@ describe('PWA service worker push notifications', () => {
     worker.listeners.get('push')?.(pushEvent);
     await pushEvent.promise;
 
-    expect(worker.showNotification).toHaveBeenCalledWith('Aion turn completed', {
-      body: 'Your task has finished.',
+    expect(worker.showNotification).toHaveBeenCalledWith('Aion turn completed: Deploy', {
+      body: '"Deploy" has completed.',
       data: { schema_version: 1, target_kind: 'team', target_id: 'team_01' },
+    });
+  });
+
+  it('falls back to safe English copy when payload text is invalid', async () => {
+    const worker = loadWorker();
+    const pushEvent = event();
+    pushEvent.data = {
+      json: () => ({
+        schema_version: 1,
+        status: 'failed',
+        title: 'invalid\ntitle',
+        body: 'invalid\tbody',
+        target_kind: 'conversation',
+        target_id: 'conversation-7',
+      }),
+    };
+
+    worker.listeners.get('push')?.(pushEvent);
+    await pushEvent.promise;
+
+    expect(worker.showNotification).toHaveBeenCalledWith('Aion turn needs attention', {
+      body: 'Your task ended with an error.',
+      data: { schema_version: 1, target_kind: 'conversation', target_id: 'conversation-7' },
+    });
+  });
+
+  it.each([
+    ['URL', 'https://evil.test/private', 'visit api.evil.test/private'],
+    ['token', 'token=secret-value', 'Bearer abcdefghijklmnop'],
+    ['secret key', 'sk-abcdefghijklmnopqrstuvwxyz012345', 'safe-looking body'],
+    ['oversized copy', '標'.repeat(31), '文'.repeat(51)],
+  ])('fails closed when payload copy contains %s content', async (_case, title, body) => {
+    const worker = loadWorker();
+    const pushEvent = event();
+    pushEvent.data = {
+      json: () => ({
+        schema_version: 1,
+        status: 'failed',
+        title,
+        body,
+        target_kind: 'conversation',
+        target_id: 'conversation-7',
+      }),
+    };
+
+    worker.listeners.get('push')?.(pushEvent);
+    await pushEvent.promise;
+
+    expect(worker.showNotification).toHaveBeenCalledWith('Aion turn needs attention', {
+      body: 'Your task ended with an error.',
+      data: { schema_version: 1, target_kind: 'conversation', target_id: 'conversation-7' },
     });
   });
 
   it('focuses an existing same-origin client and navigates to the conversation hash route', async () => {
     const worker = loadWorker();
     const focus = vi.fn().mockResolvedValue(undefined);
-    const navigate = vi.fn().mockResolvedValue(undefined);
+    const navigate = vi.fn().mockResolvedValue({ url: 'https://aion.test/#/conversation/conversation-7' });
     worker.self.clients.matchAll.mockResolvedValue([
       { url: 'https://aion.test/#/guid', focus, navigate },
       { url: 'https://other.test/#/guid', focus: vi.fn(), navigate: vi.fn() },
@@ -89,6 +140,42 @@ describe('PWA service worker push notifications', () => {
     expect(focus).toHaveBeenCalledOnce();
     expect(navigate).toHaveBeenCalledWith('https://aion.test/#/conversation/conversation-7');
     expect(worker.self.clients.openWindow).not.toHaveBeenCalled();
+  });
+
+  it('opens a fresh window when focusing an existing client fails', async () => {
+    const worker = loadWorker();
+    const focus = vi.fn().mockRejectedValue(new Error('focus failed'));
+    const navigate = vi.fn();
+    worker.self.clients.matchAll.mockResolvedValue([{ url: 'https://aion.test/#/guid', focus, navigate }]);
+    const clickEvent = event();
+    clickEvent.notification = {
+      data: { schema_version: 1, target_kind: 'team', target_id: 'team_01' },
+      close: vi.fn(),
+    };
+
+    worker.listeners.get('notificationclick')?.(clickEvent);
+    await clickEvent.promise;
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(worker.self.clients.openWindow).toHaveBeenCalledWith('https://aion.test/#/team/team_01');
+  });
+
+  it('opens a fresh window when navigating an existing client returns null', async () => {
+    const worker = loadWorker();
+    const focus = vi.fn().mockResolvedValue(undefined);
+    const navigate = vi.fn().mockResolvedValue(null);
+    worker.self.clients.matchAll.mockResolvedValue([{ url: 'https://aion.test/#/guid', focus, navigate }]);
+    const clickEvent = event();
+    clickEvent.notification = {
+      data: { schema_version: 1, target_kind: 'conversation', target_id: 'conversation-7' },
+      close: vi.fn(),
+    };
+
+    worker.listeners.get('notificationclick')?.(clickEvent);
+    await clickEvent.promise;
+
+    expect(navigate).toHaveBeenCalledWith('https://aion.test/#/conversation/conversation-7');
+    expect(worker.self.clients.openWindow).toHaveBeenCalledWith('https://aion.test/#/conversation/conversation-7');
   });
 
   it('drops malformed or untrusted destinations without opening the application home', async () => {
