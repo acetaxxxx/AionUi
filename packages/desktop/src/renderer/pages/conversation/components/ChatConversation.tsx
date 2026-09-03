@@ -38,6 +38,12 @@ import { resolveConversationBackend } from '../utils/conversationAssistantIdenti
 import LegacyReadOnlyConversation from '../platforms/legacy/LegacyReadOnlyConversation';
 import SingleChatEmptyState from './SingleChatEmptyState';
 import { useActiveLease } from '../hooks/useActiveLease';
+import usePwaMode from '@/renderer/hooks/system/usePwaMode';
+import { useAuth } from '@/renderer/hooks/context/AuthContext';
+import FacebookLiveViewControl from '@/renderer/components/facebook/FacebookLiveViewControl';
+import { createFacebookLiveViewApi } from '@/renderer/services/facebookLiveViewControl';
+
+const facebookLiveViewClient = createFacebookLiveViewApi();
 // import SkillRuleGenerator from './components/SkillRuleGenerator'; // Temporarily hidden
 
 const configErrorMessageKey = (error: unknown) => {
@@ -282,6 +288,9 @@ const ChatConversation: React.FC<{
   const cronJobId = resolveCronJobId(conversation?.extra);
   const layout = useLayoutContext();
   const isMobile = Boolean(layout?.isMobile);
+  const isPwa = usePwaMode();
+  const { user } = useAuth();
+  const facebookMonitorId = (conversation?.extra as { facebook_monitor_id?: string } | undefined)?.facebook_monitor_id;
 
   const isAionrsConversation = conversation?.type === 'aionrs';
   const isLegacyReadOnlyConversation = isLegacyReadOnlyConversationType(conversation?.type);
@@ -411,6 +420,14 @@ const ChatConversation: React.FC<{
         <div className='shrink-0'>
           <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />
         </div>
+      )}
+      {isPwa && user && facebookMonitorId && conversation && (
+        <FacebookLiveViewControl
+          userId={user.id}
+          conversationId={conversation.id}
+          monitorId={facebookMonitorId}
+          client={facebookLiveViewClient}
+        />
       )}
       {modelSelector && <div className='shrink-0'>{modelSelector}</div>}
       {conversation && conversation.type === 'acp' && !isMobile && !isLegacyReadOnlyConversation && (
