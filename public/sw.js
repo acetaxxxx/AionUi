@@ -14,11 +14,22 @@ const PRECACHE_URLS = [
 ];
 const PUSH_SCHEMA_VERSION = 1;
 const PUSH_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+const MAX_PUSH_TITLE_CHARS = 30;
+const MAX_PUSH_BODY_CHARS = 50;
+const MAX_PUSH_COPY_CHARS = 80;
+const PUSH_SENSITIVE_PATTERN =
+  /(?:https?:\/\/|www\.|token\s*=|bearer\s+|sk-|(?:api[_-]?key|access[_-]?token|secret|password)\s*[=:])/i;
+const PUSH_URL_LIKE_PATTERN =
+  /(?:^|[^a-z0-9.-])(?:[a-z0-9-]+\.)+[a-z]{2,24}(?:[^a-z0-9.-]|$)/i;
+const PUSH_SECRET_LIKE_PATTERN =
+  /(?:^|[^A-Za-z0-9_-])(?=[A-Za-z0-9_-]{32,}(?:[^A-Za-z0-9_-]|$))(?=[A-Za-z0-9_-]*[A-Za-z])(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{32,}(?:[^A-Za-z0-9_-]|$)/;
+const PUSH_JWT_LIKE_PATTERN =
+  /(?:^|[^A-Za-z0-9_=-])[A-Za-z0-9_=-]{8,}\.[A-Za-z0-9_=-]{8,}\.[A-Za-z0-9_=-]{8,}(?:[^A-Za-z0-9_=-]|$)/;
 const PUSH_TEMPLATES = Object.freeze({
-  success: Object.freeze({ title: 'Aion turn completed', body: 'Your task has finished.' }),
-  failed: Object.freeze({ title: 'Aion turn needs attention', body: 'Your task ended with an error.' }),
-  cancelled: Object.freeze({ title: 'Aion turn cancelled', body: 'The task was cancelled before completion.' }),
-  timeout: Object.freeze({ title: 'Aion turn timed out', body: 'The task did not finish in time.' }),
+  success: Object.freeze({ title: 'Aion 任務已完成', body: '這項任務已完成。' }),
+  failed: Object.freeze({ title: 'Aion 任務需要處理', body: '這項任務執行失敗，請查看詳情。' }),
+  cancelled: Object.freeze({ title: 'Aion 任務已取消', body: '這項任務在完成前已取消。' }),
+  timeout: Object.freeze({ title: 'Aion 任務逾時', body: '這項任務未在時限內完成。' }),
 });
 
 self.addEventListener('install', (event) => {
@@ -69,13 +80,47 @@ function pushRoute(data) {
   return appUrl.toString();
 }
 
+function safePushText(value, maxChars) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim();
+  const characters = Array.from(normalized);
+  if (
+    !normalized ||
+    characters.length > maxChars ||
+    PUSH_SENSITIVE_PATTERN.test(normalized) ||
+    PUSH_URL_LIKE_PATTERN.test(normalized) ||
+    PUSH_SECRET_LIKE_PATTERN.test(normalized) ||
+    PUSH_JWT_LIKE_PATTERN.test(normalized)
+  ) {
+    return null;
+  }
+  if (
+    characters.some((character) => {
+      const codePoint = character.codePointAt(0);
+      return (
+        codePoint <= 0x1f ||
+        (codePoint >= 0x7f && codePoint <= 0x9f) ||
+        character === '\u2028' ||
+        character === '\u2029'
+      );
+    })
+  ) {
+    return null;
+  }
+  return normalized;
+}
+
 function pushTemplate(data) {
   if (!data || data.schema_version !== PUSH_SCHEMA_VERSION) return null;
   if (typeof data.status !== 'string' || !Object.prototype.hasOwnProperty.call(PUSH_TEMPLATES, data.status))
     return null;
   const route = pushRoute(data);
   if (!route) return null;
-  return { route, ...PUSH_TEMPLATES[data.status] };
+  const fallback = PUSH_TEMPLATES[data.status];
+  const title = safePushText(data.title, MAX_PUSH_TITLE_CHARS) || fallback.title;
+  const body = safePushText(data.body, MAX_PUSH_BODY_CHARS) || fallback.body;
+  if (Array.from(title).length + Array.from(body).length > MAX_PUSH_COPY_CHARS) return null;
+  return { route, title, body };
 }
 
 self.addEventListener('push', (event) => {
@@ -106,7 +151,7 @@ self.addEventListener('notificationclick', (event) => {
   if (!route) return;
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clients) => {
       const sameOriginClient = clients.find((client) => {
         try {
           return new URL(client.url).origin === self.location.origin;
@@ -115,7 +160,13 @@ self.addEventListener('notificationclick', (event) => {
         }
       });
       if (sameOriginClient) {
-        return sameOriginClient.focus().then(() => sameOriginClient.navigate(route));
+        try {
+          await sameOriginClient.focus();
+          const navigatedClient = await sameOriginClient.navigate(route);
+          if (navigatedClient) return navigatedClient;
+        } catch {
+          // Fall through to opening a fresh same-origin window.
+        }
       }
       return self.clients.openWindow(route);
     })
