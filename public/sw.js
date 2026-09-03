@@ -116,10 +116,15 @@ function pushTemplate(data) {
   const route = pushRoute(data);
   if (!route) return null;
   const fallback = PUSH_TEMPLATES[data.status];
-  const title = safePushText(data.title, MAX_PUSH_TITLE_CHARS) || fallback.title;
-  const body = safePushText(data.body, MAX_PUSH_BODY_CHARS) || fallback.body;
-  if (Array.from(title).length + Array.from(body).length > MAX_PUSH_COPY_CHARS) return null;
-  return { route, title, body };
+  const safeTitle = safePushText(data.title, MAX_PUSH_TITLE_CHARS);
+  const safeBody = safePushText(data.body, MAX_PUSH_BODY_CHARS);
+  if (!safeTitle || !safeBody) {
+    return { route, title: fallback.title, body: fallback.body };
+  }
+  if (Array.from(safeTitle).length + Array.from(safeBody).length > MAX_PUSH_COPY_CHARS) {
+    return { route, title: fallback.title, body: fallback.body };
+  }
+  return { route, title: safeTitle, body: safeBody };
 }
 
 self.addEventListener('push', (event) => {
