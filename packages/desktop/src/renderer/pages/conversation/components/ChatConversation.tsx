@@ -41,9 +41,10 @@ import { useActiveLease } from '../hooks/useActiveLease';
 import usePwaMode from '@/renderer/hooks/system/usePwaMode';
 import { useAuth } from '@/renderer/hooks/context/AuthContext';
 import FacebookLiveViewControl from '@/renderer/components/facebook/FacebookLiveViewControl';
-import { createFacebookLiveViewApi } from '@/renderer/services/facebookLiveViewControl';
+import { createFacebookLiveViewControl } from '@/renderer/services/facebookLiveViewControl';
 
-const facebookLiveViewClient = createFacebookLiveViewApi();
+// Until the backend/WebRTC contract is deployed, PWA remains fail-closed.
+const facebookLiveViewClient = createFacebookLiveViewControl();
 // import SkillRuleGenerator from './components/SkillRuleGenerator'; // Temporarily hidden
 
 const configErrorMessageKey = (error: unknown) => {

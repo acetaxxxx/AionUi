@@ -44,8 +44,12 @@ export const createFacebookLiveViewControl = (): LiveViewControlPort => {
 
 /** Future backend seam, kept separate so its request shape is reviewable. */
 export const createFacebookLiveViewApi = (): LiveViewControlPort => {
-  const request = (action: string, scope: LiveViewScope) =>
-    httpRequest<LiveViewSnapshot>('POST', `/api/facebook/live-view/${action}`, scope);
+  const request = (action: string, scope: LiveViewScope) => {
+    if (![scope.user_id, scope.conversation_id, scope.monitor_id].every((value) => value.trim().length > 0)) {
+      return Promise.reject(new Error('FACEBOOK_LIVE_VIEW_SCOPE_REQUIRED'));
+    }
+    return httpRequest<LiveViewSnapshot>('POST', `/api/facebook/live-view/${action}`, scope);
+  };
   return {
     getStatus: (scope) => request('status', scope),
     start: (scope) => request('start', scope),
