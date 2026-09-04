@@ -23,11 +23,11 @@ vi.mock('@/renderer/components/base/AionScrollArea', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-const MockSelect = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
-const MockSelectWithSubcomponents = Object.assign(MockSelect, { OptGroup: MockSelect, Option: MockSelect });
-
 vi.mock('@/renderer/components/base/AionSelect', () => ({
-  default: MockSelectWithSubcomponents,
+  default: Object.assign(({ children }: { children?: React.ReactNode }) => <div>{children}</div>, {
+    OptGroup: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Option: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  }),
 }));
 
 vi.mock('@/renderer/components/base/TalkToButlerButton', () => ({
