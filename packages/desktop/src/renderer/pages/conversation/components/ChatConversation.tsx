@@ -40,11 +40,11 @@ import SingleChatEmptyState from './SingleChatEmptyState';
 import { useActiveLease } from '../hooks/useActiveLease';
 import usePwaMode from '@/renderer/hooks/system/usePwaMode';
 import { useAuth } from '@/renderer/hooks/context/AuthContext';
-import FacebookLiveViewControl from '@/renderer/components/facebook/FacebookLiveViewControl';
-import { createFacebookLiveViewControl } from '@/renderer/services/facebookLiveViewControl';
+import GenericBrowserLiveViewControl from '@/renderer/components/browser/GenericBrowserLiveViewControl';
+import { createGenericBrowserApi } from '@/renderer/services/genericBrowserControl';
 
 // Until the backend/WebRTC contract is deployed, PWA remains fail-closed.
-const facebookLiveViewClient = createFacebookLiveViewControl();
+const genericBrowserClient = createGenericBrowserApi();
 // import SkillRuleGenerator from './components/SkillRuleGenerator'; // Temporarily hidden
 
 const configErrorMessageKey = (error: unknown) => {
@@ -291,7 +291,9 @@ const ChatConversation: React.FC<{
   const isMobile = Boolean(layout?.isMobile);
   const isPwa = usePwaMode();
   const { user } = useAuth();
-  const facebookMonitorId = (conversation?.extra as { facebook_monitor_id?: string } | undefined)?.facebook_monitor_id;
+  const browserExtra = conversation?.extra as
+    | { browser_task_id?: string; browser_profile_id?: string; browser_allowed_origins?: string[] }
+    | undefined;
 
   const isAionrsConversation = conversation?.type === 'aionrs';
   const isLegacyReadOnlyConversation = isLegacyReadOnlyConversationType(conversation?.type);
@@ -422,14 +424,28 @@ const ChatConversation: React.FC<{
           <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />
         </div>
       )}
-      {isPwa && user && facebookMonitorId && conversation && (
-        <FacebookLiveViewControl
-          userId={user.id}
-          conversationId={conversation.id}
-          monitorId={facebookMonitorId}
-          client={facebookLiveViewClient}
-        />
-      )}
+      {isPwa &&
+        user &&
+        browserExtra?.browser_task_id &&
+        browserExtra.browser_profile_id &&
+        browserExtra.browser_allowed_origins?.length &&
+        conversation && (
+          <GenericBrowserLiveViewControl
+            userId={user.id}
+            conversationId={conversation.id}
+            taskId={browserExtra.browser_task_id}
+            allowedOrigins={browserExtra.browser_allowed_origins ?? []}
+            profiles={[
+              {
+                profile_id: browserExtra.browser_profile_id,
+                account_label: 'Scoped browser profile',
+                domain_scope: browserExtra.browser_allowed_origins?.[0] ?? 'unknown origin',
+                auth_status: 'needs_reauth',
+              },
+            ]}
+            client={genericBrowserClient}
+          />
+        )}
       {modelSelector && <div className='shrink-0'>{modelSelector}</div>}
       {conversation && conversation.type === 'acp' && !isMobile && !isLegacyReadOnlyConversation && (
         <div className='shrink-0'>
