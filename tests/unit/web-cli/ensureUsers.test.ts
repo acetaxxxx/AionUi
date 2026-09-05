@@ -60,8 +60,8 @@ import { ensureUsers, parseUsersEnv } from '../../../packages/web-cli/src/ensure
 describe('ensureUsers', () => {
   it('parses email-to-username mappings consistently with Web-Host SSO', () => {
     expect(parseUsersEnv('user@example.com:husband:secret,wife:other-secret')).toEqual([
-      { username: 'husband', password: 'secret' },
-      { username: 'wife', password: 'other-secret' },
+      { username: 'husband', password: 'secret', email: 'user@example.com' },
+      { username: 'wife', password: 'other-secret', email: undefined },
     ]);
   });
 

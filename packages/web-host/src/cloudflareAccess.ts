@@ -8,8 +8,8 @@ export type CloudflareAccessConfig = {
 };
 
 export type CloudflareAccessIdentity = {
-  email: string;
-  subject?: string;
+  email?: string;
+  subject: string;
   payload: JWTPayload;
 };
 
@@ -91,19 +91,22 @@ export function createCloudflareAccessVerifier(
         algorithms: ['RS256'],
         issuer: teamDomain,
         audience,
-        requiredClaims: ['email', 'exp', 'iat'],
+        requiredClaims: ['sub', 'exp'],
       });
 
-      if (payload.type !== 'app' || typeof payload.email !== 'string' || !payload.email.trim()) {
+      if (typeof payload.sub !== 'string' || !payload.sub.trim()) {
         return null;
       }
 
+      const email = typeof payload.email === 'string' && payload.email.trim() ? payload.email.trim() : undefined;
+
       return {
-        email: payload.email.trim(),
-        subject: typeof payload.sub === 'string' && payload.sub ? payload.sub : undefined,
+        email,
+        subject: payload.sub.trim(),
         payload,
       };
     } catch {
+      // Do not log raw token or verification internals
       return null;
     }
   };
