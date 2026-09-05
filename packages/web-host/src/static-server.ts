@@ -403,9 +403,13 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
 
       // Cloudflare Access is the source of truth for remote WebUI identity.
       // Local requests without a Cloudflare token keep the normal AION login flow.
-      const isAuthCheck = req.url === '/api/auth/user' || req.url.startsWith('/api/auth/user?');
+      const isApiOrAuth =
+        req.url.startsWith('/api/') ||
+        req.url.startsWith('/api?') ||
+        req.url.startsWith('/login') ||
+        req.url.startsWith('/logout');
       const isDocumentGet =
-        req.method === 'GET' && (!req.url.includes('.') || req.url === '/' || req.url.startsWith('/?'));
+        req.method === 'GET' && !isApiOrAuth && (!req.url.includes('.') || req.url === '/' || req.url.startsWith('/?'));
 
       const cloudflareAccessToken = extractCloudflareAccessToken(req.headers);
       if (cloudflareAccessToken) {
@@ -419,8 +423,8 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
           }
         }
 
-        // For auth check, forward immediately to backend so backend verifies and provisions user
-        if (isAuthCheck) {
+        // For all API and auth endpoints, forward to backend so backend verifies and provisions user
+        if (isApiOrAuth) {
           forwardToBackend(req, res, opts.backendPort);
           return;
         }
@@ -438,12 +442,7 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
       // /api/* — reverse proxy to backend (includes /api/auth/*).
       // /login and /logout are aionui-auth's top-level auth endpoints: proxy them too
       // so WebUI browser clients reach the backend without a path-rewrite.
-      if (
-        req.url.startsWith('/api/') ||
-        req.url.startsWith('/api?') ||
-        req.url.startsWith('/login') ||
-        req.url.startsWith('/logout')
-      ) {
+      if (isApiOrAuth) {
         forwardToBackend(req, res, opts.backendPort);
         return;
       }
