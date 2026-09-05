@@ -48,14 +48,14 @@ describe('WebFsPicker responsive dialog', () => {
   it('renders refresh and new folder buttons when directory mode is active', async () => {
     render(<WebFsPicker options={{ properties: ['openDirectory', 'createDirectory'] }} onDone={vi.fn()} />);
 
-    expect(await screen.findByTitle('common.refresh')).toBeTruthy();
-    expect(await screen.findByTitle('common.newFolder')).toBeTruthy();
+    expect(await screen.findByTitle('Refresh')).toBeTruthy();
+    expect(await screen.findByTitle('New Folder')).toBeTruthy();
   });
 
   it('omits new folder button in pure file selection mode', async () => {
     render(<WebFsPicker options={{ properties: ['openFile'] }} onDone={vi.fn()} />);
 
-    expect(await screen.findByTitle('common.refresh')).toBeTruthy();
-    expect(screen.queryByTitle('common.newFolder')).toBeNull();
+    expect(await screen.findByTitle('Refresh')).toBeTruthy();
+    expect(screen.queryByTitle('New Folder')).toBeNull();
   });
 });
