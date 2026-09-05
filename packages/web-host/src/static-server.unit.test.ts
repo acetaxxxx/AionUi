@@ -511,7 +511,7 @@ describe('static-server', () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toMatchObject({ error: 'CF_ACCESS_UNVERIFIED' });
-    expect(response.headers.get('set-cookie')).toMatch(/aionui-session=;.*Max-Age=0/);
+    expect(response.headers.get('set-cookie')).toBeNull();
   });
 
   it('rejects collection APIs with 401 CF_ACCESS_UNVERIFIED when Cloudflare verification fails', async () => {
