@@ -195,7 +195,6 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
       onCancel={() => settle(undefined)}
       autoFocus={false}
       focusLock
-      zIndex={10500}
       wrapStyle={{ zIndex: 10500 }}
       maskStyle={{ zIndex: 10499 }}
       style={{ width: 'calc(100vw - 32px)', maxWidth: 640 }}
