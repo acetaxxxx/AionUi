@@ -10,11 +10,15 @@
  * Design: Node native http + serve-handler. No Express. No business routes.
  */
 
-import http, { type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import http, { type IncomingMessage, type OutgoingHttpHeaders, type Server, type ServerResponse } from 'node:http';
 import { networkInterfaces } from 'node:os';
 import net, { type Socket } from 'node:net';
 import serveHandler from 'serve-handler';
-import { extractCloudflareAccessToken, getCloudflareAccessIdentity } from './cloudflareAccess.js';
+import {
+  extractCloudflareAccessToken,
+  getCloudflareAccessIdentity,
+  resolveCloudflareAccessConfig,
+} from './cloudflareAccess.js';
 
 export type StaticServerOptions = {
   staticDir: string;
@@ -80,7 +84,7 @@ function getLanIP(): string | null {
 }
 
 function forwardToBackend(req: IncomingMessage, res: ServerResponse, backendPort: number): void {
-  const headers = { ...req.headers, host: `127.0.0.1:${backendPort}` };
+  const headers: OutgoingHttpHeaders = { ...req.headers, host: `127.0.0.1:${backendPort}` };
   const cfToken = extractCloudflareAccessToken(req.headers);
   if (cfToken && !headers['cf-access-jwt-assertion']) {
     headers['cf-access-jwt-assertion'] = cfToken;
@@ -405,11 +409,6 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
 
       const cloudflareAccessToken = extractCloudflareAccessToken(req.headers);
       if (cloudflareAccessToken) {
-        // Guarantee the assertion header is forwarded on all backend requests
-        if (!req.headers['cf-access-jwt-assertion']) {
-          req.headers['cf-access-jwt-assertion'] = cloudflareAccessToken;
-        }
-
         const cfConfig = resolveCloudflareAccessConfig();
         if (cfConfig) {
           const cfIdentity = await getCloudflareAccessIdentity(req.headers);
