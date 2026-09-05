@@ -7,22 +7,45 @@ import {
   getAionServiceWorkerRegistration,
   readPushSubscriptionId,
 } from '@/renderer/hooks/system/notification/browserPush';
-// M6: CSRF removed with legacy webserver — stub functions for compatibility, re-implement in M7
-const withCsrfToken = <T extends Record<string, unknown>>(data: T): T => data;
-const hasValidCsrfToken = (): boolean => true;
-const clearCookie = (_name: string, _path?: string): void => {};
+function clearCookie(name: string, path = '/'): void {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${name}=; path=${path}; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+}
+
 const CSRF_COOKIE_NAME = 'csrf-token';
+const AIONUI_CSRF_COOKIE_NAME = 'aionui-csrf-token';
 
 function getCsrfTokenFromCookie(): string | undefined {
   if (typeof document === 'undefined') return undefined;
   const match = document.cookie.match(/(?:^|;\s*)(?:aionui-csrf-token|csrf-token)\s*=\s*([^;]+)/);
   if (match) return decodeURIComponent(match[1]);
   try {
-    return sessionStorage.getItem('aionui-csrf-token') || localStorage.getItem('aionui-csrf-token') || undefined;
+    return (
+      sessionStorage.getItem('aionui-csrf-token') ||
+      localStorage.getItem('aionui-csrf-token') ||
+      sessionStorage.getItem('csrf-token') ||
+      localStorage.getItem('csrf-token') ||
+      undefined
+    );
   } catch {
     return undefined;
   }
 }
+
+const withCsrfToken = <T extends Record<string, unknown>>(data: T): T => {
+  const token = getCsrfTokenFromCookie();
+  if (!token) return data;
+  return {
+    ...data,
+    _csrf: token,
+    csrf_token: token,
+  };
+};
+
+const hasValidCsrfToken = (): boolean => {
+  return typeof document === 'undefined' || Boolean(getCsrfTokenFromCookie());
+};
 
 type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
 
@@ -86,9 +109,17 @@ function clearAuthCache(): void {
   if (typeof window === 'undefined') return;
 
   try {
-    // Clear CSRF cookie
+    // Clear CSRF cookies
     clearCookie(CSRF_COOKIE_NAME);
     clearCookie(CSRF_COOKIE_NAME, '/');
+    clearCookie(AIONUI_CSRF_COOKIE_NAME);
+    clearCookie(AIONUI_CSRF_COOKIE_NAME, '/');
+    try {
+      sessionStorage.removeItem('aionui-csrf-token');
+      localStorage.removeItem('aionui-csrf-token');
+      sessionStorage.removeItem('csrf-token');
+      localStorage.removeItem('csrf-token');
+    } catch {}
 
     // Clear localStorage auth-related items, plus per-user UI state that must not
     // leak across accounts. Preview scopes are keyed by project id and hold file
@@ -121,8 +152,18 @@ type CurrentUserFetchResult = {
 
 async function fetchCurrentUser(signal?: AbortSignal): Promise<CurrentUserFetchResult> {
   try {
+    const headers: Record<string, string> = {
+      'X-Requested-With': 'XMLHttpRequest',
+    };
+    const csrfToken = getCsrfTokenFromCookie();
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+      headers['aionui-csrf-token'] = csrfToken;
+    }
+
     const response = await fetch(AUTH_USER_ENDPOINT, {
       method: 'GET',
+      headers,
       credentials: 'include',
       signal,
     });
@@ -243,6 +284,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       const csrfToken = getCsrfTokenFromCookie();
       const loginHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
       };
       if (csrfToken) {
         loginHeaders['X-CSRF-Token'] = csrfToken;
@@ -361,6 +403,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       const csrfToken = getCsrfTokenFromCookie();
       const logoutHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
       };
       if (csrfToken) {
         logoutHeaders['X-CSRF-Token'] = csrfToken;

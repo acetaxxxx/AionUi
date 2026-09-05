@@ -113,13 +113,22 @@ export function fromApiConversation<T>(raw: T): T {
   return next;
 }
 
-export function fromApiPaginatedConversations<T>(result: { items: T[]; total: number; has_more: boolean }): {
+export function fromApiPaginatedConversations<T>(result?: { items?: T[]; total?: number; has_more?: boolean }): {
   items: T[];
   total: number;
   has_more: boolean;
 } {
+  if (!result || !Array.isArray(result.items)) {
+    return {
+      items: [],
+      total: result?.total ?? 0,
+      has_more: result?.has_more ?? false,
+    };
+  }
   return {
     ...result,
+    total: result.total ?? result.items.length,
+    has_more: result.has_more ?? false,
     // The backend scopes this endpoint to the authenticated session. Do not
     // filter again with localStorage: that value can be stale during account
     // switches, PWA session recovery, or Electron launches and would hide

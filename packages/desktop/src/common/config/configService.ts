@@ -23,7 +23,13 @@ function getCsrfTokenFromCookie(): string | undefined {
   const match = document.cookie.match(/(?:^|;\s*)(?:aionui-csrf-token|csrf-token)\s*=\s*([^;]+)/);
   if (match) return decodeURIComponent(match[1]);
   try {
-    return sessionStorage.getItem('aionui-csrf-token') || localStorage.getItem('aionui-csrf-token') || undefined;
+    return (
+      sessionStorage.getItem('aionui-csrf-token') ||
+      localStorage.getItem('aionui-csrf-token') ||
+      sessionStorage.getItem('csrf-token') ||
+      localStorage.getItem('csrf-token') ||
+      undefined
+    );
   } catch {
     return undefined;
   }
@@ -31,7 +37,9 @@ function getCsrfTokenFromCookie(): string | undefined {
 
 async function fetchJson<T>(method: string, path: string, body?: unknown): Promise<T> {
   const url = `${getBaseUrl()}${path}`;
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    'X-Requested-With': 'XMLHttpRequest',
+  };
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
@@ -52,9 +60,16 @@ async function fetchJson<T>(method: string, path: string, body?: unknown): Promi
     const errorBody = await response.text();
     throw new Error(`ConfigService ${method} ${path} failed (${response.status}): ${errorBody}`);
   }
-  const contentType = response.headers.get('Content-Type');
-  if (!contentType?.includes('application/json')) {
+  if (response.status === 204) {
     return undefined as T;
+  }
+  const contentType = response.headers.get('Content-Type') || '';
+  if (!contentType.includes('application/json')) {
+    const rawText = await response.text().catch(() => '');
+    if (rawText.trim() === '' && !contentType.includes('text/html')) {
+      return undefined as T;
+    }
+    throw new Error(`ConfigService ${method} ${path} non-JSON response (${response.status}): ${rawText.slice(0, 200)}`);
   }
   const json = await response.json();
   if (json && typeof json === 'object' && 'data' in json) {

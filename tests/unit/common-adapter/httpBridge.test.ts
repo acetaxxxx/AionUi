@@ -283,8 +283,36 @@ describe('httpBridge', () => {
     });
   });
 
+  describe('request headers', () => {
+    it('always includes X-Requested-With: XMLHttpRequest', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ success: true, data: { ok: true } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+      vi.spyOn(console, 'debug').mockImplementation(() => {});
+
+      await httpGet('/api/ping').invoke();
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      const [, init] = fetchSpy.mock.calls[0];
+      expect(init.headers['X-Requested-With']).toBe('XMLHttpRequest');
+    });
+  });
+
   describe('non-JSON response', () => {
-    it('returns undefined when content-type is not JSON', async () => {
+    it('returns undefined when content-type is 204 No Content', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+      vi.stubGlobal('fetch', fetchSpy);
+      vi.spyOn(console, 'debug').mockImplementation(() => {});
+
+      const result = await httpGet('/api/x').invoke();
+      expect(result).toBeUndefined();
+    });
+
+    it('returns undefined when content-type is not JSON and body is empty', async () => {
       const fetchSpy = vi.fn().mockResolvedValue(
         new Response('', {
           status: 200,
@@ -296,6 +324,50 @@ describe('httpBridge', () => {
       const result = await httpGet('/api/x').invoke();
 
       expect(result).toBeUndefined();
+    });
+
+    it('throws BackendHttpError when success response is HTML (protocol error)', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(
+        new Response('<!DOCTYPE html><html><body>Login</body></html>', {
+          status: 200,
+          headers: { 'Content-Type': 'text/html' },
+        })
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+      vi.spyOn(console, 'debug').mockImplementation(() => {});
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      try {
+        await httpGet('/api/x').invoke();
+        expect.fail('Should have thrown BackendHttpError');
+      } catch (e) {
+        expect(e).toBeInstanceOf(BackendHttpError);
+        const err = e as BackendHttpError;
+        expect(err.status).toBe(200);
+        expect(err.backendMessage).toContain('Unexpected HTML response');
+      }
+    });
+
+    it('throws BackendHttpError when success response is non-empty non-JSON text', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(
+        new Response('Plain text error or redirect', {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' },
+        })
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+      vi.spyOn(console, 'debug').mockImplementation(() => {});
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      try {
+        await httpGet('/api/x').invoke();
+        expect.fail('Should have thrown BackendHttpError');
+      } catch (e) {
+        expect(e).toBeInstanceOf(BackendHttpError);
+        const err = e as BackendHttpError;
+        expect(err.status).toBe(200);
+        expect(err.body).toBe('Plain text error or redirect');
+      }
     });
   });
 
