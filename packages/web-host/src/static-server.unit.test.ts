@@ -10,6 +10,7 @@ import { startStaticServer, type StaticServerHandle } from './static-server.js';
 vi.mock('./cloudflareAccess.js', () => ({
   extractCloudflareAccessToken: vi.fn(() => null),
   getCloudflareAccessIdentity: vi.fn(),
+  resolveCloudflareAccessConfig: vi.fn(() => ({ teamDomain: 'https://team.example.com', audience: 'test-aud' })),
 }));
 
 async function mkRendererFixture(): Promise<string> {
