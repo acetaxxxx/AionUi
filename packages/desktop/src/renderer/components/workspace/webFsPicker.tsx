@@ -21,7 +21,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client';
 import { useTranslation } from 'react-i18next';
 import type { PickerEntry as Entry } from './webFsPickerUtils';
-import { matchesFilters, normalizeEntry, parentOf, sortEntries } from './webFsPickerUtils';
+import {
+  classifyFsError,
+  matchesFilters,
+  normalizeEntry,
+  parentOf,
+  resolveConfirmPath,
+  resolveNewFolderPath,
+  sortEntries,
+} from './webFsPickerUtils';
 
 const LAST_DIR_KEY = 'aionui:web-fs-picker:last-dir';
 
@@ -36,6 +44,7 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
   const wantsDirectory = properties.includes('openDirectory');
   const wantsFile = properties.includes('openFile');
   const allowMultiple = properties.includes('multiSelections');
+  const canCreateDirectory = properties.includes('createDirectory') || wantsDirectory;
   // `openFile` + `openDirectory` together (skills import) — treat as file-first
   // but still let a directory be chosen via the confirm button.
   const fileMode = wantsFile;
@@ -47,6 +56,8 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
   const settledRef = useRef(false);
 
   const settle = useCallback(
@@ -76,8 +87,27 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
         } catch {
           /* storage unavailable — non-fatal */
         }
-      } catch {
-        setError(t('fileSelection.webFsPicker.loadFailed', { defaultValue: 'Cannot open this directory' }));
+      } catch (err: unknown) {
+        const errorKind = classifyFsError(err);
+        if (errorKind === 'forbidden') {
+          setError(
+            t('fileSelection.webFsPicker.forbidden', {
+              defaultValue: 'Access denied: path is outside allowed sandbox',
+            })
+          );
+        } else if (errorKind === 'notFound') {
+          setError(
+            t('fileSelection.webFsPicker.notFound', {
+              defaultValue: 'Directory not found',
+            })
+          );
+        } else {
+          setError(
+            t('fileSelection.webFsPicker.loadFailed', {
+              defaultValue: 'Cannot open this directory',
+            })
+          );
+        }
         setEntries([]);
       } finally {
         setLoading(false);
@@ -131,15 +161,28 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
     [allowMultiple]
   );
 
-  const confirmDisabled = fileMode && selected.length === 0 && !wantsDirectory;
+  const targetCandidate = resolveConfirmPath(pathDraft, currentDir, wantsDirectory);
+  const confirmDisabled = fileMode ? selected.length === 0 && (!wantsDirectory || !targetCandidate) : !targetCandidate;
 
   const handleConfirm = useCallback(() => {
     if (fileMode && selected.length > 0) {
       settle(selected);
       return;
     }
-    if (currentDir) settle([currentDir]);
-  }, [fileMode, selected, currentDir, settle]);
+    const resolved = resolveConfirmPath(pathDraft, currentDir, wantsDirectory);
+    if (resolved) settle([resolved]);
+  }, [fileMode, selected, pathDraft, currentDir, wantsDirectory, settle]);
+
+  const handleCreateFolder = useCallback(() => {
+    const trimmed = newFolderName.trim();
+    if (!trimmed) return;
+    const parent = currentDir || pathDraft.trim() || '/';
+    const resolvedPath = resolveNewFolderPath(parent, trimmed);
+    setPathDraft(resolvedPath);
+    setShowNewFolder(false);
+    setNewFolderName('');
+    void load(resolvedPath);
+  }, [newFolderName, currentDir, pathDraft, load]);
 
   const title = wantsDirectory
     ? t('fileSelection.webFsPicker.titleDirectory', { defaultValue: 'Select a folder on the server' })
@@ -152,19 +195,26 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
       onCancel={() => settle(undefined)}
       autoFocus={false}
       focusLock
+      zIndex={10500}
+      wrapStyle={{ zIndex: 10500 }}
+      maskStyle={{ zIndex: 10499 }}
       style={{ width: 'calc(100vw - 32px)', maxWidth: 640 }}
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
           <span
             style={{ fontSize: 12, color: 'var(--color-text-3)', overflow: 'hidden', textOverflow: 'ellipsis' }}
-            title={fileMode && selected.length > 0 ? selected.join('\n') : currentDir}
+            title={
+              fileMode && selected.length > 0
+                ? selected.join('\n')
+                : resolveConfirmPath(pathDraft, currentDir, wantsDirectory)
+            }
           >
             {fileMode && selected.length > 0
               ? t('fileSelection.webFsPicker.selectedCount', {
                   defaultValue: '{{count}} selected',
                   count: selected.length,
                 })
-              : currentDir}
+              : resolveConfirmPath(pathDraft, currentDir, wantsDirectory)}
           </span>
           <span style={{ flexShrink: 0 }}>
             <Button onClick={() => settle(undefined)} style={{ marginInlineEnd: 8 }}>
@@ -190,7 +240,46 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
         <Button onClick={() => void load(pathDraft.trim() || '/')} disabled={loading}>
           {t('fileSelection.webFsPicker.go', { defaultValue: 'Go' })}
         </Button>
+        <Button
+          onClick={() => void load(currentDir || pathDraft.trim() || '/')}
+          disabled={loading}
+          title={t('common.refresh', { defaultValue: 'Refresh' })}
+        >
+          {t('common.refresh', { defaultValue: 'Refresh' })}
+        </Button>
+        {canCreateDirectory && (
+          <Button
+            onClick={() => setShowNewFolder((prev) => !prev)}
+            disabled={loading}
+            title={t('common.newFolder', { defaultValue: 'New Folder' })}
+          >
+            {t('common.newFolder', { defaultValue: 'New Folder' })}
+          </Button>
+        )}
       </div>
+
+      {showNewFolder && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+          <Input
+            value={newFolderName}
+            onChange={setNewFolderName}
+            onPressEnter={handleCreateFolder}
+            placeholder={t('fileSelection.webFsPicker.newFolderPlaceholder', { defaultValue: 'Folder name' })}
+            autoFocus
+          />
+          <Button type='primary' onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
+            {t('common.confirm', { defaultValue: 'OK' })}
+          </Button>
+          <Button
+            onClick={() => {
+              setShowNewFolder(false);
+              setNewFolderName('');
+            }}
+          >
+            {t('common.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+        </div>
+      )}
 
       <div
         style={{
@@ -206,7 +295,24 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
             <Spin />
           </div>
         ) : error ? (
-          <div style={{ padding: 16, color: 'var(--color-text-3)' }}>{error}</div>
+          <div style={{ padding: 16 }}>
+            <div style={{ color: 'var(--color-danger-6)', marginBottom: 12 }}>{error}</div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              {currentDir && currentDir !== '/' && (
+                <Button size='small' onClick={() => void load(parentOf(currentDir))}>
+                  {t('fileSelection.webFsPicker.up', { defaultValue: 'Up' })}
+                </Button>
+              )}
+              <Button size='small' onClick={() => void load(currentDir || pathDraft.trim() || '/')}>
+                {t('common.refresh', { defaultValue: 'Refresh' })}
+              </Button>
+              {wantsDirectory && pathDraft.trim() && (
+                <Button size='small' type='primary' onClick={handleConfirm}>
+                  {t('fileSelection.webFsPicker.selectTypedPath', { defaultValue: 'Select this path' })}
+                </Button>
+              )}
+            </div>
+          </div>
         ) : visibleEntries.length === 0 ? (
           <div style={{ padding: 16, color: 'var(--color-text-3)' }}>
             {t('fileSelection.webFsPicker.empty', { defaultValue: 'Nothing here' })}

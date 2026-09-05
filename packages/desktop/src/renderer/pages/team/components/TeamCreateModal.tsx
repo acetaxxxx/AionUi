@@ -191,6 +191,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
           })}
           triggerTestId='team-create-workspace-trigger'
           menuTestId='team-create-workspace-menu'
+          menuZIndex={10030}
         />
       </div>
     </div>

@@ -59,3 +59,76 @@ export const matchesFilters = (name: string, filters: NonNullable<ShowOpenOption
   const lower = name.toLowerCase();
   return exts.some((ext) => lower.endsWith(`.${ext.toLowerCase()}`));
 };
+
+/**
+ * Resolves a new child folder path under parentDir.
+ * Normalizes leading/trailing slashes and handles filesystem root.
+ */
+export const resolveNewFolderPath = (parentDir: string, folderName: string): string => {
+  const trimmedName = folderName.trim().replace(/^[\\/]+|[\\/]+$/g, '');
+  if (!trimmedName) return parentDir || '/';
+  const base = (parentDir || '/').trim().replace(/\/+$/, '');
+  return base ? `${base}/${trimmedName}` : `/${trimmedName}`;
+};
+
+/**
+ * Resolves which path should be confirmed upon OK.
+ * In directory mode, a typed path in draft takes precedence over the currently listed directory.
+ */
+export const resolveConfirmPath = (pathDraft: string, currentDir: string, wantsDirectory: boolean): string => {
+  const trimmedDraft = pathDraft.trim();
+  if (wantsDirectory && trimmedDraft) {
+    return trimmedDraft;
+  }
+  return currentDir;
+};
+
+export type FsErrorKind = 'forbidden' | 'notFound' | 'generic';
+
+/**
+ * Classifies a filesystem error into semantic categories for user feedback.
+ */
+export const classifyFsError = (err: unknown): FsErrorKind => {
+  if (typeof err !== 'object' || err === null) {
+    const str = String(err || '').toLowerCase();
+    if (str.includes('403') || str.includes('sandbox') || str.includes('forbidden') || str.includes('permission')) {
+      return 'forbidden';
+    }
+    if (str.includes('404') || str.includes('not found') || str.includes('not exist') || str.includes('enoent')) {
+      return 'notFound';
+    }
+    return 'generic';
+  }
+
+  const errObj = err as {
+    status?: number;
+    statusCode?: number;
+    code?: string | number;
+    message?: string;
+    response?: { status?: number };
+  };
+
+  const status = errObj.status ?? errObj.statusCode ?? errObj.response?.status;
+  if (status === 403) return 'forbidden';
+  if (status === 404) return 'notFound';
+
+  const code = String(errObj.code || '').toUpperCase();
+  if (code === 'EACCES' || code === 'EPERM' || code === 'PATH_OUTSIDE_SANDBOX') return 'forbidden';
+  if (code === 'ENOENT' || code === 'FILE_NOT_FOUND' || code === 'DIR_NOT_FOUND') return 'notFound';
+
+  const msg = String(errObj.message || '').toLowerCase();
+  if (msg.includes('403') || msg.includes('sandbox') || msg.includes('forbidden') || msg.includes('permission')) {
+    return 'forbidden';
+  }
+  if (
+    msg.includes('404') ||
+    msg.includes('not found') ||
+    msg.includes('not exist') ||
+    msg.includes('no such file') ||
+    msg.includes('enoent')
+  ) {
+    return 'notFound';
+  }
+
+  return 'generic';
+};
