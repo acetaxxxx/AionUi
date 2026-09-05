@@ -70,8 +70,14 @@ describe('cloudflare Access JWT verification', () => {
       },
     ],
     ['the wrong audience', () => signToken({ sub: 'cloudflare-subject' }, { audience: 'another-audience' })],
-    ['the wrong issuer', () => signToken({ sub: 'cloudflare-subject' }, { issuer: 'https://other.cloudflareaccess.com' })],
-    ['an expired token', () => signToken({ sub: 'cloudflare-subject' }, { expiration: Math.floor(Date.now() / 1000) - 1 })],
+    [
+      'the wrong issuer',
+      () => signToken({ sub: 'cloudflare-subject' }, { issuer: 'https://other.cloudflareaccess.com' }),
+    ],
+    [
+      'an expired token',
+      () => signToken({ sub: 'cloudflare-subject' }, { expiration: Math.floor(Date.now() / 1000) - 1 }),
+    ],
     ['a token without a subject', () => signToken({ sub: '' })],
   ])('rejects %s', async (_description, createToken) => {
     await expect(verifier(await createToken())).resolves.toBeNull();
