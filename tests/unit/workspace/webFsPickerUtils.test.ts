@@ -4,9 +4,12 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  classifyFsError,
   matchesFilters,
   normalizeEntry,
   parentOf,
+  resolveConfirmPath,
+  resolveNewFolderPath,
   sortEntries,
 } from '@/renderer/components/workspace/webFsPickerUtils';
 
@@ -122,5 +125,75 @@ describe('matchesFilters', () => {
 
   it('requires a dot separator so suffix lookalikes do not match', () => {
     expect(matchesFilters('notzip', [{ name: 'Archives', extensions: ['zip'] }])).toBe(false);
+  });
+});
+
+describe('resolveNewFolderPath', () => {
+  it('appends a clean folder name to a directory', () => {
+    expect(resolveNewFolderPath('/data/projects', 'my-team')).toBe('/data/projects/my-team');
+  });
+
+  it('handles root parent directory', () => {
+    expect(resolveNewFolderPath('/', 'workspace')).toBe('/workspace');
+    expect(resolveNewFolderPath('', 'workspace')).toBe('/workspace');
+  });
+
+  it('strips redundant slashes from parent and child', () => {
+    expect(resolveNewFolderPath('/data/workspaces///', '//team-a//')).toBe('/data/workspaces/team-a');
+    expect(resolveNewFolderPath('/data/workspaces', '\\team-b\\')).toBe('/data/workspaces/team-b');
+  });
+
+  it('returns parentDir when folder name is empty or whitespace', () => {
+    expect(resolveNewFolderPath('/data/projects', '')).toBe('/data/projects');
+    expect(resolveNewFolderPath('/data/projects', '   ')).toBe('/data/projects');
+  });
+});
+
+describe('resolveConfirmPath', () => {
+  it('prefers trimmed pathDraft in directory mode', () => {
+    expect(resolveConfirmPath('/data/new-team', '/data/default', true)).toBe('/data/new-team');
+    expect(resolveConfirmPath('  /data/trimmed  ', '/data/default', true)).toBe('/data/trimmed');
+  });
+
+  it('falls back to currentDir in directory mode when pathDraft is empty', () => {
+    expect(resolveConfirmPath('', '/data/default', true)).toBe('/data/default');
+    expect(resolveConfirmPath('   ', '/data/default', true)).toBe('/data/default');
+  });
+
+  it('returns currentDir in file mode regardless of pathDraft', () => {
+    expect(resolveConfirmPath('/data/draft', '/data/default', false)).toBe('/data/default');
+  });
+});
+
+describe('classifyFsError', () => {
+  it('classifies 403 status as forbidden', () => {
+    expect(classifyFsError({ status: 403 })).toBe('forbidden');
+    expect(classifyFsError({ statusCode: 403 })).toBe('forbidden');
+    expect(classifyFsError({ response: { status: 403 } })).toBe('forbidden');
+  });
+
+  it('classifies 404 status as notFound', () => {
+    expect(classifyFsError({ status: 404 })).toBe('notFound');
+    expect(classifyFsError({ statusCode: 404 })).toBe('notFound');
+  });
+
+  it('classifies permission and sandbox codes/messages as forbidden', () => {
+    expect(classifyFsError({ code: 'PATH_OUTSIDE_SANDBOX' })).toBe('forbidden');
+    expect(classifyFsError({ code: 'EACCES' })).toBe('forbidden');
+    expect(classifyFsError({ code: 'EPERM' })).toBe('forbidden');
+    expect(classifyFsError(new Error('path is outside allowed sandbox'))).toBe('forbidden');
+    expect(classifyFsError('Forbidden: sandbox restriction')).toBe('forbidden');
+  });
+
+  it('classifies not-found codes/messages as notFound', () => {
+    expect(classifyFsError({ code: 'ENOENT' })).toBe('notFound');
+    expect(classifyFsError({ code: 'DIR_NOT_FOUND' })).toBe('notFound');
+    expect(classifyFsError(new Error('No such file or directory: /path/foo'))).toBe('notFound');
+  });
+
+  it('falls back to generic for unknown errors', () => {
+    expect(classifyFsError({ status: 500 })).toBe('generic');
+    expect(classifyFsError(new Error('Network timeout'))).toBe('generic');
+    expect(classifyFsError(null)).toBe('generic');
   });
 });

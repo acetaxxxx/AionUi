@@ -35,4 +35,27 @@ describe('WebFsPicker responsive dialog', () => {
     expect(modal?.style.width).toBe('calc(100vw - 32px)');
     expect(modal?.style.maxWidth).toBe('640px');
   });
+
+  it('renders modal wrapper with z-index >= 10500 above TeamCreateModal', async () => {
+    render(<WebFsPicker options={{ properties: ['openDirectory', 'createDirectory'] }} onDone={vi.fn()} />);
+
+    const dialog = await screen.findByRole('dialog');
+    const modalWrap = dialog.closest<HTMLElement>('.arco-modal-wrapper');
+
+    expect(modalWrap?.style.zIndex).toBe('10500');
+  });
+
+  it('renders refresh and new folder buttons when directory mode is active', async () => {
+    render(<WebFsPicker options={{ properties: ['openDirectory', 'createDirectory'] }} onDone={vi.fn()} />);
+
+    expect(await screen.findByTitle('Refresh')).toBeTruthy();
+    expect(await screen.findByTitle('New Folder')).toBeTruthy();
+  });
+
+  it('omits new folder button in pure file selection mode', async () => {
+    render(<WebFsPicker options={{ properties: ['openFile'] }} onDone={vi.fn()} />);
+
+    expect(await screen.findByTitle('Refresh')).toBeTruthy();
+    expect(screen.queryByTitle('New Folder')).toBeNull();
+  });
 });
