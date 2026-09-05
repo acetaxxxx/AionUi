@@ -310,7 +310,8 @@ export function useCronJobsMap() {
   const fetchAllJobs = useCallback(async () => {
     setLoading(true);
     try {
-      const allJobs = await repairCronJobTimeZones(await ipcBridge.cron.listJobs.invoke());
+      const rawJobs = await ipcBridge.cron.listJobs.invoke();
+      const allJobs = await repairCronJobTimeZones(Array.isArray(rawJobs) ? rawJobs : []);
       const map = new Map<string, ICronJob[]>();
 
       for (const job of allJobs || []) {

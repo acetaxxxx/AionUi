@@ -19,10 +19,10 @@ export const useAssistantList = () => {
   const localeKey = resolveLocaleKey(i18n.language);
   const previousLocaleKeyRef = useRef(localeKey);
   const { assistantOrder, setAssistantOrder } = useAssistantOrder();
-
   const loadAssistants = useCallback(async () => {
     try {
-      const list = await ipcBridge.assistants.list.invoke();
+      const rawList = await ipcBridge.assistants.list.invoke();
+      const list = Array.isArray(rawList) ? rawList : [];
       setAssistants(list);
       setActiveAssistantId((prev) => {
         if (prev && list.some((a) => a.id === prev)) return prev;

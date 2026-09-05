@@ -458,12 +458,14 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({
   const [visible, setVisible] = useState(false);
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('smileys');
   const [activeTab, setActiveTab] = useState<'emoji' | 'builtin'>('emoji');
+  const safeBuiltinAvatars = useMemo(() => (Array.isArray(builtinAvatars) ? builtinAvatars : []), [builtinAvatars]);
 
   // Load recent emojis from localStorage
   const recentEmojis = useMemo(() => {
     try {
       const stored = localStorage.getItem(RECENT_EMOJIS_KEY);
-      return stored ? JSON.parse(stored) : [];
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -522,9 +524,9 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({
       return;
     }
 
-    const hasMatchingBuiltinAvatar = builtinAvatars.some((avatarOption) => avatarOption.src === value);
+    const hasMatchingBuiltinAvatar = safeBuiltinAvatars.some((avatarOption) => avatarOption.src === value);
     setActiveTab(hasMatchingBuiltinAvatar ? 'builtin' : 'emoji');
-  }, [builtinAvatars, value, visible]);
+  }, [safeBuiltinAvatars, value, visible]);
 
   const emojiPickerContent = (
     <div className='w-280px'>
@@ -567,9 +569,9 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({
 
   const builtinAvatarContent = (
     <div className='w-280px p-8px max-h-264px overflow-y-auto'>
-      {builtinAvatars.length > 0 ? (
+      {safeBuiltinAvatars.length > 0 ? (
         <div className='grid grid-cols-4 gap-8px'>
-          {builtinAvatars.map((avatarOption) => {
+          {safeBuiltinAvatars.map((avatarOption) => {
             const isSelected = avatarOption.src === value;
             return (
               <Button
@@ -596,7 +598,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({
   );
 
   const pickerContent =
-    builtinAvatars.length > 0 ? (
+    safeBuiltinAvatars.length > 0 ? (
       <div className='w-280px'>
         <Tabs activeTab={activeTab} onChange={(key) => setActiveTab(key as 'emoji' | 'builtin')} size='small'>
           <Tabs.TabPane

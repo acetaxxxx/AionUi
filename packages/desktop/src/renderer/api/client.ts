@@ -26,7 +26,13 @@ function getCsrfTokenFromCookie(): string | undefined {
   const match = document.cookie.match(/(?:^|;\s*)(?:aionui-csrf-token|csrf-token)\s*=\s*([^;]+)/);
   if (match) return decodeURIComponent(match[1]);
   try {
-    return sessionStorage.getItem('aionui-csrf-token') || localStorage.getItem('aionui-csrf-token') || undefined;
+    return (
+      sessionStorage.getItem('aionui-csrf-token') ||
+      localStorage.getItem('aionui-csrf-token') ||
+      sessionStorage.getItem('csrf-token') ||
+      localStorage.getItem('csrf-token') ||
+      undefined
+    );
   } catch {
     return undefined;
   }
@@ -40,7 +46,10 @@ async function request<T>(
   options?: RequestOptions
 ): Promise<T> {
   const url = `${baseURL}${path}`;
-  const headers: Record<string, string> = { ...options?.headers };
+  const headers: Record<string, string> = {
+    'X-Requested-With': 'XMLHttpRequest',
+    ...options?.headers,
+  };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (method !== 'GET' && method !== 'HEAD') {
     const csrfToken = getCsrfTokenFromCookie();
@@ -70,9 +79,14 @@ async function request<T>(
     throw new ApiError(response.status, response.statusText, errorBody);
   }
 
-  const contentType = response.headers.get('Content-Type');
-  if (contentType?.includes('application/json')) return (await response.json()) as T;
-  return undefined as T;
+  if (response.status === 204) return undefined as T;
+  const contentType = response.headers.get('Content-Type') || '';
+  if (contentType.includes('application/json')) return (await response.json()) as T;
+  const rawText = await response.text().catch(() => '');
+  if (rawText.trim() === '' && !contentType.includes('text/html')) {
+    return undefined as T;
+  }
+  throw new ApiError(response.status, response.statusText, rawText || `Unexpected non-JSON response (${contentType})`);
 }
 
 export function createApiClient(baseURL: string) {

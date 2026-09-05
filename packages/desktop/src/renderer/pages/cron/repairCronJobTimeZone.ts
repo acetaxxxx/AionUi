@@ -49,7 +49,10 @@ export async function repairCronJobTimeZone(job: ICronJob): Promise<ICronJob> {
   return repairPromise;
 }
 
-export async function repairCronJobTimeZones(jobs: ICronJob[]): Promise<ICronJob[]> {
+export async function repairCronJobTimeZones(jobs?: ICronJob[]): Promise<ICronJob[]> {
+  if (!Array.isArray(jobs)) {
+    return [];
+  }
   return Promise.all(jobs.map((job) => repairCronJobTimeZone(job)));
 }
 

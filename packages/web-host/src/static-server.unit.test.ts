@@ -535,6 +535,33 @@ describe('static-server', () => {
     expect(await teamsResponse.json()).toEqual({ success: false, error: 'CF_ACCESS_UNVERIFIED' });
   });
 
+  it('forwards GET data APIs without dot to backend when Cloudflare assertion is verified', async () => {
+    vi.mocked(getCloudflareAccessIdentity).mockResolvedValue({
+      subject: 'sub-user-123',
+      email: 'user@example.com',
+      payload: {},
+    });
+    const backend = await startMockBackend((req, res) => {
+      if (req.url?.startsWith('/api/conversations')) {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ success: true, data: [{ id: 'conv-1' }] }));
+        return;
+      }
+      res.writeHead(404).end();
+    });
+    stopBackend = backend.close;
+    handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+    const headers = { 'cf-access-jwt-assertion': 'verified-token' };
+    const response = await fetch(`${handle.localUrl}/api/conversations?limit=10000`, { headers });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    const json = (await response.json()) as { success: boolean; data: Array<{ id: string }> };
+    expect(json.success).toBe(true);
+    expect(json.data).toEqual([{ id: 'conv-1' }]);
+  });
+
   it('forwards assertion to backend /api/auth/user to refresh an expired session', async () => {
     let receivedAssertion: string | undefined;
     let forwardedCookie: string | undefined;
