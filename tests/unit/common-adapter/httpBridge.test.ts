@@ -166,7 +166,10 @@ describe('httpBridge', () => {
       expect(fetchSpy).toHaveBeenCalledTimes(1);
       expect(fetchSpy.mock.calls[0][1]?.method).toBe('POST');
       expect(fetchSpy.mock.calls[0][1]?.body).toBe('{"k":"v"}');
-      expect(fetchSpy.mock.calls[0][1]?.headers).toEqual({ 'Content-Type': 'application/json' });
+      expect(fetchSpy.mock.calls[0][1]?.headers).toEqual({
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      });
     });
 
     it('applies mapBody custom mapper', async () => {
@@ -537,7 +540,9 @@ describe('httpBridge', () => {
         expect.stringContaining('/api/test'),
         expect.objectContaining({
           method: 'GET',
-          headers: {},
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+          },
         })
       );
     });
@@ -555,7 +560,10 @@ describe('httpBridge', () => {
       await httpRequest('POST', '/api/create', { key: 'value' });
 
       expect(fetchSpy.mock.calls[0][1]?.body).toBe('{"key":"value"}');
-      expect(fetchSpy.mock.calls[0][1]?.headers).toEqual({ 'Content-Type': 'application/json' });
+      expect(fetchSpy.mock.calls[0][1]?.headers).toEqual({
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      });
     });
 
     it('does not log browser Push subscription material', async () => {
