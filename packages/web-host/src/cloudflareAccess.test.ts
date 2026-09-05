@@ -51,21 +51,28 @@ describe('cloudflare Access JWT verification', () => {
     });
   });
 
+  it('accepts a valid Cloudflare Access token with optional email omitted', async () => {
+    const token = await signToken({ sub: 'cloudflare-subject', email: undefined });
+
+    await expect(verifier(token)).resolves.toMatchObject({
+      subject: 'cloudflare-subject',
+    });
+  });
+
   it.each([
     [
       'a tampered signature',
       async () => {
-        const token = await signToken();
+        const token = await signToken({ sub: 'cloudflare-subject' });
         const [header, payload, signature] = token.split('.');
         const tamperedSignature = `${signature[0] === 'a' ? 'b' : 'a'}${signature.slice(1)}`;
         return `${header}.${payload}.${tamperedSignature}`;
       },
     ],
-    ['the wrong audience', () => signToken({}, { audience: 'another-audience' })],
-    ['the wrong issuer', () => signToken({}, { issuer: 'https://other.cloudflareaccess.com' })],
-    ['an expired token', () => signToken({}, { expiration: Math.floor(Date.now() / 1000) - 1 })],
-    ['a non-application token', () => signToken({ type: 'service' })],
-    ['a token without an email', () => signToken({ email: undefined })],
+    ['the wrong audience', () => signToken({ sub: 'cloudflare-subject' }, { audience: 'another-audience' })],
+    ['the wrong issuer', () => signToken({ sub: 'cloudflare-subject' }, { issuer: 'https://other.cloudflareaccess.com' })],
+    ['an expired token', () => signToken({ sub: 'cloudflare-subject' }, { expiration: Math.floor(Date.now() / 1000) - 1 })],
+    ['a token without a subject', () => signToken({ sub: '' })],
   ])('rejects %s', async (_description, createToken) => {
     await expect(verifier(await createToken())).resolves.toBeNull();
   });

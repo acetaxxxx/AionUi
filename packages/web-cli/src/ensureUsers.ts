@@ -16,6 +16,7 @@ import path from 'node:path';
 export type UserSpec = {
   username: string;
   password: string;
+  email?: string;
 };
 
 export type EnsureUsersOptions = {
@@ -76,11 +77,12 @@ export function parseUsersEnv(rawEnv?: string): UserSpec[] {
     const usernameStart = isEmailMapping ? firstColonIdx + 1 : 0;
     const passwordStart = isEmailMapping ? secondColonIdx + 1 : firstColonIdx + 1;
     if (firstColonIdx > 0 && passwordStart > usernameStart) {
+      const email = isEmailMapping ? entry.slice(0, firstColonIdx).trim() : undefined;
       const usernameEnd = isEmailMapping ? secondColonIdx : firstColonIdx;
       const username = entry.slice(usernameStart, usernameEnd).trim();
       const password = entry.slice(passwordStart).trim();
       if (username && password) {
-        specs.push({ username, password });
+        specs.push({ username, password, email });
       }
     }
   }

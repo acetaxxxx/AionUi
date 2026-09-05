@@ -80,16 +80,21 @@ function getLanIP(): string | null {
 }
 
 function forwardToBackend(req: IncomingMessage, res: ServerResponse, backendPort: number): void {
+  const headers = { ...req.headers, host: `127.0.0.1:${backendPort}` };
+  const cfToken = extractCloudflareAccessToken(req.headers);
+  if (cfToken && !headers['cf-access-jwt-assertion']) {
+    headers['cf-access-jwt-assertion'] = cfToken;
+  }
   const options: http.RequestOptions = {
     hostname: '127.0.0.1',
     port: backendPort,
     path: req.url,
     method: req.method,
-    headers: { ...req.headers, host: `127.0.0.1:${backendPort}` },
+    headers,
   };
   const proxy = http.request(options, (proxyRes) => {
     const isLogout = req.url?.startsWith('/logout') || req.url?.startsWith('/api/auth/logout');
-    const isCfAccess = Boolean(extractCloudflareAccessToken(req.headers));
+    const isCfAccess = Boolean(cfToken);
 
     const resHeaders = { ...proxyRes.headers };
     if (isLogout && isCfAccess) {
@@ -394,72 +399,40 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
 
       // Cloudflare Access is the source of truth for remote WebUI identity.
       // Local requests without a Cloudflare token keep the normal AION login flow.
-      const hasSessionCookie = Boolean(getCookieValue(req.headers.cookie, 'aionui-session'));
       const isAuthCheck = req.url === '/api/auth/user' || req.url.startsWith('/api/auth/user?');
       const isDocumentGet =
         req.method === 'GET' && (!req.url.includes('.') || req.url === '/' || req.url.startsWith('/?'));
 
       const cloudflareAccessToken = extractCloudflareAccessToken(req.headers);
-      if ((isDocumentGet || isAuthCheck) && cloudflareAccessToken) {
-        const cfIdentity = await getCloudflareAccessIdentity(req.headers);
-        // Cloudflare Access remains the outer gate. If origin-side JWT
-        // verification is temporarily unavailable, continue with the normal
-        // AION flow instead of turning a transient edge problem into a logout.
-        if (cfIdentity?.email) {
-          const userMatch = getAionUserForEmail(cfIdentity.email);
-          if (!userMatch) {
-            if (isAuthCheck) {
-              writeCloudflareAuthFailure(req, res, 403, 'CF_IDENTITY_NOT_MAPPED');
-            } else {
-              res.setHeader('Set-Cookie', getExpiredAionSessionCookie(req));
-              await serveHandler(req, res, {
-                public: opts.staticDir,
-                rewrites: [{ source: '**', destination: '/index.html' }],
-              });
-            }
+      if (cloudflareAccessToken) {
+        // Guarantee the assertion header is forwarded on all backend requests
+        if (!req.headers['cf-access-jwt-assertion']) {
+          req.headers['cf-access-jwt-assertion'] = cloudflareAccessToken;
+        }
+
+        const cfConfig = resolveCloudflareAccessConfig();
+        if (cfConfig) {
+          const cfIdentity = await getCloudflareAccessIdentity(req.headers);
+          if (!cfIdentity) {
+            // Edge verification failed: reject immediately, never fallback to random or local user
+            writeCloudflareAuthFailure(req, res, 401, 'CF_ACCESS_UNVERIFIED');
             return;
           }
+        }
 
-          const currentUsername = hasSessionCookie
-            ? await getBackendSessionUsername(opts.backendPort, req.headers.cookie ?? '')
-            : null;
-          const sessionMatchesCloudflareIdentity = currentUsername === userMatch.username;
+        // For auth check, forward immediately to backend so backend verifies and provisions user
+        if (isAuthCheck) {
+          forwardToBackend(req, res, opts.backendPort);
+          return;
+        }
 
-          if (!sessionMatchesCloudflareIdentity) {
-            const cookieHeader = await autoLoginUser(opts.backendPort, userMatch.username, userMatch.password);
-            if (!cookieHeader) {
-              if (isAuthCheck) {
-                writeCloudflareAuthFailure(req, res, 401, 'AION_SESSION_REFRESH_FAILED');
-              } else {
-                res.setHeader('Set-Cookie', getExpiredAionSessionCookie(req));
-                await serveHandler(req, res, {
-                  public: opts.staticDir,
-                  rewrites: [{ source: '**', destination: '/index.html' }],
-                });
-              }
-              return;
-            }
-
-            let formattedCookie = cookieHeader;
-            if (!formattedCookie.toLowerCase().includes('path=')) formattedCookie += '; Path=/';
-            if (!formattedCookie.toLowerCase().includes('samesite=')) formattedCookie += '; SameSite=Lax';
-            if (isHttpsRequest(req) && !formattedCookie.toLowerCase().includes('secure')) {
-              formattedCookie += '; Secure';
-            }
-            res.setHeader('Set-Cookie', formattedCookie);
-            req.headers.cookie = replaceAionSessionCookie(req.headers.cookie, formattedCookie);
-
-            if (isAuthCheck) {
-              forwardToBackend(req, res, opts.backendPort);
-              return;
-            }
-
-            await serveHandler(req, res, {
-              public: opts.staticDir,
-              rewrites: [{ source: '**', destination: '/index.html' }],
-            });
-            return;
-          }
+        // For initial document request with Cloudflare token, serve SPA index
+        if (isDocumentGet) {
+          await serveHandler(req, res, {
+            public: opts.staticDir,
+            rewrites: [{ source: '**', destination: '/index.html' }],
+          });
+          return;
         }
       }
 
