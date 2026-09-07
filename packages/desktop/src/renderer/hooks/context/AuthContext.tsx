@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { httpRequest } from '@/common/adapter/httpBridge';
+import { refreshSession } from '@/common/adapter/sessionRefresh';
 import { PREVIEW_SCOPE_KEY_PREFIX } from '@/renderer/pages/conversation/Preview/context/previewScope';
 import {
   clearPushSubscriptionId,
@@ -12,7 +13,6 @@ function clearCookie(name: string, path = '/'): void {
   document.cookie = `${name}=; path=${path}; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
 }
-
 const CSRF_COOKIE_NAME = 'csrf-token';
 const AIONUI_CSRF_COOKIE_NAME = 'aionui-csrf-token';
 
@@ -161,12 +161,26 @@ async function fetchCurrentUser(signal?: AbortSignal): Promise<CurrentUserFetchR
       headers['aionui-csrf-token'] = csrfToken;
     }
 
-    const response = await fetch(AUTH_USER_ENDPOINT, {
+    let response = await fetch(AUTH_USER_ENDPOINT, {
       method: 'GET',
       headers,
       credentials: 'include',
       signal,
     });
+
+    // Refresh an expired WebUI session once before declaring the user logged out.
+    // The shared refresh primitive single-flights concurrent auth checks.
+    if (response.status === 401) {
+      const refreshed = await refreshSession();
+      if (refreshed) {
+        response = await fetch(AUTH_USER_ENDPOINT, {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+          signal,
+        });
+      }
+    }
 
     const contentType = response.headers.get('content-type') || '';
     const isHtmlIntercepted = contentType.includes('text/html');
