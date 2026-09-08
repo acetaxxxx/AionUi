@@ -1,5 +1,5 @@
 name: '🔍 Resolve PR Context'
-description: 'Resolve the correct ref and base branch for pull_request and workflow_dispatch triggers. Must be called after actions/checkout.'
+description: 'Resolve the correct ref and base branch for pull_request, workflow_dispatch, and merge_group triggers. Must be called after actions/checkout.'
 inputs:
   pr_number:
     description: 'PR number (only used when triggered via workflow_dispatch)'
@@ -22,6 +22,10 @@ runs:
           BASE_REF=$(echo "$PR_INFO" | jq -r '.base.ref')
           git fetch origin "refs/pull/${{ inputs.pr_number }}/head"
           git checkout "$HEAD_SHA"
+          echo "PR_BASE_REF=$BASE_REF" >> $GITHUB_ENV
+        elif [ "${{ github.event_name }}" = "merge_group" ]; then
+          BASE_REF="${GITHUB_REF#refs/heads/gh-readonly-queue/}"
+          BASE_REF="${BASE_REF%%/*}"
           echo "PR_BASE_REF=$BASE_REF" >> $GITHUB_ENV
         else
           echo "PR_BASE_REF=${{ github.base_ref }}" >> $GITHUB_ENV
