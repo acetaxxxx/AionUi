@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { httpRequest } from '@/common/adapter/httpBridge';
+import { revokeCloudflareAccessAndReturnToLogin } from '@/common/adapter/cloudflareLogout';
 import { refreshSession } from '@/common/adapter/sessionRefresh';
 import { PREVIEW_SCOPE_KEY_PREFIX } from '@/renderer/pages/conversation/Preview/context/previewScope';
 import {
@@ -408,6 +409,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       return;
     }
 
+    const hadCloudflareAccess = typeof document !== 'undefined' && document.cookie.includes('CF_Authorization');
     try {
       const activeUserId = user?.id ?? previousUserRef.current?.id;
       if (activeUserId) {
@@ -439,13 +441,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         setUser(null);
         setStatus('unauthenticated');
         clearAuthCache();
-        if (typeof window !== 'undefined') {
-          window.location.href = '/cdn-cgi/access/logout';
-        }
+        await revokeCloudflareAccessAndReturnToLogin();
         return;
       }
     } catch (error) {
       console.error('Logout request failed:', error);
+      if (hadCloudflareAccess) {
+        await revokeCloudflareAccessAndReturnToLogin();
+      }
     } finally {
       previousUserRef.current = null;
       setUser(null);

@@ -26,6 +26,13 @@ describe('Cloudflare expiry recovery source policy', () => {
     expect(logoutSection).toContain('/cdn-cgi/access/logout');
   });
 
+  it('uses the safe logout helper from the login page instead of top-level navigation', () => {
+    const loginPage = read('packages/desktop/src/renderer/pages/login/index.tsx');
+
+    expect(loginPage).toContain('revokeCloudflareAccessAndReturnToLogin');
+    expect(loginPage).not.toContain("window.location.href = '/cdn-cgi/access/logout'");
+  });
+
   it('bypasses edge authentication and auth navigation from the service-worker cache', () => {
     const serviceWorker = read('public/sw.js');
 
