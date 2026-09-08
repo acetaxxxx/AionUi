@@ -4,6 +4,7 @@
 // activate handler deletes v1, flushing any poisoned cached entries.
 const CACHE_NAME = 'aionui-webui-v2';
 const NON_CACHEABLE_PATHS = new Set(['/qr-login']);
+const AUTH_NAVIGATION_PATHS = new Set(['/login', '/logout']);
 const OFFLINE_PAGE_URL = new URL('./index.html', self.location.href).toString();
 const PRECACHE_URLS = [
   new URL('./', self.location.href).toString(),
@@ -187,7 +188,13 @@ function shouldHandleRequest(request) {
     return false;
   }
 
-  return !url.pathname.startsWith('/api/') && !NON_CACHEABLE_PATHS.has(url.pathname);
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/cdn-cgi/')) {
+    return false;
+  }
+  if (AUTH_NAVIGATION_PATHS.has(url.pathname) || NON_CACHEABLE_PATHS.has(url.pathname)) {
+    return false;
+  }
+  return true;
 }
 
 async function networkFirst(request) {

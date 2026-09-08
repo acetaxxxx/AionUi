@@ -262,8 +262,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         window.location.pathname !== '/login' &&
         !window.location.hash.includes('/login')
       ) {
-        console.warn('[AuthContext] SSO / CloudAccess session expired (HTML intercepted), triggering SSO logout...');
-        window.location.href = '/cdn-cgi/access/logout';
+        console.warn('[AuthContext] SSO / CloudAccess session expired (HTML intercepted), returning to login...');
+        window.location.href = '/login';
         return;
       }
     }

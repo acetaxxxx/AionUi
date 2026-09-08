@@ -16,12 +16,10 @@ export const PwaAuthExpiredModal: React.FC = () => {
 
   const handleSsoReload = useCallback(() => {
     if (typeof window !== 'undefined') {
-      const isCfAccess = document.cookie.includes('CF_Authorization');
-      if (isCfAccess) {
-        window.location.href = '/cdn-cgi/access/logout';
-      } else {
-        window.location.href = window.location.origin;
-      }
+      // Let the protected same-origin route invoke Cloudflare Access login.
+      // Expiry recovery must not revoke the Access session or strand the PWA
+      // on the provider's logout page.
+      window.location.href = '/login';
     }
   }, []);
 
