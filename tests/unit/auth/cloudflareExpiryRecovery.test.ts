@@ -4,6 +4,9 @@ import { describe, expect, it } from 'vitest';
 
 const root = resolve(process.cwd());
 const read = (path: string): string => readFileSync(resolve(root, path), 'utf8');
+const sectionBetween = (source: string, start: string, end: string): string => {
+  return source.slice(source.indexOf(start), source.indexOf(end));
+};
 
 describe('Cloudflare expiry recovery source policy', () => {
   it('returns the PWA expiry action to the same-origin login route', () => {
@@ -16,12 +19,8 @@ describe('Cloudflare expiry recovery source policy', () => {
   it('returns HTML-intercepted expiry to login while preserving explicit logout', () => {
     const authContext = read('packages/desktop/src/renderer/hooks/context/AuthContext.tsx');
     const logoutHelper = read('packages/desktop/src/common/adapter/cloudflareLogout.ts');
-    const expiryStart = authContext.indexOf('result.ssoIntercepted');
-    const expiryEnd = authContext.indexOf('  useEffect(() => {');
-    const expirySection = authContext.slice(expiryStart, expiryEnd);
-    const logoutStart = authContext.indexOf('const logout =');
-    const logoutEnd = authContext.indexOf('const value =');
-    const logoutSection = authContext.slice(logoutStart, logoutEnd);
+    const expirySection = sectionBetween(authContext, 'result.ssoIntercepted', '  useEffect(() => {');
+    const logoutSection = sectionBetween(authContext, 'const logout =', 'const value =');
 
     expect(expirySection).toContain("window.location.href = '/login'");
     expect(expirySection).not.toContain('/cdn-cgi/access/logout');
