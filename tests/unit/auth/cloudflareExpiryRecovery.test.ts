@@ -15,6 +15,7 @@ describe('Cloudflare expiry recovery source policy', () => {
 
   it('returns HTML-intercepted expiry to login while preserving explicit logout', () => {
     const authContext = read('packages/desktop/src/renderer/hooks/context/AuthContext.tsx');
+    const logoutHelper = read('packages/desktop/src/common/adapter/cloudflareLogout.ts');
     const expirySection = authContext.slice(
       authContext.indexOf('result.ssoIntercepted'),
       authContext.indexOf('  useEffect(() => {')
@@ -26,7 +27,9 @@ describe('Cloudflare expiry recovery source policy', () => {
 
     expect(expirySection).toContain("window.location.href = '/login'");
     expect(expirySection).not.toContain('/cdn-cgi/access/logout');
-    expect(logoutSection).toContain('/cdn-cgi/access/logout');
+    expect(logoutSection).toContain('revokeCloudflareAccessAndReturnToLogin');
+    expect(logoutHelper).toContain("fetch('/cdn-cgi/access/logout'");
+    expect(logoutHelper).toContain("window.location.assign('/login')");
   });
 
   it('uses the safe logout helper from the login page instead of top-level navigation', () => {

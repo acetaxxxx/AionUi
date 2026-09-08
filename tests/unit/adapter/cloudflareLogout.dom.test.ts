@@ -2,10 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { revokeCloudflareAccessAndReturnToLogin } from '@/common/adapter/cloudflareLogout';
 
 describe('Cloudflare logout recovery', () => {
-  let assign: ReturnType<typeof vi.spyOn>;
+  let assign: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    assign = vi.spyOn(window.location, 'assign').mockImplementation(() => undefined);
+    assign = vi.fn();
+    vi.stubGlobal('window', { location: { assign } });
   });
 
   afterEach(() => {
