@@ -8,6 +8,8 @@ function sectionBetween(source: string, start: string, end: string): string {
   return source.slice(source.indexOf(start), source.indexOf(end));
 }
 
+// Source-policy string assertions intentionally retain their explicit layout.
+// oxfmt-ignore
 describe('Cloudflare expiry recovery source policy', () => {
   it('returns the PWA expiry action to the same-origin login route', () => {
     const modal = read('packages/desktop/src/renderer/components/layout/PwaAuthExpiredModal.tsx');
