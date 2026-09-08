@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 
 const root = resolve(process.cwd());
 const read = (path: string): string => readFileSync(resolve(root, path), 'utf8');
-const sectionBetween = (source: string, start: string, end: string): string => {
+function sectionBetween(source: string, start: string, end: string): string {
   return source.slice(source.indexOf(start), source.indexOf(end));
-};
+}
 
 describe('Cloudflare expiry recovery source policy', () => {
   it('returns the PWA expiry action to the same-origin login route', () => {
