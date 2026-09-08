@@ -21,7 +21,7 @@ describe('Cloudflare expiry recovery source policy', () => {
     );
     const logoutSection = authContext.slice(
       authContext.indexOf('const logout ='),
-      authContext.indexOf('const value ='),
+      authContext.indexOf('const value =')
     );
 
     expect(expirySection).toContain("window.location.href = '/login'");
