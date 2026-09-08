@@ -19,7 +19,10 @@ describe('Cloudflare expiry recovery source policy', () => {
       authContext.indexOf('result.ssoIntercepted'),
       authContext.indexOf('  useEffect(() => {')
     );
-    const logoutSection = authContext.slice(authContext.indexOf('const logout ='), authContext.indexOf('const value ='));
+    const logoutSection = authContext.slice(
+      authContext.indexOf('const logout ='),
+      authContext.indexOf('const value ='),
+    );
 
     expect(expirySection).toContain("window.location.href = '/login'");
     expect(expirySection).not.toContain('/cdn-cgi/access/logout');
