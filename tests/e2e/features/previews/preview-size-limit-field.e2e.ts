@@ -41,9 +41,9 @@ test.describe('Settings — preview size limit', () => {
 
     await input.click();
     await input.fill('');
-    for (const key of ['1', 'Period', '5']) {
-      await page.keyboard.press(key);
-    }
+    await page.keyboard.press('1');
+    await page.keyboard.press('Period');
+    await page.keyboard.press('5');
 
     // The dot has to still be there *before* blur: this is the state the bug destroyed.
     await expect(input).toHaveValue('1.5');
@@ -57,12 +57,20 @@ test.describe('Settings — preview size limit', () => {
 
     // Below the minimum, including a fraction below it — a limit of 0 would gate off
     // every file through a field that never says so.
-    for (const tooSmall of ['0', '-5', '0.2']) {
-      await input.click();
-      await input.fill(tooSmall);
-      await commit(page);
-      await expect(input).toHaveValue('1');
-    }
+    await input.click();
+    await input.fill('0');
+    await commit(page);
+    await expect(input).toHaveValue('1');
+
+    await input.click();
+    await input.fill('-5');
+    await commit(page);
+    await expect(input).toHaveValue('1');
+
+    await input.click();
+    await input.fill('0.2');
+    await commit(page);
+    await expect(input).toHaveValue('1');
 
     await input.click();
     await input.fill('999');

@@ -53,12 +53,15 @@ const readBridgeEnv = async (electronApp: ElectronApplication): Promise<BridgeEn
     });
 
   const deadline = Date.now() + 30_000;
-  let latest = await readOnce();
-  while ((latest.port === null || !latest.token) && Date.now() < deadline) {
+  const poll = async (): Promise<BridgeEnv> => {
+    const current = await readOnce();
+    if ((current.port !== null && current.token) || Date.now() >= deadline) {
+      return current;
+    }
     await new Promise((resolve) => setTimeout(resolve, 500));
-    latest = await readOnce();
-  }
-  return latest;
+    return poll();
+  };
+  return poll();
 };
 
 /** GET a path off the bridge from this process; null when nothing is listening. */
@@ -159,11 +162,15 @@ test.describe('Agent browser control (single-target CDP bridge)', () => {
 
     // The backend may still be coming up when this test starts.
     const deadline = Date.now() + 30_000;
-    let inherited = readOurAioncoreEnv();
-    while (inherited === null && Date.now() < deadline) {
+    const pollBackendEnv = async (): Promise<{ token: string | null; activePort: string | null } | null> => {
+      const current = readOurAioncoreEnv();
+      if (current !== null || Date.now() >= deadline) {
+        return current;
+      }
       await new Promise((resolve) => setTimeout(resolve, 500));
-      inherited = readOurAioncoreEnv();
-    }
+      return pollBackendEnv();
+    };
+    const inherited = await pollBackendEnv();
 
     // `ps -E` is not available on every platform; skip rather than fail where it is not.
     test.skip(inherited === null, 'could not read the backend process environment on this platform');

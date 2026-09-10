@@ -572,8 +572,8 @@ const SystemModalContent: React.FC = () => {
           {/* Voice input (speech-to-text) settings */}
           <VoiceInputSection />
 
-          {/* In-app browser: sign-in state and cache */}
-          <BrowserDataSection />
+          {/* In-app browser is Electron-only; WebUI/PWA has no webview or IPC bridge. */}
+          {isDesktop && <BrowserDataSection />}
 
           {/* Developer settings: DevTools + CDP (only visible in dev mode) */}
           <DevSettings />
