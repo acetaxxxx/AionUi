@@ -60,7 +60,8 @@ export type ExplorerView = {
 };
 
 type PersistedUi = {
-  expanded: PeKey[];
+  /** Undefined means no valid saved preference; an empty array is an explicit Collapse All. */
+  expanded?: PeKey[];
   selected?: PeKey;
 };
 
@@ -91,14 +92,17 @@ const getLocalStorage = (): Storage | null => {
 
 const loadUi = (id: string): PersistedUi => {
   const ls = getLocalStorage();
-  if (!ls) return { expanded: [] };
+  if (!ls) return {};
   try {
     const raw = ls.getItem(uiStorageKey(id));
-    if (!raw) return { expanded: [] };
+    if (!raw) return {};
     const parsed = JSON.parse(raw) as Partial<PersistedUi>;
-    return { expanded: Array.isArray(parsed.expanded) ? parsed.expanded : [], selected: parsed.selected };
+    return {
+      expanded: Array.isArray(parsed.expanded) ? parsed.expanded : undefined,
+      selected: parsed.selected,
+    };
   } catch {
-    return { expanded: [] };
+    return {};
   }
 };
 
@@ -376,7 +380,7 @@ export const openProject = (id: string, projectRoots: RootRef[]): void => {
   // in the tree — a leak. Keys are kept only for the current roots' pe_ids.
   const validPeIds = new Set(projectRoots.map((r) => r.pe_id));
   const ui = loadUi(id);
-  const restored = ui.expanded.length > 0 ? ui.expanded : projectRoots.map((r) => peKey(r.pe_id, ''));
+  const restored = ui.expanded ?? projectRoots.map((r) => peKey(r.pe_id, ''));
   expanded = new Set(restored.filter((k) => validPeIds.has(keyToRef(k).pe_id)));
   selected = ui.selected && validPeIds.has(keyToRef(ui.selected).pe_id) ? ui.selected : null;
   commit();
