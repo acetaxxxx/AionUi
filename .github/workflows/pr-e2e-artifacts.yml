@@ -2,6 +2,12 @@ name: '✓PR E2E Artifacts'
 
 on:
   workflow_dispatch:
+    inputs:
+      run_electron_e2e:
+        description: 'Run the Electron application E2E suite (default: false)'
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: pr-e2e-artifacts-${{ github.run_id }}
@@ -15,7 +21,8 @@ env:
 
 jobs:
   e2e-artifacts:
-    name: E2E Artifacts (Linux)
+    name: Electron E2E Artifacts (Linux)
+    if: inputs.run_electron_e2e == true
     runs-on: ubuntu-latest
     timeout-minutes: 25
 

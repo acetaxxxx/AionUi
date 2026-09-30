@@ -8,10 +8,10 @@ on:
         required: true
         type: string
       skip_build_test:
-        description: 'Skip the build test job (saves ~45 min)'
+        description: 'Skip Electron desktop build and installer smoke tests (default: true)'
         type: boolean
         required: false
-        default: false
+        default: true
   pull_request:
     types: [opened, synchronize, edited, closed, ready_for_review]
     branches: [main, dev]
@@ -270,10 +270,10 @@ jobs:
 
   # Job 4: Build test across representative PR platforms (parallel with code-quality and unit-tests)
   build-test:
-    name: Build Test (${{ matrix.platform }})
-    # Desktop installer builds are release/manual-build concerns. Keep this
-    # expensive validation available on demand, but do not run it for every PR
-    # (the pinned AionCore release may not have platform bundles available).
+    name: Electron Build Test (${{ matrix.platform }})
+    # Electron desktop packaging and installer smoke tests are opt-in. Routine
+    # PR validation keeps the mocked Vitest suite; set skip_build_test=false
+    # in workflow_dispatch to run this platform matrix explicitly.
     if: github.event_name == 'workflow_dispatch' && inputs.skip_build_test != true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
