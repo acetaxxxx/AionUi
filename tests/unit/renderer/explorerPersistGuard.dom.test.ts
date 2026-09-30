@@ -21,10 +21,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { peKey } from '@/renderer/pages/conversation/explorer/explorerModel';
 import {
+  collapseAll,
+  getExplorerSnapshot,
   openProject,
+  resetExplorerStoreForTest,
   setExpanded,
   setExpandedKeys,
-  resetExplorerStoreForTest,
 } from '@/renderer/pages/conversation/explorer/explorerStore';
 
 const lsKey = (id: string) => `explorer-ui:${id}`;
@@ -40,6 +42,30 @@ beforeEach(() => {
 afterEach(() => localStorage.clear());
 
 describe('explorerStore persistUi anti-clobber — narrowed to openProject leave-persist (③)', () => {
+  it('defaults roots to expanded only when no valid preference was saved', () => {
+    openProject('first-run', [{ pe_id: 'peA', title: 'A' }]);
+
+    expect(getExplorerSnapshot().expanded).toEqual([peKey('peA', '')]);
+
+    resetExplorerStoreForTest();
+    localStorage.setItem(lsKey('corrupt-preference'), '{invalid');
+    openProject('corrupt-preference', [{ pe_id: 'peB', title: 'B' }]);
+    expect(getExplorerSnapshot().expanded).toEqual([peKey('peB', '')]);
+  });
+
+  it('keeps Collapse All after the store reloads', () => {
+    openProject('A', [{ pe_id: 'peA', title: 'A' }]);
+    setExpanded(peKey('peA', 'sub'), true);
+    collapseAll();
+    expect(readExpanded('A')).toEqual([]);
+
+    // Reset module state while preserving localStorage, as a renderer/store reload does.
+    resetExplorerStoreForTest();
+    openProject('A', [{ pe_id: 'peA', title: 'A' }]);
+
+    expect(getExplorerSnapshot().expanded).toEqual([]);
+  });
+
   it('USER collapse-all persists empty (legit — next open stays collapsed)', () => {
     openProject('A', [{ pe_id: 'peA', title: 'A' }]);
     setExpanded(peKey('peA', ''), true);
