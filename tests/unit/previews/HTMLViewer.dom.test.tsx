@@ -205,7 +205,10 @@ describe('HTMLRenderer', () => {
     const { container } = render(
       <HTMLRenderer
         content={
-          '<img src="first.jpg"><link href="style.css" rel="stylesheet"><script src="app.js"></script><img src="second.jpg">'
+          '<img src="first.jpg">' +
+          '<link href="style.css" rel="stylesheet">' +
+          '<script src="app.js"></script>' +
+          '<img src="second.jpg">'
         }
         file_path="/workspace/index.html"
         workspace="/workspace"

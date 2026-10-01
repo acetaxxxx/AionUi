@@ -195,7 +195,7 @@ async function mapWithConcurrency<T, R>(
   mapper: (item: T, index: number) => Promise<R>,
   signal?: AbortSignal
 ): Promise<Array<R | undefined>> {
-  const results: Array<R | undefined> = new Array(items.length);
+  const results: Array<R | undefined> = Array.from({ length: items.length }, () => undefined);
   let nextIndex = 0;
   const workerCount = Math.min(RESOURCE_REQUEST_CONCURRENCY, items.length);
 
@@ -219,7 +219,7 @@ function replaceMatches(
   let cursor = 0;
 
   entries
-    .sort((left, right) => (left.match.index ?? 0) - (right.match.index ?? 0))
+    .toSorted((left, right) => (left.match.index ?? 0) - (right.match.index ?? 0))
     .forEach(({ match, replacement }) => {
       const start = match.index ?? cursor;
       result += source.slice(cursor, start);
@@ -247,7 +247,7 @@ async function inlineRelativeResources(
       request = limitRequest(() => {
         if (signal?.aborted) return Promise.resolve(null);
         return ipcBridge.fs.getImageBase64.invoke({ path, workspace }, { signal });
-      }).catch((error: unknown) => {
+      }).catch((error: unknown): null => {
         if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline image:', path, error);
         return null;
       });
@@ -262,7 +262,7 @@ async function inlineRelativeResources(
       request = limitRequest(() => {
         if (signal?.aborted) return Promise.resolve(null);
         return ipcBridge.fs.readFile.invoke({ path, workspace }, { signal });
-      }).catch((error: unknown) => {
+      }).catch((error: unknown): null => {
         if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline file resource:', path, error);
         return null;
       });
@@ -344,11 +344,7 @@ async function inlineRelativeResources(
     }
   }, signal);
 
-  const [imgReplacements, linkReplacements, scriptReplacements] = await Promise.all([
-    imgWork,
-    linkWork,
-    scriptWork,
-  ]);
+  const [imgReplacements, linkReplacements, scriptReplacements] = await Promise.all([imgWork, linkWork, scriptWork]);
   result = replaceMatches(html, [
     ...imgMatches.map((match, index) => ({ match, replacement: imgReplacements[index] })),
     ...linkMatches.map((match, index) => ({ match, replacement: linkReplacements[index] })),
