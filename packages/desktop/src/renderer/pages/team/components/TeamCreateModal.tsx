@@ -12,7 +12,7 @@ import AionModal from '@renderer/components/base/AionModal';
 import { WorkspaceFolderSelect } from '@renderer/components/workspace';
 import { getConversationCreateErrorMessage } from '@renderer/pages/conversation/utils/conversationCreateError';
 import { useTeamAssistantOptions } from '../hooks/useTeamAssistantOptions';
-import type { TeamAssistantOption } from './assistantSelectUtils';
+import type { TeamAssistantOption } from './memberPicker/assistantSelectUtils';
 import { resolveDefaultTeamAgentModel } from './teamCreateModelResolver';
 import TeamAssistantPicker from './memberPicker/TeamAssistantPicker';
 import TeamAssistantPickerDropdown from './memberPicker/TeamAssistantPickerDropdown';

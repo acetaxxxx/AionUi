@@ -7,7 +7,7 @@ import { getConversationCreateErrorMessage } from '@renderer/pages/conversation/
 import { getSendBoxDraftHook } from '@renderer/hooks/chat/useSendBoxDraft';
 import { useTeamAssistantOptions } from '../../hooks/useTeamAssistantOptions';
 import { useTeamTabs } from '../../hooks/TeamTabsContext';
-import type { TeamAssistantOption } from '../assistantSelectUtils';
+import type { TeamAssistantOption } from './assistantSelectUtils';
 import { resolveDefaultTeamAgentModel } from '../teamCreateModelResolver';
 import TeamAssistantPickerDropdown from './TeamAssistantPickerDropdown';
 

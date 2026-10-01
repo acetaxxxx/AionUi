@@ -5,7 +5,7 @@ import {
   assistantToOption,
   filterTeamSupportedAssistants,
   type TeamAssistantOption,
-} from '../components/assistantSelectUtils';
+} from '../components/memberPicker/assistantSelectUtils';
 
 export function useTeamAssistantOptions(locale = 'en-US'): {
   assistants: TeamAssistantOption[];
