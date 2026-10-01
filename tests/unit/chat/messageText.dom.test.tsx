@@ -818,4 +818,51 @@ describe('MessageText fork entry point', () => {
       expect(forkMocks.ensureRuntime).toHaveBeenCalledWith({ conversation_id: 'conv-forked' });
     });
   });
+
+  describe('shared conversation speaker attribution', () => {
+    it('renders speaker name on user messages when speaker_name is present', () => {
+      const message: IMessageText = {
+        id: 'msg-speaker-1',
+        conversation_id: 'conv-shared',
+        position: 'right',
+        type: 'text',
+        created_at: 1700000000,
+        content: {
+          text: 'Can we check the flight details?',
+          speaker_name: 'Bob Collaborator',
+        },
+      };
+
+      render(
+        <ConversationProvider conversationId='conv-shared'>
+          <MessageText message={message} isLastMessage={true} />
+        </ConversationProvider>
+      );
+
+      const speakerEl = screen.getByTestId('message-speaker-name');
+      expect(speakerEl).toBeInTheDocument();
+      expect(speakerEl).toHaveTextContent('Bob Collaborator');
+    });
+
+    it('does not render speaker badge when speaker_name is absent', () => {
+      const message: IMessageText = {
+        id: 'msg-plain-user',
+        conversation_id: 'conv-private',
+        position: 'right',
+        type: 'text',
+        created_at: 1700000000,
+        content: {
+          text: 'Regular private message',
+        },
+      };
+
+      render(
+        <ConversationProvider conversationId='conv-private'>
+          <MessageText message={message} isLastMessage={true} />
+        </ConversationProvider>
+      );
+
+      expect(screen.queryByTestId('message-speaker-name')).toBeNull();
+    });
+  });
 });

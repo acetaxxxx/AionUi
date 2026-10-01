@@ -246,6 +246,11 @@ const MessageText: React.FC<MessageTextProps> = ({
 
   const cronMeta = message.content.cronMeta;
   const displaySenderName = senderName === 'team_system' ? t('team.systemNotice.sender') : senderName;
+  const userSpeakerName = isUserMessage
+    ? ((message.content as Record<string, unknown>).speaker_name as string | undefined) ??
+      ((message.content as Record<string, unknown>).author_name as string | undefined) ??
+      (senderName && senderName !== 'team_system' ? senderName : undefined)
+    : undefined;
   const fallbackBackendLogo = senderAgentType ? resolveAgentLogo(logos, { backend: senderAgentType }) : null;
   // 团队 teammate 消息：按发送者会话取身份色，做气泡左色条 + 彩色发送者名；非团队场景为 undefined。
   const teammateColor = useTeammateColor(isTeammateMessage ? senderConversationId : undefined);
@@ -259,6 +264,16 @@ const MessageText: React.FC<MessageTextProps> = ({
         )}
       >
         {cronMeta && <MessageCronBadge meta={cronMeta} />}
+        {isUserMessage && userSpeakerName && (
+          <div className='flex items-center gap-6px mb-4px self-end'>
+            <span className='text-12px text-t-secondary' data-testid='message-speaker-name'>
+              {userSpeakerName}
+            </span>
+            <div className='flex size-18px items-center justify-center rounded-full bg-fill-3 text-t-secondary text-10px font-medium'>
+              {userSpeakerName.slice(0, 1).toUpperCase()}
+            </div>
+          </div>
+        )}
         {isTeammateMessage && displaySenderName && (
           <div className='flex items-center gap-6px mb-4px'>
             <TeammateMessageAvatar

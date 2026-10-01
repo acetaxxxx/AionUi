@@ -1,4 +1,4 @@
-import { Button, Dropdown, Menu, Message, Modal, Spin, Tooltip } from '@arco-design/web-react';
+import { Button, Dropdown, Menu, Message, Modal, Spin, Tag, Tooltip } from '@arco-design/web-react';
 import { FullScreen, Left, MoreOne, OffScreen, Peoples, Right } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -819,16 +819,28 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
           headerExtra={
             <div className='flex items-center gap-8px'>
               {isSharedTeam && (
-                <Button
-                  type='secondary'
-                  size='small'
-                  icon={<Peoples theme='outline' size='14' fill='currentColor' />}
-                  onClick={() => setCollaboratorsModalVisible(true)}
-                  className='!h-28px !rounded-6px !px-8px !text-12px'
-                  data-testid='team-collaborators-button'
-                >
-                  {t('team.collaborators.button', { defaultValue: 'People' })}
-                </Button>
+                <>
+                  <Tag
+                    color={team.current_member_role === 'owner' ? 'arcoblue' : 'green'}
+                    size='small'
+                    className='!text-11px'
+                    data-testid='team-role-badge'
+                  >
+                    {team.current_member_role === 'owner'
+                      ? t('team.collaborators.roleOwner', { defaultValue: 'Owner' })
+                      : t('team.collaborators.roleCollaborator', { defaultValue: 'Collaborator' })}
+                  </Tag>
+                  <Button
+                    type='secondary'
+                    size='small'
+                    icon={<Peoples theme='outline' size='14' fill='currentColor' />}
+                    onClick={() => setCollaboratorsModalVisible(true)}
+                    className='!h-28px !rounded-6px !px-8px !text-12px'
+                    data-testid='team-collaborators-button'
+                  >
+                    {t('team.collaborators.button', { defaultValue: 'People' })}
+                  </Button>
+                </>
               )}
               {assistants.length > 1 && <TeamViewToggle value={viewMode} onChange={setViewMode} />}
             </div>
