@@ -303,6 +303,23 @@ describe('httpBridge', () => {
       const [, init] = fetchSpy.mock.calls[0];
       expect(init.headers['X-Requested-With']).toBe('XMLHttpRequest');
     });
+
+    it('forwards an AbortSignal to fetch', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ success: true, data: { ok: true } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+      vi.spyOn(console, 'debug').mockImplementation(() => {});
+      const signal = new AbortController().signal;
+
+      await httpRequest('GET', '/api/ping', undefined, { signal });
+
+      const [, init] = fetchSpy.mock.calls[0];
+      expect(init.signal).toBe(signal);
+    });
   });
 
   describe('non-JSON response', () => {

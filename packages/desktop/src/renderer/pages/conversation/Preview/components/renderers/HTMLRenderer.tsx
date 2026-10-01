@@ -168,91 +168,201 @@ export function resolveRelativePath(basePath: string, relativePath: string, work
  * @param basePath 基础文件路径 / Base file path
  * @returns 处理后的 HTML / Processed HTML
  */
-async function inlineRelativeResources(html: string, basePath: string, workspace?: string): Promise<string> {
+const RESOURCE_REQUEST_CONCURRENCY = 4;
+
+function createRequestLimiter(limit: number): <T>(operation: () => Promise<T>) => Promise<T> {
+  let active = 0;
+  const waiting: Array<() => void> = [];
+
+  return async <T,>(operation: () => Promise<T>): Promise<T> => {
+    if (active >= limit) {
+      await new Promise<void>((resolve) => waiting.push(resolve));
+    } else {
+      active += 1;
+    }
+    try {
+      return await operation();
+    } finally {
+      const next = waiting.shift();
+      if (next) next();
+      else active -= 1;
+    }
+  };
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  mapper: (item: T, index: number) => Promise<R>,
+  signal?: AbortSignal
+): Promise<Array<R | undefined>> {
+  const results: Array<R | undefined> = Array.from({ length: items.length }, (): R | undefined => undefined);
+  let nextIndex = 0;
+  const workerCount = Math.min(RESOURCE_REQUEST_CONCURRENCY, items.length);
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length && !signal?.aborted) {
+        const index = nextIndex++;
+        results[index] = await mapper(items[index], index);
+      }
+    })
+  );
+
+  return results;
+}
+
+function replaceMatches(source: string, entries: Array<{ match: RegExpMatchArray; replacement?: string }>): string {
+  let result = '';
+  let cursor = 0;
+
+  entries
+    .toSorted((left, right) => (left.match.index ?? 0) - (right.match.index ?? 0))
+    .forEach(({ match, replacement }) => {
+      const start = match.index ?? cursor;
+      result += source.slice(cursor, start);
+      result += replacement ?? match[0];
+      cursor = start + match[0].length;
+    });
+
+  return result + source.slice(cursor);
+}
+
+async function inlineRelativeResources(
+  html: string,
+  basePath: string,
+  workspace?: string,
+  signal?: AbortSignal
+): Promise<string> {
   let result = html;
+  const imageRequests = new Map<string, Promise<string | null>>();
+  const fileRequests = new Map<string, Promise<string | null>>();
+  const limitRequest = createRequestLimiter(RESOURCE_REQUEST_CONCURRENCY);
+
+  const loadImage = (path: string): Promise<string | null> => {
+    let request = imageRequests.get(path);
+    if (!request) {
+      request = limitRequest(() => {
+        if (signal?.aborted) return Promise.resolve(null);
+        return ipcBridge.fs.getImageBase64.invoke({ path, workspace }, { signal });
+      }).catch((error: unknown): null => {
+        if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline image:', path, error);
+        return null;
+      });
+      imageRequests.set(path, request);
+    }
+    return request;
+  };
+
+  const loadFile = (path: string): Promise<string | null> => {
+    let request = fileRequests.get(path);
+    if (!request) {
+      request = limitRequest(() => {
+        if (signal?.aborted) return Promise.resolve(null);
+        return ipcBridge.fs.readFile.invoke({ path, workspace }, { signal });
+      }).catch((error: unknown): null => {
+        if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline file resource:', path, error);
+        return null;
+      });
+      fileRequests.set(path, request);
+    }
+    return request;
+  };
 
   // 1. 处理 <img src="relative"> -> base64 / Handle <img src="relative"> -> base64
   const imgRegex = /<img([^>]*)\ssrc=["'](?!https?:\/\/|data:|\/\/)([^"']+)["']([^>]*)>/gi;
-  const imgMatches = [...result.matchAll(imgRegex)];
-
-  for (const match of imgMatches) {
-    const [fullMatch, before, src, after] = match;
-    try {
-      const absolutePath = resolveRelativePath(basePath, src, workspace);
-      const dataUrl = await ipcBridge.fs.getImageBase64.invoke({ path: absolutePath, workspace });
-      if (dataUrl) {
-        // getImageBase64 已经返回完整的 data URL / getImageBase64 already returns complete data URL
-        const newTag = `<img${before} src="${dataUrl}"${after}>`;
-        result = result.replace(fullMatch, newTag);
+  const imgMatches = [...html.matchAll(imgRegex)];
+  const imgWork = mapWithConcurrency(
+    imgMatches,
+    async (match) => {
+      const [, before, src, after] = match;
+      try {
+        const absolutePath = resolveRelativePath(basePath, src, workspace);
+        const dataUrl = await loadImage(absolutePath);
+        return dataUrl ? `<img${before} src="${dataUrl}"${after}>` : undefined;
+      } catch (error) {
+        if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline image:', src, error);
+        return undefined;
       }
-    } catch (e) {
-      console.warn('[HTMLRenderer] Failed to inline image:', src, e);
-    }
-  }
+    },
+    signal
+  );
 
   // 2. 处理 <link href="relative" rel="stylesheet"> -> <style> / Handle CSS links -> inline <style>
   const linkRegex = /<link([^>]*)\shref=["'](?!https?:\/\/|data:|\/\/)([^"']+)["']([^>]*)>/gi;
-  const linkMatches = [...result.matchAll(linkRegex)];
+  const linkMatches = [...html.matchAll(linkRegex)];
+  const linkWork = mapWithConcurrency(
+    linkMatches,
+    async (match) => {
+      const [fullMatch, , href] = match;
+      // 检查是否为 stylesheet / Check if it's a stylesheet
+      const isStylesheet = /rel=["']stylesheet["']/i.test(fullMatch) || href.endsWith('.css');
+      if (!isStylesheet) return undefined;
 
-  for (const match of linkMatches) {
-    const [fullMatch, _before, href, _after] = match;
-    // 检查是否为 stylesheet / Check if it's a stylesheet
-    const isStylesheet = /rel=["']stylesheet["']/i.test(fullMatch) || href.endsWith('.css');
-    if (isStylesheet) {
       try {
         const absolutePath = resolveRelativePath(basePath, href, workspace);
-        const cssContent = await ipcBridge.fs.readFile.invoke({ path: absolutePath, workspace });
-        if (cssContent) {
-          // 替换 CSS 中的相对 url() 引用为 base64 / Replace relative url() references in CSS with base64
-          let processedCss = cssContent;
-          const cssUrlRegex = /url\(["']?(?!https?:\/\/|data:|\/\/)([^"')]+)["']?\)/gi;
-          const cssUrlMatches = [...processedCss.matchAll(cssUrlRegex)];
+        const cssContent = await loadFile(absolutePath);
+        if (!cssContent || signal?.aborted) return undefined;
 
-          for (const urlMatch of cssUrlMatches) {
-            const [urlFullMatch, urlPath] = urlMatch;
+        const cssUrlRegex = /url\(["']?(?!https?:\/\/|data:|\/\/)([^"')]+)["']?\)/gi;
+        const cssUrlMatches = [...cssContent.matchAll(cssUrlRegex)];
+        const cssReplacements = await mapWithConcurrency(
+          cssUrlMatches,
+          async (urlMatch) => {
+            const [, urlPath] = urlMatch;
             try {
-              // CSS 文件的基础路径 / Base path for CSS file
-              const cssBasePath = absolutePath;
-              const resourcePath = resolveRelativePath(cssBasePath, urlPath, workspace);
-              const dataUrl = await ipcBridge.fs.getImageBase64.invoke({ path: resourcePath, workspace });
-              if (dataUrl) {
-                // getImageBase64 已经返回完整的 data URL / getImageBase64 already returns complete data URL
-                processedCss = processedCss.replace(urlFullMatch, `url("${dataUrl}")`);
-              }
-            } catch (e) {
-              console.warn('[HTMLRenderer] Failed to inline CSS resource:', urlPath, e);
+              const resourcePath = resolveRelativePath(absolutePath, urlPath, workspace);
+              const dataUrl = await loadImage(resourcePath);
+              return dataUrl ? `url("${dataUrl}")` : undefined;
+            } catch (error) {
+              if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline CSS resource:', urlPath, error);
+              return undefined;
             }
-          }
+          },
+          signal
+        );
 
-          const styleTag = `<style>${processedCss}</style>`;
-          result = result.replace(fullMatch, styleTag);
-        }
-      } catch (e) {
-        console.warn('[HTMLRenderer] Failed to inline CSS:', href, e);
+        const processedCss = replaceMatches(
+          cssContent,
+          cssUrlMatches.map((cssMatch, index) => ({ match: cssMatch, replacement: cssReplacements[index] }))
+        );
+        return `<style>${processedCss}</style>`;
+      } catch (error) {
+        if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline CSS:', href, error);
+        return undefined;
       }
-    }
-  }
+    },
+    signal
+  );
 
   // 3. 处理 <script src="relative"> -> inline <script> / Handle script tags -> inline
   const scriptRegex = /<script([^>]*)\ssrc=["'](?!https?:\/\/|data:|\/\/)([^"']+)["']([^>]*)><\/script>/gi;
-  const scriptMatches = [...result.matchAll(scriptRegex)];
-
-  for (const match of scriptMatches) {
-    const [fullMatch, before, src, after] = match;
-    try {
-      const absolutePath = resolveRelativePath(basePath, src, workspace);
-      const scriptContent = await ipcBridge.fs.readFile.invoke({ path: absolutePath, workspace });
-      if (scriptContent) {
+  const scriptMatches = [...html.matchAll(scriptRegex)];
+  const scriptWork = mapWithConcurrency(
+    scriptMatches,
+    async (match) => {
+      const [, before, src, after] = match;
+      try {
+        const absolutePath = resolveRelativePath(basePath, src, workspace);
+        const scriptContent = await loadFile(absolutePath);
+        if (!scriptContent || signal?.aborted) return undefined;
         // 保留其他属性（如 type, defer, async 等，但 async/defer 对 inline 无效）
         // Keep other attributes (like type, but defer/async don't work for inline)
         const attrsToKeep = (before + after).replace(/\s*(defer|async)\s*/gi, '');
-        const scriptTag = `<script${attrsToKeep}>${scriptContent}</script>`;
-        result = result.replace(fullMatch, scriptTag);
+        return `<script${attrsToKeep}>${scriptContent}</script>`;
+      } catch (error) {
+        if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline script:', src, error);
+        return undefined;
       }
-    } catch (e) {
-      console.warn('[HTMLRenderer] Failed to inline script:', src, e);
-    }
-  }
+    },
+    signal
+  );
+
+  const [imgReplacements, linkReplacements, scriptReplacements] = await Promise.all([imgWork, linkWork, scriptWork]);
+  result = replaceMatches(html, [
+    ...imgMatches.map((match, index) => ({ match, replacement: imgReplacements[index] })),
+    ...linkMatches.map((match, index) => ({ match, replacement: linkReplacements[index] })),
+    ...scriptMatches.map((match, index) => ({ match, replacement: scriptReplacements[index] })),
+  ]);
 
   return result;
 }
@@ -353,8 +463,9 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
 
     // Browser 环境且有相对资源，进行内联化处理
     // Browser environment with relative resources, perform inlining
+    const controller = new AbortController();
     let cancelled = false;
-    inlineRelativeResources(content, file_path, workspace)
+    inlineRelativeResources(content, file_path, workspace, controller.signal)
       .then((inlined) => {
         if (!cancelled) {
           setInlinedHtmlContent(inlined);
@@ -369,6 +480,7 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [content, file_path, isElectron, hasRelativeResources, workspace]);
 

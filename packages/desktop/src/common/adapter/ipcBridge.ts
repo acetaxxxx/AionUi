@@ -97,7 +97,7 @@ import type {
 import type { AgentMetadata } from '@/renderer/utils/model/agentTypes';
 import type { Theme } from '@/common/theme/types';
 import type { AttachFolderRequest, ProjectDetailDto, ProjectEntryDto } from '@/common/types/project';
-import { chatFileRefPath, localFileRef, type ChatFileRef, type ContentEncoding } from '@/common/types/chatFile';
+import { chatFileRefPath, type ChatFileRef, type ContentEncoding } from '@/common/types/chatFile';
 import type { ProtocolDetectionRequest, ProtocolDetectionResponse } from '../utils/protocolDetector';
 import {
   buildCreateConversationBody,
@@ -112,6 +112,7 @@ import {
   httpPost,
   httpPut,
   httpRequest,
+  type HttpRequestOptions,
   stubProvider,
   withResponseMap,
   wsEmitter,
@@ -870,27 +871,32 @@ export const fs = {
   ),
   getImageBase64: {
     provider: () => {},
-    invoke: async (params: { path: string; workspace?: string }): Promise<string | null> => {
+    invoke: async (
+      params: { path: string; workspace?: string },
+      options?: HttpRequestOptions
+    ): Promise<string | null> => {
       try {
-        const res = await httpRequest<unknown>('POST', '/api/fs/image-base64', params);
+        const res = await httpRequest<unknown>('POST', '/api/fs/image-base64', params, options);
         if (typeof res === 'string' && res) return res;
         if (res && typeof res === 'object' && 'content' in res)
           return String((res as { content: unknown }).content ?? '');
         if (res && typeof res === 'object' && 'data' in res) return String((res as { data: unknown }).data ?? '');
-      } catch (_err) {
-        try {
-          const fileRef: ChatFileRef = localFileRef(params.path);
-          const dataUrl = await fs.readContent.invoke({ file: fileRef, encoding: 'dataurl' });
-          if (dataUrl) return dataUrl;
-        } catch (_fallbackErr) {
-          return null;
-        }
+      } catch {
+        // A failed image authorization must not retry the same absolute path
+        // through the more general ChatFileRef content endpoint.
+        return null;
       }
       return null;
     },
   },
   fetchRemoteImage: httpPost<string, { url: string }>('/api/fs/fetch-remote-image'),
-  readFile: httpPost<string | null, { path: string; workspace?: string }>('/api/fs/read'),
+  readFile: {
+    provider: () => {},
+    invoke: async (
+      params: { path: string; workspace?: string },
+      options?: HttpRequestOptions
+    ): Promise<string | null> => httpRequest<string | null>('POST', '/api/fs/read', params, options),
+  },
   writeFile: httpPost<boolean, { path: string; data: string; workspace?: string }>('/api/fs/write'),
   getFileMetadata: httpPost<IFileMetadata, { path: string; workspace?: string }>('/api/fs/metadata'),
   // ── ChatFileRef content endpoints (PR-2: preview I/O by ref identity) ──────
