@@ -196,6 +196,7 @@
     "sharedOption": "Paylaşılan Takım",
     "privateHint": "Bu takımı yalnızca siz görüntüleyebilir ve etkileşim kurabilirsiniz.",
     "sharedHint": "İşbirlikçiler takım çalışma alanını paylaşır ve etkinlikleri görüntüler. Yürütme, takım sahibi kimliği altında çalışır.",
+    "workspaceProvisioned": "Paylaşılan ekip çalışma alanı Aion tarafından sağlanır.",
     "workspaceRequired": "Paylaşılan takım bir çalışma alanı klasörü seçilmesini gerektirir"
   },
   "collaborators": {

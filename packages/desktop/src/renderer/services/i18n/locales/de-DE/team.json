@@ -196,6 +196,7 @@
     "sharedOption": "Geteiltes Team",
     "privateHint": "Nur Sie können dieses Team anzeigen und damit interagieren.",
     "sharedHint": "Mitwirkende teilen sich den Team-Arbeitsbereich und sehen Aktivitäten. Die Ausführung erfolgt unter der Identität des Teambesitzers.",
+    "workspaceProvisioned": "Der geteilte Team-Arbeitsbereich wird von Aion bereitgestellt.",
     "workspaceRequired": "Für ein geteiltes Team muss ein Arbeitsbereich-Ordner ausgewählt werden"
   },
   "collaborators": {

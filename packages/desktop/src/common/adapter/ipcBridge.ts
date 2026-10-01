@@ -2311,13 +2311,16 @@ export const realtime = {
 
 export const team = {
   create: withResponseMap(
-    httpPost<TTeam, ICreateTeamParams>('/api/teams', (p) => ({
-      name: p.name,
-      agents: p.agents.map(toBackendAssistant),
-      workspace_mode: p.workspace_mode,
-      ...(p.sharing_mode ? { sharing_mode: p.sharing_mode } : {}),
-      ...(p.workspace ? { workspace: p.workspace } : {}),
-    })),
+    httpPost<TTeam, ICreateTeamParams>('/api/teams', (p) => {
+      const isShared = p.sharing_mode === 'shared';
+      return {
+        name: p.name,
+        agents: p.agents.map(toBackendAssistant),
+        workspace_mode: p.workspace_mode,
+        ...(p.sharing_mode ? { sharing_mode: p.sharing_mode } : {}),
+        ...(!isShared && p.workspace ? { workspace: p.workspace } : {}),
+      };
+    }),
     fromBackendTeam
   ),
   list: withResponseMap(

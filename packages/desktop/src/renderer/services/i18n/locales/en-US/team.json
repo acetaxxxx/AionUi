@@ -196,6 +196,7 @@
     "sharedOption": "Shared Team",
     "privateHint": "Only you can view and interact with this team.",
     "sharedHint": "Collaborators share the team workspace and view activity. Execution runs under team owner identity.",
+    "workspaceProvisioned": "Shared team workspace is provisioned by Aion.",
     "workspaceRequired": "Shared team requires selecting a workspace folder"
   },
   "collaborators": {

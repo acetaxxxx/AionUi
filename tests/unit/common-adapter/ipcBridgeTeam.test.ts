@@ -146,6 +146,7 @@ describe('ipcBridge team adapter', () => {
       body: {
         name: 'Alpha',
         workspace: '/tmp/ws',
+        workspace_mode: 'shared',
         agents: [
           {
             name: 'Lead',
@@ -157,5 +158,83 @@ describe('ipcBridge team adapter', () => {
       },
     });
     expect(JSON.stringify(httpBridgeMocks.calls.at(-1)?.body)).not.toContain('assistants');
+  });
+
+  it('team.create with sharing_mode: shared omits workspace from the request body', async () => {
+    const { team } = await import('@/common/adapter/ipcBridge');
+
+    await team.create.invoke({
+      user_id: 'user-1',
+      name: 'Shared Team',
+      workspace: '/unwanted/client/path',
+      workspace_mode: 'shared',
+      sharing_mode: 'shared',
+      agents: [
+        {
+          role: 'leader',
+          assistant_name: 'Lead',
+          assistant_id: 'assistant-lead',
+          model: 'claude-sonnet-4',
+        },
+      ],
+    });
+
+    expect(httpBridgeMocks.calls).toContainEqual({
+      method: 'POST',
+      path: '/api/teams',
+      body: {
+        name: 'Shared Team',
+        workspace_mode: 'shared',
+        sharing_mode: 'shared',
+        agents: [
+          {
+            name: 'Lead',
+            role: 'lead',
+            model: 'claude-sonnet-4',
+            assistant_id: 'assistant-lead',
+          },
+        ],
+      },
+    });
+    expect(httpBridgeMocks.calls.at(-1)?.body).not.toHaveProperty('workspace');
+  });
+
+  it('team.create with sharing_mode: private preserves workspace in the request body', async () => {
+    const { team } = await import('@/common/adapter/ipcBridge');
+
+    await team.create.invoke({
+      user_id: 'user-1',
+      name: 'Private Team',
+      workspace: '/data/user/private-ws',
+      workspace_mode: 'shared',
+      sharing_mode: 'private',
+      agents: [
+        {
+          role: 'leader',
+          assistant_name: 'Lead',
+          assistant_id: 'assistant-lead',
+          model: 'claude-sonnet-4',
+        },
+      ],
+    });
+
+    expect(httpBridgeMocks.calls).toContainEqual({
+      method: 'POST',
+      path: '/api/teams',
+      body: {
+        name: 'Private Team',
+        workspace: '/data/user/private-ws',
+        workspace_mode: 'shared',
+        sharing_mode: 'private',
+        agents: [
+          {
+            name: 'Lead',
+            role: 'lead',
+            model: 'claude-sonnet-4',
+            assistant_id: 'assistant-lead',
+          },
+        ],
+      },
+    });
   });
 });

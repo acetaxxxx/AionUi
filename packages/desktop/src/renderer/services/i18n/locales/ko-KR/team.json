@@ -196,6 +196,7 @@
     "sharedOption": "공유 팀",
     "privateHint": "나만 이 팀을 보고 상호 작용할 수 있습니다.",
     "sharedHint": "공동 작업자가 팀 워크스페이스와 활동을 공유합니다. 실행은 팀 소유자 자격으로 진행됩니다.",
+    "workspaceProvisioned": "공유 팀 워크스페이스는 Aion에서 자동으로 프로비저닝됩니다.",
     "workspaceRequired": "공유 팀은 워크스페이스 폴더 선택이 필요합니다"
   },
   "collaborators": {

@@ -196,6 +196,7 @@
     "sharedOption": "共享团队",
     "privateHint": "只有您可以查看并与此团队交互。",
     "sharedHint": "成员共享团队工作空间与动态。执行沿用团队所有者身份。",
+    "workspaceProvisioned": "共享团队工作空间由 Aion 统一分配。",
     "workspaceRequired": "共享团队必须选择工作空间文件夹"
   },
   "collaborators": {

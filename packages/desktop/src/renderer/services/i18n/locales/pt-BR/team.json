@@ -196,6 +196,7 @@
     "sharedOption": "Equipe compartilhada",
     "privateHint": "Apenas você pode visualizar e interagir com esta equipe.",
     "sharedHint": "Os colaboradores compartilham o espaço de trabalho da equipe e visualizam as atividades. A execução ocorre com a identidade do proprietário da equipe.",
+    "workspaceProvisioned": "O espaço de trabalho compartilhado da equipe é provisionado pelo Aion.",
     "workspaceRequired": "A equipe compartilhada requer a seleção de uma pasta de espaço de trabalho"
   },
   "collaborators": {

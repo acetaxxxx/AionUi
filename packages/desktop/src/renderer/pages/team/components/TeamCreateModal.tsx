@@ -94,12 +94,6 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
       Message.warning(t('team.create.selectOneLeader', { defaultValue: 'Select one Team Leader' }));
       return;
     }
-    if (sharingMode === 'shared' && !workspace.trim()) {
-      Message.warning(
-        t('team.sharing.workspaceRequired', { defaultValue: 'Shared team requires selecting a workspace folder' })
-      );
-      return;
-    }
     const user_id = user?.id ?? 'system_default_user';
     setLoading(true);
     try {
@@ -126,10 +120,11 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
         model: modelBySelectionId.get(member.selectionId),
       }));
 
+      const isShared = sharingMode === 'shared';
       const team = await ipcBridge.team.create.invoke({
         user_id,
         name,
-        workspace,
+        workspace: isShared ? undefined : (workspace.trim() || undefined),
         workspace_mode: 'shared',
         sharing_mode: sharingMode,
         agents,
@@ -217,21 +212,31 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
 
       <div className='text-14px font-500 leading-21px text-t-secondary'>
         {t('team.create.workspaceLabel', { defaultValue: 'Workspace' })}
-        {sharingMode === 'shared' && <span className='ms-4px text-danger-6'>*</span>}
       </div>
       <div>
-        <WorkspaceFolderSelect
-          value={workspace}
-          onChange={setWorkspace}
-          placeholder={t('team.create.selectFolder', { defaultValue: 'Select folder' })}
-          recentLabel={t('team.create.recentLabel', { defaultValue: 'Recent' })}
-          chooseDifferentLabel={t('team.create.chooseDifferentFolder', {
-            defaultValue: 'Choose a different folder',
-          })}
-          triggerTestId='team-create-workspace-trigger'
-          menuTestId='team-create-workspace-menu'
-          menuZIndex={10030}
-        />
+        {sharingMode === 'shared' ? (
+          <div
+            className='flex min-h-38px items-center rounded-8px border border-border-2 bg-fill-1 px-12px text-13px text-t-tertiary'
+            data-testid='team-create-shared-workspace-notice'
+          >
+            {t('team.sharing.workspaceProvisioned', {
+              defaultValue: 'Shared team workspace is provisioned by Aion.',
+            })}
+          </div>
+        ) : (
+          <WorkspaceFolderSelect
+            value={workspace}
+            onChange={setWorkspace}
+            placeholder={t('team.create.selectFolder', { defaultValue: 'Select folder' })}
+            recentLabel={t('team.create.recentLabel', { defaultValue: 'Recent' })}
+            chooseDifferentLabel={t('team.create.chooseDifferentFolder', {
+              defaultValue: 'Choose a different folder',
+            })}
+            triggerTestId='team-create-workspace-trigger'
+            menuTestId='team-create-workspace-menu'
+            menuZIndex={10030}
+          />
+        )}
       </div>
     </div>
   );
@@ -349,12 +354,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
               type='primary'
               onClick={handleCreate}
               loading={loading}
-              disabled={
-                !name.trim() ||
-                selectedMembers.length === 0 ||
-                !hasOneLeader ||
-                (sharingMode === 'shared' && !workspace.trim())
-              }
+              disabled={!name.trim() || selectedMembers.length === 0 || !hasOneLeader}
               className='!h-38px min-w-100px !rounded-8px !px-18px !text-13px'
             >
               {t('team.create.confirm', { defaultValue: 'Confirm Create' })}

@@ -2889,6 +2889,7 @@ export type I18nKey =
   | 'team.sharing.privateOption'
   | 'team.sharing.sharedHint'
   | 'team.sharing.sharedOption'
+  | 'team.sharing.workspaceProvisioned'
   | 'team.sharing.workspaceRequired'
   | 'team.sider.archive'
   | 'team.sider.archiveFailed'

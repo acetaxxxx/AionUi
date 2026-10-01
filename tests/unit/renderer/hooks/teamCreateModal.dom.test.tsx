@@ -454,21 +454,56 @@ describe('TeamCreateModal · mobile (narrow screen)', () => {
     );
   });
 
-  it('creates team with explicit sharing_mode in payload', async () => {
+  it('toggles between private workspace folder selection and provisioned shared workspace notice', () => {
+    render(<TeamCreateModal visible onClose={vi.fn()} onCreated={vi.fn()} />);
+
+    // Default private mode mounts WorkspaceFolderSelect and does not show provisioned notice
+    expect(screen.getByTestId('workspace-folder-select')).toBeInTheDocument();
+    expect(screen.queryByTestId('team-create-shared-workspace-notice')).not.toBeInTheDocument();
+
+    // Switching to shared mode unmounts WorkspaceFolderSelect and shows provisioned notice
+    fireEvent.click(screen.getByTestId('team-create-sharing-mode-shared'));
+    expect(screen.queryByTestId('workspace-folder-select')).not.toBeInTheDocument();
+    expect(screen.getByTestId('team-create-shared-workspace-notice')).toBeInTheDocument();
+    expect(screen.getByTestId('team-create-shared-workspace-notice')).toHaveTextContent(
+      'Shared team workspace is provisioned by Aion.'
+    );
+
+    // Switching back to private mode restores WorkspaceFolderSelect
+    fireEvent.click(screen.getByTestId('team-create-sharing-mode-private'));
+    expect(screen.getByTestId('workspace-folder-select')).toBeInTheDocument();
+    expect(screen.queryByTestId('team-create-shared-workspace-notice')).not.toBeInTheDocument();
+  });
+
+  it('creates shared team omitting workspace from payload without requiring folder selection', async () => {
     render(<TeamCreateModal visible onClose={vi.fn()} onCreated={vi.fn()} />);
 
     fireEvent.change(screen.getByTestId('team-create-name-input'), { target: { value: 'Collab Project' } });
     fireEvent.click(screen.getByTestId('team-create-agent-option-bare-aionrs'));
 
-    // Select shared mode
+    // Switch to shared mode
     fireEvent.click(screen.getByTestId('team-create-sharing-mode-shared'));
 
-    // When shared mode is selected but workspace is empty, button is disabled
+    // In shared mode, workspace selection is not required, so submit button is enabled
     const submitButton = screen.getByRole('button', { name: 'Confirm Create' });
-    expect(submitButton).toBeDisabled();
+    expect(submitButton).toBeEnabled();
 
-    // Switch back to private mode: button becomes enabled (workspace optional for private)
-    fireEvent.click(screen.getByTestId('team-create-sharing-mode-private'));
+    fireEvent.click(submitButton);
+
+    await waitFor(() => expect(createTeamInvokeMock).toHaveBeenCalledTimes(1));
+    const payload = createTeamInvokeMock.mock.calls[0][0];
+    expect(payload.sharing_mode).toBe('shared');
+    expect(payload.workspace).toBeUndefined();
+    expect(payload.workspace_mode).toBe('shared');
+  });
+
+  it('creates private team preserving private sharing_mode payload behavior', async () => {
+    render(<TeamCreateModal visible onClose={vi.fn()} onCreated={vi.fn()} />);
+
+    fireEvent.change(screen.getByTestId('team-create-name-input'), { target: { value: 'Solo Project' } });
+    fireEvent.click(screen.getByTestId('team-create-agent-option-bare-aionrs'));
+
+    const submitButton = screen.getByRole('button', { name: 'Confirm Create' });
     expect(submitButton).toBeEnabled();
 
     fireEvent.click(submitButton);
