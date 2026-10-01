@@ -137,7 +137,9 @@ export const TeamCollaboratorsModal: React.FC<TeamCollaboratorsModalProps> = ({
               <Spin />
             </div>
           ) : members.length === 0 ? (
-            <div className='flex h-100px items-center justify-center rounded-8px border border-dashed border-border-2 text-13px text-t-tertiary'>
+            <div
+              className='flex h-100px items-center justify-center rounded-8px border border-dashed border-border-2 text-13px text-t-tertiary'
+            >
               {t('team.collaborators.emptyMembers', { defaultValue: 'No collaborators yet.' })}
             </div>
           ) : (

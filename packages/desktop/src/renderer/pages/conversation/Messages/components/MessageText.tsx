@@ -269,7 +269,9 @@ const MessageText: React.FC<MessageTextProps> = ({
             <span className='text-12px text-t-secondary' data-testid='message-speaker-name'>
               {userSpeakerName}
             </span>
-            <div className='flex size-18px items-center justify-center rounded-full bg-fill-3 text-t-secondary text-10px font-medium'>
+            <div
+              className='flex size-18px items-center justify-center rounded-full bg-fill-3 text-t-secondary text-10px font-medium'
+            >
               {userSpeakerName.slice(0, 1).toUpperCase()}
             </div>
           </div>

@@ -22,14 +22,7 @@ export const TeamMcpAllowlistModal: React.FC<TeamMcpAllowlistModalProps> = ({
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
 
-  const {
-    loading,
-    saving,
-    servers,
-    selectedIds,
-    toggleServer,
-    handleSave,
-  } = useTeamMcpAllowlist(team, visible);
+  const { loading, saving, servers, selectedIds, toggleServer, handleSave } = useTeamMcpAllowlist(team, visible);
 
   return (
     <AionModal

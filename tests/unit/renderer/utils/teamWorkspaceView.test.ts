@@ -36,7 +36,11 @@ describe('resolveTeamWorkspaceView', () => {
   });
 
   it('uses team.workspace for shared team when explicitly configured', () => {
-    const view = resolveTeamWorkspaceView('/data/shared-workspace', '/tmp/aion/conversations/acp-temp-leader', 'shared');
+    const view = resolveTeamWorkspaceView(
+      '/data/shared-workspace',
+      '/tmp/aion/conversations/acp-temp-leader',
+      'shared'
+    );
     expect(view.workspacePath).toBe('/data/shared-workspace');
     expect(view.workspaceEnabled).toBe(true);
     expect(view.isTemporaryWorkspace).toBe(false);

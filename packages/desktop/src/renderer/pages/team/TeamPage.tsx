@@ -45,7 +45,9 @@ import { usePreviewContext } from '@/renderer/pages/conversation/Preview';
 import { previewScopeKey } from '@/renderer/pages/conversation/Preview/context/previewScope';
 import { setCurrentProject } from '@/renderer/pages/conversation/explorer/currentProjectStore';
 import { setCurrentConversation } from '@/renderer/pages/conversation/explorer/currentConversationStore';
-import { getSnapshotConversationProjectId } from '@/renderer/pages/conversation/GroupedHistory/hooks/useConversationListSync';
+import {
+  getSnapshotConversationProjectId,
+} from '@/renderer/pages/conversation/GroupedHistory/hooks/useConversationListSync';
 import { isBackendHttpError } from '@/common/adapter/httpBridge';
 
 type Props = {

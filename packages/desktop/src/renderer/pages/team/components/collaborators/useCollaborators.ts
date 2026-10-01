@@ -67,7 +67,9 @@ export function useCollaborators(team: TTeam, visible: boolean) {
 
       const result = added as unknown as { __bridgeError?: boolean; message?: string };
       if (result?.__bridgeError) {
-        Message.error(result.message ?? t('team.collaborators.addError', { defaultValue: 'Failed to add collaborator' }));
+        Message.error(
+          result.message ?? t('team.collaborators.addError', { defaultValue: 'Failed to add collaborator' })
+        );
         return;
       }
 

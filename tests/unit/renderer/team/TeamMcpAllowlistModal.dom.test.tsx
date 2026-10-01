@@ -131,22 +131,25 @@ describe('TeamMcpAllowlistModal', () => {
     expect(disclosure.textContent).toContain('No collaborator credentials are used');
   });
 
-  it('safely renders server labels and descriptions while omitting connection secrets, URLs, and configurations', async () => {
-    render(<TeamMcpAllowlistModal visible={true} onClose={vi.fn()} team={sampleTeam} />);
+  it(
+    'safely renders server labels and descriptions while omitting connection secrets, URLs, and configurations',
+    async () => {
+      render(<TeamMcpAllowlistModal visible={true} onClose={vi.fn()} team={sampleTeam} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('GitHub MCP')).toBeInTheDocument();
-      expect(screen.getByText('Database Explorer')).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByText('GitHub MCP')).toBeInTheDocument();
+        expect(screen.getByText('Database Explorer')).toBeInTheDocument();
+      });
 
-    expect(screen.getByText('Read and query GitHub repositories')).toBeInTheDocument();
-    expect(screen.getByText('Inspect Postgres database')).toBeInTheDocument();
+      expect(screen.getByText('Read and query GitHub repositories')).toBeInTheDocument();
+      expect(screen.getByText('Inspect Postgres database')).toBeInTheDocument();
 
-    const modalContent = screen.getByTestId('team-mcp-allowlist-modal').innerHTML;
-    expect(modalContent).not.toContain('secret-token');
-    expect(modalContent).not.toContain('super-secret-password');
-    expect(modalContent).not.toContain('https://api.github.com');
-  });
+      const modalContent = screen.getByTestId('team-mcp-allowlist-modal').innerHTML;
+      expect(modalContent).not.toContain('secret-token');
+      expect(modalContent).not.toContain('super-secret-password');
+      expect(modalContent).not.toContain('https://api.github.com');
+    }
+  );
 
   it('loads initial allowlist and toggles servers', async () => {
     render(<TeamMcpAllowlistModal visible={true} onClose={vi.fn()} team={sampleTeam} />);
