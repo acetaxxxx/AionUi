@@ -271,75 +271,91 @@ async function inlineRelativeResources(
   // 1. 处理 <img src="relative"> -> base64 / Handle <img src="relative"> -> base64
   const imgRegex = /<img([^>]*)\ssrc=["'](?!https?:\/\/|data:|\/\/)([^"']+)["']([^>]*)>/gi;
   const imgMatches = [...html.matchAll(imgRegex)];
-  const imgWork = mapWithConcurrency(imgMatches, async (match) => {
-    const [, before, src, after] = match;
-    try {
-      const absolutePath = resolveRelativePath(basePath, src, workspace);
-      const dataUrl = await loadImage(absolutePath);
-      return dataUrl ? `<img${before} src="${dataUrl}"${after}>` : undefined;
-    } catch (error) {
-      if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline image:', src, error);
-      return undefined;
-    }
-  }, signal);
+  const imgWork = mapWithConcurrency(
+    imgMatches,
+    async (match) => {
+      const [, before, src, after] = match;
+      try {
+        const absolutePath = resolveRelativePath(basePath, src, workspace);
+        const dataUrl = await loadImage(absolutePath);
+        return dataUrl ? `<img${before} src="${dataUrl}"${after}>` : undefined;
+      } catch (error) {
+        if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline image:', src, error);
+        return undefined;
+      }
+    },
+    signal
+  );
 
   // 2. 处理 <link href="relative" rel="stylesheet"> -> <style> / Handle CSS links -> inline <style>
   const linkRegex = /<link([^>]*)\shref=["'](?!https?:\/\/|data:|\/\/)([^"']+)["']([^>]*)>/gi;
   const linkMatches = [...html.matchAll(linkRegex)];
-  const linkWork = mapWithConcurrency(linkMatches, async (match) => {
-    const [fullMatch, , href] = match;
-    // 检查是否为 stylesheet / Check if it's a stylesheet
-    const isStylesheet = /rel=["']stylesheet["']/i.test(fullMatch) || href.endsWith('.css');
-    if (!isStylesheet) return undefined;
+  const linkWork = mapWithConcurrency(
+    linkMatches,
+    async (match) => {
+      const [fullMatch, , href] = match;
+      // 检查是否为 stylesheet / Check if it's a stylesheet
+      const isStylesheet = /rel=["']stylesheet["']/i.test(fullMatch) || href.endsWith('.css');
+      if (!isStylesheet) return undefined;
 
-    try {
-      const absolutePath = resolveRelativePath(basePath, href, workspace);
-      const cssContent = await loadFile(absolutePath);
-      if (!cssContent || signal?.aborted) return undefined;
+      try {
+        const absolutePath = resolveRelativePath(basePath, href, workspace);
+        const cssContent = await loadFile(absolutePath);
+        if (!cssContent || signal?.aborted) return undefined;
 
-      const cssUrlRegex = /url\(["']?(?!https?:\/\/|data:|\/\/)([^"')]+)["']?\)/gi;
-      const cssUrlMatches = [...cssContent.matchAll(cssUrlRegex)];
-      const cssReplacements = await mapWithConcurrency(cssUrlMatches, async (urlMatch) => {
-        const [, urlPath] = urlMatch;
-        try {
-          const resourcePath = resolveRelativePath(absolutePath, urlPath, workspace);
-          const dataUrl = await loadImage(resourcePath);
-          return dataUrl ? `url("${dataUrl}")` : undefined;
-        } catch (error) {
-          if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline CSS resource:', urlPath, error);
-          return undefined;
-        }
-      }, signal);
+        const cssUrlRegex = /url\(["']?(?!https?:\/\/|data:|\/\/)([^"')]+)["']?\)/gi;
+        const cssUrlMatches = [...cssContent.matchAll(cssUrlRegex)];
+        const cssReplacements = await mapWithConcurrency(
+          cssUrlMatches,
+          async (urlMatch) => {
+            const [, urlPath] = urlMatch;
+            try {
+              const resourcePath = resolveRelativePath(absolutePath, urlPath, workspace);
+              const dataUrl = await loadImage(resourcePath);
+              return dataUrl ? `url("${dataUrl}")` : undefined;
+            } catch (error) {
+              if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline CSS resource:', urlPath, error);
+              return undefined;
+            }
+          },
+          signal
+        );
 
-      const processedCss = replaceMatches(
-        cssContent,
-        cssUrlMatches.map((cssMatch, index) => ({ match: cssMatch, replacement: cssReplacements[index] }))
-      );
-      return `<style>${processedCss}</style>`;
-    } catch (error) {
-      if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline CSS:', href, error);
-      return undefined;
-    }
-  }, signal);
+        const processedCss = replaceMatches(
+          cssContent,
+          cssUrlMatches.map((cssMatch, index) => ({ match: cssMatch, replacement: cssReplacements[index] }))
+        );
+        return `<style>${processedCss}</style>`;
+      } catch (error) {
+        if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline CSS:', href, error);
+        return undefined;
+      }
+    },
+    signal
+  );
 
   // 3. 处理 <script src="relative"> -> inline <script> / Handle script tags -> inline
   const scriptRegex = /<script([^>]*)\ssrc=["'](?!https?:\/\/|data:|\/\/)([^"']+)["']([^>]*)><\/script>/gi;
   const scriptMatches = [...html.matchAll(scriptRegex)];
-  const scriptWork = mapWithConcurrency(scriptMatches, async (match) => {
-    const [, before, src, after] = match;
-    try {
-      const absolutePath = resolveRelativePath(basePath, src, workspace);
-      const scriptContent = await loadFile(absolutePath);
-      if (!scriptContent || signal?.aborted) return undefined;
-      // 保留其他属性（如 type, defer, async 等，但 async/defer 对 inline 无效）
-      // Keep other attributes (like type, but defer/async don't work for inline)
-      const attrsToKeep = (before + after).replace(/\s*(defer|async)\s*/gi, '');
-      return `<script${attrsToKeep}>${scriptContent}</script>`;
-    } catch (error) {
-      if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline script:', src, error);
-      return undefined;
-    }
-  }, signal);
+  const scriptWork = mapWithConcurrency(
+    scriptMatches,
+    async (match) => {
+      const [, before, src, after] = match;
+      try {
+        const absolutePath = resolveRelativePath(basePath, src, workspace);
+        const scriptContent = await loadFile(absolutePath);
+        if (!scriptContent || signal?.aborted) return undefined;
+        // 保留其他属性（如 type, defer, async 等，但 async/defer 对 inline 无效）
+        // Keep other attributes (like type, but defer/async don't work for inline)
+        const attrsToKeep = (before + after).replace(/\s*(defer|async)\s*/gi, '');
+        return `<script${attrsToKeep}>${scriptContent}</script>`;
+      } catch (error) {
+        if (!signal?.aborted) console.warn('[HTMLRenderer] Failed to inline script:', src, error);
+        return undefined;
+      }
+    },
+    signal
+  );
 
   const [imgReplacements, linkReplacements, scriptReplacements] = await Promise.all([imgWork, linkWork, scriptWork]);
   result = replaceMatches(html, [

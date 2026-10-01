@@ -41,25 +41,22 @@ describe('ipcBridge image-base64 adapter', () => {
     { status: 401, label: 'unauthorized' },
     { status: 403, label: 'forbidden' },
     { status: 500, label: 'server error' },
-  ])(
-    'does not retry a $label image request through the general local-file endpoint',
-    async ({ status }) => {
-      httpBridgeMocks.httpRequest.mockRejectedValue(Object.assign(new Error('Image request failed'), { status }));
-      const { fs } = await import('@/common/adapter/ipcBridge');
+  ])('does not retry a $label image request through the general local-file endpoint', async ({ status }) => {
+    httpBridgeMocks.httpRequest.mockRejectedValue(Object.assign(new Error('Image request failed'), { status }));
+    const { fs } = await import('@/common/adapter/ipcBridge');
 
-      await expect(
-        fs.getImageBase64.invoke({ path: '/data/private/photo.jpg', workspace: '/data/private' })
-      ).resolves.toBeNull();
+    await expect(
+      fs.getImageBase64.invoke({ path: '/data/private/photo.jpg', workspace: '/data/private' })
+    ).resolves.toBeNull();
 
-      expect(httpBridgeMocks.httpRequest).toHaveBeenCalledTimes(1);
-      expect(httpBridgeMocks.httpRequest).toHaveBeenCalledWith(
-        'POST',
-        '/api/fs/image-base64',
-        { path: '/data/private/photo.jpg', workspace: '/data/private' },
-        undefined
-      );
-    }
-  );
+    expect(httpBridgeMocks.httpRequest).toHaveBeenCalledTimes(1);
+    expect(httpBridgeMocks.httpRequest).toHaveBeenCalledWith(
+      'POST',
+      '/api/fs/image-base64',
+      { path: '/data/private/photo.jpg', workspace: '/data/private' },
+      undefined
+    );
+  });
 
   it('forwards an abort signal to the image request', async () => {
     httpBridgeMocks.httpRequest.mockResolvedValue('data:image/jpeg;base64,abc');

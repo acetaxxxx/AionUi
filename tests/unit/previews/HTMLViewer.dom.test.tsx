@@ -136,7 +136,7 @@ describe('HTMLRenderer', () => {
     );
     const images = Array.from({ length: 6 }, (_, index) => `<img src="image-${index}.jpg">`).join('');
     const { unmount } = render(
-      <HTMLRenderer content={images} file_path="/workspace/index.html" workspace="/workspace" />
+      <HTMLRenderer content={images} file_path='/workspace/index.html' workspace='/workspace' />
     );
 
     await waitFor(() => expect(ipcBridge.fs.getImageBase64.invoke).toHaveBeenCalledTimes(4));
@@ -155,8 +155,8 @@ describe('HTMLRenderer', () => {
     render(
       <HTMLRenderer
         content={'<link rel="stylesheet" href="style.css"><img src="img/shared.jpg">'}
-        file_path="/workspace/index.html"
-        workspace="/workspace"
+        file_path='/workspace/index.html'
+        workspace='/workspace'
       />
     );
 
@@ -178,8 +178,8 @@ describe('HTMLRenderer', () => {
     const { unmount } = render(
       <HTMLRenderer
         content={'<img src="photo.jpg"><link rel="stylesheet" href="style.css">'}
-        file_path="/workspace/index.html"
-        workspace="/workspace"
+        file_path='/workspace/index.html'
+        workspace='/workspace'
       />
     );
 
@@ -210,8 +210,8 @@ describe('HTMLRenderer', () => {
           '<script src="app.js"></script>' +
           '<img src="second.jpg">'
         }
-        file_path="/workspace/index.html"
-        workspace="/workspace"
+        file_path='/workspace/index.html'
+        workspace='/workspace'
       />
     );
 
@@ -245,7 +245,7 @@ describe('HTMLRenderer', () => {
   it('aborts outstanding resource requests when the preview unmounts', async () => {
     vi.mocked(ipcBridge.fs.getImageBase64.invoke).mockImplementation(() => new Promise(() => {}));
     const { unmount } = render(
-      <HTMLRenderer content='<img src="slow.jpg">' file_path="/workspace/index.html" workspace="/workspace" />
+      <HTMLRenderer content='<img src="slow.jpg">' file_path='/workspace/index.html' workspace='/workspace' />
     );
 
     await waitFor(() => expect(ipcBridge.fs.getImageBase64.invoke).toHaveBeenCalledTimes(1));
