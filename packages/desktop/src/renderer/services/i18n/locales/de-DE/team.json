@@ -223,4 +223,3 @@
     "executionNoticeContent": "Mitwirkende können Nachrichten an das Team senden und Agentenausführungen anstoßen. Alle Ausführungen laufen unter den Anmeldedaten und Berechtigungen des Teambesitzers mit Zugriff auf den Team-Arbeitsbereich. Host-Prozesse bieten keine Sandbox-Isolation auf Betriebssystemebene."
   }
 }
-

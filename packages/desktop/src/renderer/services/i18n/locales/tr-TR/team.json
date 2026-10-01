@@ -223,4 +223,3 @@
     "executionNoticeContent": "İşbirlikçiler takıma mesaj gönderebilir ve ajan çalıştırmalarını tetikleyebilir. Tüm çalıştırmalar Takım Sahibinin kimlik bilgileri ve yetkileriyle yürütülür ve takım çalışma alanına erişir. Ana bilgisayar süreçleri işletim sistemi düzeyinde korumalı alan (sandbox) yalıtımı sağlamaz."
   }
 }
-

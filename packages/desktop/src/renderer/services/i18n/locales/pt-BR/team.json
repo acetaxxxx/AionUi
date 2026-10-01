@@ -223,4 +223,3 @@
     "executionNoticeContent": "Os colaboradores podem enviar mensagens para a equipe e disparar execuções de agentes. Todas as execuções utilizam as credenciais e permissões do proprietário da equipe, acessando o espaço de trabalho da equipe. Os processos de host não fornecem isolamento em sandbox no nível do SO."
   }
 }
-

@@ -223,4 +223,3 @@
     "executionNoticeContent": "Les collaborateurs peuvent envoyer des messages à l'équipe et déclencher des exécutions d'agents. Toutes les exécutions s'effectuent avec les identifiants et autorisations du propriétaire de l'équipe et accèdent à l'espace de travail de l'équipe. Les processus hôtes ne fournissent pas d'isolation de type bac à sable au niveau du système d'exploitation."
   }
 }
-
