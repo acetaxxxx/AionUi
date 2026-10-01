@@ -1,10 +1,10 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Button, Input, Message } from '@arco-design/web-react';
+import { Button, Input, Message, Radio } from '@arco-design/web-react';
 import type { RefInputType } from '@arco-design/web-react/es/Input/interface';
 import { Plus } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { ipcBridge } from '@/common';
-import type { TTeam } from '@/common/types/team/teamTypes';
+import type { SharingMode, TTeam } from '@/common/types/team/teamTypes';
 import type { TeamAssistantInput } from '@/common/adapter/teamMapper';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
@@ -18,14 +18,14 @@ import TeamAssistantPicker from './memberPicker/TeamAssistantPicker';
 import TeamAssistantPickerDropdown from './memberPicker/TeamAssistantPickerDropdown';
 import TeamMemberDraftList, { type TeamMemberDraft } from './memberPicker/TeamMemberDraftList';
 
-// [E2E SYNC] 修改此组件的 DOM 结构（class、标题、关闭按钮等）时，
-// 必须同步更新 tests/e2e/cases/teams/team-create.e2e.ts、team-whitelist.e2e.ts、
-// team-name-validation.e2e.ts 中的 selector，并立即向上汇报改动情况。
-// 注意：迁移到 AionModal variant='standard' 后，关闭按钮为 button[aria-label="Close"]，
+// [E2E SYNC] 修改此组件的 DOM 結構（class、標題、關閉按鈕等）時，
+// 必須同步更新 tests/e2e/cases/teams/team-create.e2e.ts、team-whitelist.e2e.ts、
+// team-name-validation.e2e.ts 中的 selector，並立即向上匯報改動情況。
+// 注意：遷移到 AionModal variant='standard' 後，關閉按鈕為 button[aria-label="Close"]，
 // 不再是 .arco-btn-text / .arco-modal-close-icon。
-// 窄屏（layout.isMobile，<768px）改为单栏：布局根为 team-create-layout-mobile，
-// 助手选择器是锚在 team-create-add-member-btn 上的下拉（选中即关，助手随即出现在下方列表）；
-// 桌面双栏为 team-create-layout。
+// 窄屏（layout.isMobile，<768px）改為單欄：佈局根為 team-create-layout-mobile，
+// 助手選擇器是錨在 team-create-add-member-btn 上的下拉（選中即關，助手隨即出現在下方列表）；
+// 桌面雙欄為 team-create-layout。
 type Props = {
   visible: boolean;
   onClose: () => void;
@@ -39,11 +39,12 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
   const isMobile = layout?.isMobile ?? false;
   const { assistants: allAssistants } = useTeamAssistantOptions(i18n?.language ?? 'en-US');
   const [name, setName] = useState('');
+  const [sharingMode, setSharingMode] = useState<SharingMode>('private');
   const [selectedMembers, setSelectedMembers] = useState<TeamMemberDraft[]>([]);
   const [leaderSelectionId, setLeaderSelectionId] = useState<string | undefined>(undefined);
   const [workspace, setWorkspace] = useState('');
   const [loading, setLoading] = useState(false);
-  // 窄屏专用：助手选择器以下拉列表形式，锚在“添加成员”按钮上按需唤出。
+  // 窄屏專用：助手選擇器以下拉列表形式，錨在“添加成員”按鈕上按需喚出。
   const [assistantDropdownOpen, setAssistantDropdownOpen] = useState(false);
   const nameInputRef = useRef<RefInputType | null>(null);
 
@@ -54,6 +55,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
 
   const handleClose = () => {
     setName('');
+    setSharingMode('private');
     setSelectedMembers([]);
     setLeaderSelectionId(undefined);
     setWorkspace('');
@@ -92,6 +94,12 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
       Message.warning(t('team.create.selectOneLeader', { defaultValue: 'Select one Team Leader' }));
       return;
     }
+    if (sharingMode === 'shared' && !workspace.trim()) {
+      Message.warning(
+        t('team.sharing.workspaceRequired', { defaultValue: 'Shared team requires selecting a workspace folder' })
+      );
+      return;
+    }
     const user_id = user?.id ?? 'system_default_user';
     setLoading(true);
     try {
@@ -123,6 +131,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
         name,
         workspace,
         workspace_mode: 'shared',
+        sharing_mode: sharingMode,
         agents,
       });
 
@@ -159,7 +168,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
     </>
   );
 
-  // 团队名 + 工作空间：桌面端与窄屏端共用同一份字段（文案、testId、交互一致）。
+  // 团队名 + 共享模式 + 工作空间：桌面端与窄屏端共用同一份字段（文案、testId、交互一致）。
   const teamFields = (
     <div className='grid grid-cols-[76px_minmax(0,1fr)] items-center gap-x-14px gap-y-10px'>
       <div className='text-14px font-600 leading-21px text-t-secondary'>
@@ -177,8 +186,38 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
         />
       </div>
 
+      <div className='text-14px font-500 leading-21px text-t-secondary self-start pt-4px'>
+        {t('team.sharing.modeLabel', { defaultValue: 'Sharing' })}
+      </div>
+      <div className='flex flex-col gap-6px'>
+        <Radio.Group
+          type='button'
+          value={sharingMode}
+          onChange={(val) => setSharingMode(val as SharingMode)}
+          data-testid='team-create-sharing-mode-group'
+        >
+          <Radio value='private' data-testid='team-create-sharing-mode-private'>
+            {t('team.sharing.privateOption', { defaultValue: 'Private Team' })}
+          </Radio>
+          <Radio value='shared' data-testid='team-create-sharing-mode-shared'>
+            {t('team.sharing.sharedOption', { defaultValue: 'Shared Team' })}
+          </Radio>
+        </Radio.Group>
+        <div className='text-12px text-t-tertiary leading-18px' data-testid='team-create-sharing-mode-hint'>
+          {sharingMode === 'shared'
+            ? t('team.sharing.sharedHint', {
+                defaultValue:
+                  'Collaborators share the team workspace and view activity. Execution runs under team owner identity.',
+              })
+            : t('team.sharing.privateHint', {
+                defaultValue: 'Only you can view and interact with this team.',
+              })}
+        </div>
+      </div>
+
       <div className='text-14px font-500 leading-21px text-t-secondary'>
         {t('team.create.workspaceLabel', { defaultValue: 'Workspace' })}
+        {sharingMode === 'shared' && <span className='ms-4px text-danger-6'>*</span>}
       </div>
       <div>
         <WorkspaceFolderSelect
@@ -310,7 +349,12 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
               type='primary'
               onClick={handleCreate}
               loading={loading}
-              disabled={!name.trim() || selectedMembers.length === 0 || !hasOneLeader}
+              disabled={
+                !name.trim() ||
+                selectedMembers.length === 0 ||
+                !hasOneLeader ||
+                (sharingMode === 'shared' && !workspace.trim())
+              }
               className='!h-38px min-w-100px !rounded-8px !px-18px !text-13px'
             >
               {t('team.create.confirm', { defaultValue: 'Confirm Create' })}

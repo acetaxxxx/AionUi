@@ -12,6 +12,7 @@ import type { Assistant } from '@/common/types/agent/assistantTypes';
 const createTeamInvokeMock = vi.fn();
 const resolveDefaultTeamAgentModelMock = vi.fn();
 const messageErrorMock = vi.fn();
+const messageWarningMock = vi.fn();
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -51,6 +52,7 @@ vi.mock('@arco-design/web-react', async () => {
     Message: {
       ...actual.Message,
       error: (...args: unknown[]) => messageErrorMock(...args),
+      warning: (...args: unknown[]) => messageWarningMock(...args),
     },
   };
 });
@@ -128,6 +130,7 @@ describe('TeamCreateModal', () => {
     resolveDefaultTeamAgentModelMock.mockReset();
     resolveDefaultTeamAgentModelMock.mockResolvedValue(undefined);
     messageErrorMock.mockReset();
+    messageWarningMock.mockReset();
   });
 
   it('keeps blocked assistants visible and prevents selecting them', () => {
@@ -430,6 +433,50 @@ describe('TeamCreateModal · mobile (narrow screen)', () => {
     const payload = createTeamInvokeMock.mock.calls[0][0];
     expect(payload.name).toBe('Mobile Team');
     expect(payload.agents[0]).toMatchObject({ role: 'leader', assistant_id: 'bare-aionrs' });
+  });
+
+  it('renders sharing mode selection with private default and allows selecting shared mode', () => {
+    render(<TeamCreateModal visible onClose={vi.fn()} onCreated={vi.fn()} />);
+
+    expect(screen.getByTestId('team-create-sharing-mode-group')).toBeInTheDocument();
+    expect(screen.getByTestId('team-create-sharing-mode-private')).toBeInTheDocument();
+    expect(screen.getByTestId('team-create-sharing-mode-shared')).toBeInTheDocument();
+
+    // Default private hint
+    expect(screen.getByTestId('team-create-sharing-mode-hint')).toHaveTextContent(
+      'Only you can view and interact with this team.'
+    );
+
+    // Switch to shared mode
+    fireEvent.click(screen.getByTestId('team-create-sharing-mode-shared'));
+    expect(screen.getByTestId('team-create-sharing-mode-hint')).toHaveTextContent(
+      'Collaborators share the team workspace and view activity'
+    );
+  });
+
+  it('creates team with explicit sharing_mode in payload', async () => {
+    render(<TeamCreateModal visible onClose={vi.fn()} onCreated={vi.fn()} />);
+
+    fireEvent.change(screen.getByTestId('team-create-name-input'), { target: { value: 'Collab Project' } });
+    fireEvent.click(screen.getByTestId('team-create-agent-option-bare-aionrs'));
+
+    // Select shared mode
+    fireEvent.click(screen.getByTestId('team-create-sharing-mode-shared'));
+
+    // When shared mode is selected but workspace is empty, button is disabled
+    const submitButton = screen.getByRole('button', { name: 'Confirm Create' });
+    expect(submitButton).toBeDisabled();
+
+    // Switch back to private mode: button becomes enabled (workspace optional for private)
+    fireEvent.click(screen.getByTestId('team-create-sharing-mode-private'));
+    expect(submitButton).toBeEnabled();
+
+    fireEvent.click(submitButton);
+
+    await waitFor(() => expect(createTeamInvokeMock).toHaveBeenCalledTimes(1));
+    const payload = createTeamInvokeMock.mock.calls[0][0];
+    expect(payload.sharing_mode).toBe('private');
+    expect(payload.workspace_mode).toBe('shared');
   });
 });
 

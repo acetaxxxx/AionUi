@@ -29,6 +29,7 @@ import TeamAgentIdentity from './components/TeamAgentIdentity';
 import TeamViewToggle from './components/TeamViewToggle';
 import TeamActivityView from './activity/TeamActivityView';
 import TeamWarmupOverlay from './components/TeamWarmupOverlay';
+import TeamCollaboratorsModal from './components/collaborators/TeamCollaboratorsModal';
 import { useTeamViewMode } from './hooks/useTeamViewMode';
 import { useTeamWarmup, type TeamWarmupMemberState, type TeamWarmupPhase } from './hooks/useTeamWarmup';
 import { TeamTabsProvider, useTeamTabs } from './hooks/TeamTabsContext';
@@ -549,6 +550,8 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   // 视图模式（并行/单聊），按团队记忆。单聊 = 全屏当前选中成员。
   const [viewMode, setViewMode] = useTeamViewMode(team.id);
   const isSingleView = viewMode === 'single';
+  const [collaboratorsModalVisible, setCollaboratorsModalVisible] = useState(false);
+  const isSharedTeam = team.sharing_mode === 'shared';
 
   const activeAssistant = assistants.find((assistant) => assistant.slot_id === activeSlotId);
   const leadAssistant = assistants.find((assistant) => assistant.role === 'leader');
@@ -813,7 +816,23 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
           isTemporaryWorkspace={isTeamWorkspaceTemporary}
           workspacePreferenceKey={team.id}
           onRenameTitle={onRenameTeam}
-          headerExtra={assistants.length > 1 ? <TeamViewToggle value={viewMode} onChange={setViewMode} /> : undefined}
+          headerExtra={
+            <div className='flex items-center gap-8px'>
+              {isSharedTeam && (
+                <Button
+                  type='secondary'
+                  size='small'
+                  icon={<Peoples theme='outline' size='14' fill='currentColor' />}
+                  onClick={() => setCollaboratorsModalVisible(true)}
+                  className='!h-28px !rounded-6px !px-8px !text-12px'
+                  data-testid='team-collaborators-button'
+                >
+                  {t('team.collaborators.button', { defaultValue: 'People' })}
+                </Button>
+              )}
+              {assistants.length > 1 && <TeamViewToggle value={viewMode} onChange={setViewMode} />}
+            </div>
+          }
           headerLeading={
             <span className='inline-flex w-16px h-16px items-center justify-center shrink-0 leading-none text-t-primary'>
               <Peoples theme='outline' size='16' fill='currentColor' style={{ lineHeight: 0 }} />
@@ -951,6 +970,13 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
             )}
           </div>
         </ChatLayout>
+        {isSharedTeam && (
+          <TeamCollaboratorsModal
+            visible={collaboratorsModalVisible}
+            onClose={() => setCollaboratorsModalVisible(false)}
+            team={team}
+          />
+        )}
       </TeamIdentityProvider>
     </TeamPermissionProvider>
   );

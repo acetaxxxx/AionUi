@@ -50,6 +50,7 @@ import type {
   UpdateProviderRequest,
 } from '../types/provider/providerApi';
 import type {
+  EligibleCollaborator,
   ITeamAgentRemovedEvent,
   ITeamAgentRenamedEvent,
   ITeamAgentRuntimeStatusEvent,
@@ -79,6 +80,7 @@ import type {
   ISendTeamMessageParams,
   ITeamTeammateMessageEvent,
   ITeamInterruptAgentResponse,
+  TeamMember,
   TTeam,
   TeamAssistant,
   TeamContextResetResponse,
@@ -122,8 +124,10 @@ import { fromApiSidebar, fromApiSidebarItems } from './sidebarMapper';
 import type { IAddTeamAssistantParams, ICreateTeamParams } from './teamMapper';
 import {
   fromBackendAssistant,
+  fromBackendEligibleCollaborator,
   fromBackendTeam,
   fromBackendTeamList,
+  fromBackendTeamMember,
   fromBackendTeamOptional,
   toBackendAssistant,
 } from './teamMapper';
@@ -2295,6 +2299,7 @@ export const hub = {
 // ---------------------------------------------------------------------------
 
 export type { IAddTeamAssistantParams, ICreateTeamParams } from './teamMapper';
+export type { EligibleCollaborator, TeamMember, TeamMemberRole, SharingMode } from '../types/team/teamTypes';
 
 export type IRealtimeReconnectedEvent = {
   timestamp: number;
@@ -2309,6 +2314,8 @@ export const team = {
     httpPost<TTeam, ICreateTeamParams>('/api/teams', (p) => ({
       name: p.name,
       agents: p.agents.map(toBackendAssistant),
+      workspace_mode: p.workspace_mode,
+      ...(p.sharing_mode ? { sharing_mode: p.sharing_mode } : {}),
       ...(p.workspace ? { workspace: p.workspace } : {}),
     })),
     fromBackendTeam
@@ -2322,6 +2329,24 @@ export const team = {
     fromBackendTeamOptional
   ),
   remove: httpDelete<void, { id: string }>((p) => `/api/teams/${p.id}`),
+  listEligibleCollaborators: withResponseMap(
+    httpGet<EligibleCollaborator[], void>('/api/teams/eligible-collaborators'),
+    (raw) => (Array.isArray(raw) ? (raw as unknown[]).map(fromBackendEligibleCollaborator) : [])
+  ),
+  listMembers: withResponseMap(
+    httpGet<TeamMember[], { team_id: string }>((p) => `/api/teams/${p.team_id}/members`),
+    (raw) => (Array.isArray(raw) ? (raw as unknown[]).map(fromBackendTeamMember) : [])
+  ),
+  addMember: withResponseMap(
+    httpPost<TeamMember, { team_id: string; account_ref: string }>(
+      (p) => `/api/teams/${p.team_id}/members`,
+      (p) => ({ account_ref: p.account_ref })
+    ),
+    fromBackendTeamMember
+  ),
+  removeMember: httpDelete<void, { team_id: string; membership_ref: string }>(
+    (p) => `/api/teams/${p.team_id}/members/${encodeURIComponent(p.membership_ref)}`
+  ),
   addAgent: withResponseMap(
     httpPost<TeamAssistant, IAddTeamAssistantParams>(
       (p) => `/api/teams/${p.team_id}/agents`,

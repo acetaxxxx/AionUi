@@ -189,5 +189,37 @@
       "idle_notification": "Idle notice",
       "shutdown_request": "Shutdown request"
     }
+  },
+  "sharing": {
+    "modeLabel": "Sharing",
+    "privateOption": "Private Team",
+    "sharedOption": "Shared Team",
+    "privateHint": "Only you can view and interact with this team.",
+    "sharedHint": "Collaborators share the team workspace and view activity. Execution runs under team owner identity.",
+    "workspaceRequired": "Shared team requires selecting a workspace folder"
+  },
+  "collaborators": {
+    "title": "People & Collaborators",
+    "button": "People",
+    "subtitle": "Manage human collaborators who share this team. AI assistants are managed separately in the team roster.",
+    "addTitle": "Add Collaborator",
+    "selectPlaceholder": "Select an eligible account...",
+    "addButton": "Add",
+    "membersTitle": "Team Members ({{count}})",
+    "roleOwner": "Owner",
+    "roleCollaborator": "Collaborator",
+    "remove": "Remove",
+    "removeConfirmTitle": "Remove Collaborator",
+    "removeConfirmContent": "Are you sure you want to remove {{name}} from this team? They will immediately lose access to team conversations and workspace.",
+    "ownerOnlyNotice": "Only the Team Owner can add or remove collaborators.",
+    "emptyMembers": "No collaborators yet.",
+    "emptyEligible": "No eligible accounts available to add.",
+    "loadError": "Failed to load collaborators",
+    "addSuccess": "Collaborator added successfully",
+    "addError": "Failed to add collaborator",
+    "removeSuccess": "Collaborator removed successfully",
+    "removeError": "Failed to remove collaborator",
+    "executionNotice": "Execution & Security Notice",
+    "executionNoticeContent": "Collaborators can message the team and trigger agent runs. All runs execute under the Team Owner's credentials and capabilities with access to the team workspace. Host processes do not provide OS sandbox isolation."
   }
 }

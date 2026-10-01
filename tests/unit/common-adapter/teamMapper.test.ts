@@ -7,7 +7,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   fromBackendAssistant,
+  fromBackendEligibleCollaborator,
   fromBackendTeam,
+  fromBackendTeamMember,
   normalizeTeamStatus,
   toBackendAssistant,
 } from '@/common/adapter/teamMapper';
@@ -196,5 +198,84 @@ describe('teamMapper', () => {
         model: 'claude',
       })
     ).toThrow('assistant_id is required');
+  });
+
+  describe('shared team and collaborator mapping', () => {
+    it('maps sharing_mode and current_member_role in fromBackendTeam', () => {
+      const team = fromBackendTeam({
+        id: 'team-shared-1',
+        name: 'Family Travel',
+        workspace: '/data/shared/travel',
+        workspace_mode: 'shared',
+        sharing_mode: 'shared',
+        current_member_role: 'collaborator',
+        assistants: [],
+      });
+
+      expect(team.sharing_mode).toBe('shared');
+      expect(team.current_member_role).toBe('collaborator');
+    });
+
+    it('handles undefined sharing_mode and current_member_role gracefully', () => {
+      const team = fromBackendTeam({
+        id: 'team-legacy-1',
+        name: 'Solo Project',
+        workspace: '/data/solo',
+        workspace_mode: 'shared',
+        assistants: [],
+      });
+
+      expect(team.sharing_mode).toBeUndefined();
+      expect(team.current_member_role).toBeUndefined();
+    });
+
+    it('maps eligible collaborators correctly', () => {
+      const eligible = fromBackendEligibleCollaborator({
+        account_ref: 'acc-ref-123',
+        display_name: 'Alice Cooper',
+        email: 'alice@example.com',
+      });
+
+      expect(eligible).toEqual({
+        account_ref: 'acc-ref-123',
+        display_name: 'Alice Cooper',
+        email: 'alice@example.com',
+      });
+    });
+
+    it('maps team members with role correctly', () => {
+      const ownerMember = fromBackendTeamMember({
+        membership_ref: 'mem-ref-1',
+        account_ref: 'acc-ref-1',
+        role: 'owner',
+        display_name: 'Bob Ross',
+        email: 'bob@example.com',
+        created_at: 1700000000,
+      });
+
+      expect(ownerMember).toEqual({
+        membership_ref: 'mem-ref-1',
+        account_ref: 'acc-ref-1',
+        role: 'owner',
+        display_name: 'Bob Ross',
+        email: 'bob@example.com',
+        created_at: 1700000000,
+      });
+
+      const collabMember = fromBackendTeamMember({
+        membership_ref: 'mem-ref-2',
+        role: 'collaborator',
+        display_name: 'Charlie Brown',
+      });
+
+      expect(collabMember).toEqual({
+        membership_ref: 'mem-ref-2',
+        account_ref: undefined,
+        role: 'collaborator',
+        display_name: 'Charlie Brown',
+        email: undefined,
+        created_at: undefined,
+      });
+    });
   });
 });
