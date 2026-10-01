@@ -237,4 +237,60 @@ describe('ipcBridge team adapter', () => {
       },
     });
   });
+
+  it('team.getMcpAllowlist calls GET /api/teams/{team_id}/mcp-allowlist', async () => {
+    const { team } = await import('@/common/adapter/ipcBridge');
+
+    await team.getMcpAllowlist.invoke({ team_id: 'team-42' });
+
+    expect(httpBridgeMocks.calls).toContainEqual({
+      method: 'GET',
+      path: '/api/teams/team-42/mcp-allowlist',
+      body: undefined,
+    });
+  });
+
+  it('team.setMcpAllowlist sends strictly mcp_server_ids payload to PUT /api/teams/{team_id}/mcp-allowlist', async () => {
+    const { team } = await import('@/common/adapter/ipcBridge');
+
+    await team.setMcpAllowlist.invoke({
+      team_id: 'team-42',
+      mcp_server_ids: ['mcp-srv-1', 'mcp-srv-2'],
+    });
+
+    expect(httpBridgeMocks.calls).toContainEqual({
+      method: 'PUT',
+      path: '/api/teams/team-42/mcp-allowlist',
+      body: {
+        mcp_server_ids: ['mcp-srv-1', 'mcp-srv-2'],
+      },
+    });
+
+    const call = httpBridgeMocks.calls.find(
+      (c) => c.method === 'PUT' && c.path === '/api/teams/team-42/mcp-allowlist'
+    );
+    expect(call?.body).toEqual({ mcp_server_ids: ['mcp-srv-1', 'mcp-srv-2'] });
+    expect(call?.body).not.toHaveProperty('team_id');
+    expect(call?.body).not.toHaveProperty('config');
+    expect(call?.body).not.toHaveProperty('credentials');
+  });
+
+  it('team.setMcpAllowlist supports empty allowlist [] as fail-closed selection', async () => {
+    const { team } = await import('@/common/adapter/ipcBridge');
+
+    await team.setMcpAllowlist.invoke({
+      team_id: 'team-42',
+      mcp_server_ids: [],
+    });
+
+    const call = httpBridgeMocks.calls.find(
+      (c) => c.method === 'PUT' && c.path === '/api/teams/team-42/mcp-allowlist'
+    );
+    expect(call?.body).toEqual({ mcp_server_ids: [] });
+  });
+
+  it('exports mcp alias pointing to mcpService', async () => {
+    const { mcp, mcpService } = await import('@/common/adapter/ipcBridge');
+    expect(mcp).toBe(mcpService);
+  });
 });

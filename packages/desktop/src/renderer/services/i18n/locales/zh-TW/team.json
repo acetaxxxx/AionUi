@@ -221,6 +221,18 @@
     "removeSuccess": "已成功移除協作者",
     "removeError": "移除協作者失敗",
     "executionNotice": "執行身分與安全提示",
-    "executionNoticeContent": "協作者可以在團隊中發言並觸發 Agent 執行。所有執行均使用團隊擁有者的憑證與權限，並存取團隊工作空間。主機行程不提供作業系統層級沙箱隔離。"
+    "executionNoticeContent": "協作者可以在團隊中發言並觸發 Agent執行。所有執行均使用團隊擁有者的憑證與權限，並存取團隊工作空間。主機行程不提供作業系統層級沙箱隔離。"
+  },
+  "mcp": {
+    "title": "團隊 MCP 服務",
+    "button": "MCP",
+    "subtitle": "設定團隊成員可調用的 MCP 服務。",
+    "disclosureTitle": "MCP 安全與存取說明",
+    "disclosure": "所選 MCP 服務將以團隊擁有者的憑證與權限執行，並可由所有團隊成員調用。未選取的個人 MCP 服務維持無法使用，且絕不使用協作者憑證。",
+    "emptyServers": "尚無已設定的個人 MCP 服務。請先在「設定」中新增 MCP 服務。",
+    "save": "儲存",
+    "saveSuccess": "MCP 白名單更新成功",
+    "saveFailed": "更新 MCP 白名單失敗",
+    "loadFailed": "載入 MCP 服務失敗"
   }
 }

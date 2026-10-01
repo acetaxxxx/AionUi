@@ -39,6 +39,14 @@ export type TeamMember = {
   created_at?: number;
 };
 
+export type TeamMcpAllowlistResponse = {
+  mcp_server_ids: string[];
+};
+
+export type ReplaceTeamMcpAllowlistRequest = {
+  mcp_server_ids: string[];
+};
+
 export type TeamContextResetAvailability =
   | 'ready'
   | 'initializing'

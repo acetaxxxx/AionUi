@@ -1,5 +1,5 @@
 import { Button, Dropdown, Menu, Message, Modal, Spin, Tag, Tooltip } from '@arco-design/web-react';
-import { FullScreen, Left, MoreOne, OffScreen, Peoples, Right } from '@icon-park/react';
+import { FullScreen, Left, MoreOne, OffScreen, Peoples, Right, SettingOne } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR, { useSWRConfig } from 'swr';
@@ -30,6 +30,7 @@ import TeamViewToggle from './components/TeamViewToggle';
 import TeamActivityView from './activity/TeamActivityView';
 import TeamWarmupOverlay from './components/TeamWarmupOverlay';
 import TeamCollaboratorsModal from './components/collaborators';
+import TeamMcpAllowlistModal from './mcp';
 import { useTeamViewMode } from './hooks/useTeamViewMode';
 import { useTeamWarmup, type TeamWarmupMemberState, type TeamWarmupPhase } from './hooks/useTeamWarmup';
 import { TeamTabsProvider, useTeamTabs } from './hooks/TeamTabsContext';
@@ -551,7 +552,9 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   const [viewMode, setViewMode] = useTeamViewMode(team.id);
   const isSingleView = viewMode === 'single';
   const [collaboratorsModalVisible, setCollaboratorsModalVisible] = useState(false);
+  const [mcpModalVisible, setMcpModalVisible] = useState(false);
   const isSharedTeam = team.sharing_mode === 'shared';
+  const isOwner = team.current_member_role === 'owner';
 
   const activeAssistant = assistants.find((assistant) => assistant.slot_id === activeSlotId);
   const leadAssistant = assistants.find((assistant) => assistant.role === 'leader');
@@ -842,6 +845,18 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                   >
                     {t('team.collaborators.button', { defaultValue: 'People' })}
                   </Button>
+                  {isOwner && (
+                    <Button
+                      type='secondary'
+                      size='small'
+                      icon={<SettingOne theme='outline' size='14' fill='currentColor' />}
+                      onClick={() => setMcpModalVisible(true)}
+                      className='!h-28px !rounded-6px !px-8px !text-12px'
+                      data-testid='team-mcp-allowlist-button'
+                    >
+                      {t('team.mcp.button', { defaultValue: 'MCP' })}
+                    </Button>
+                  )}
                 </>
               )}
               {assistants.length > 1 && <TeamViewToggle value={viewMode} onChange={setViewMode} />}
@@ -988,6 +1003,13 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
           <TeamCollaboratorsModal
             visible={collaboratorsModalVisible}
             onClose={() => setCollaboratorsModalVisible(false)}
+            team={team}
+          />
+        )}
+        {isSharedTeam && isOwner && (
+          <TeamMcpAllowlistModal
+            visible={mcpModalVisible}
+            onClose={() => setMcpModalVisible(false)}
             team={team}
           />
         )}

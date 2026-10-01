@@ -222,5 +222,17 @@
     "removeError": "İşbirlikçi kaldırılamadı",
     "executionNotice": "Yürütme ve Güvenlik Bildirimi",
     "executionNoticeContent": "İşbirlikçiler takıma mesaj gönderebilir ve ajan çalıştırmalarını tetikleyebilir. Tüm çalıştırmalar Takım Sahibinin kimlik bilgileri ve yetkileriyle yürütülür ve takım çalışma alanına erişir. Ana bilgisayar süreçleri işletim sistemi düzeyinde korumalı alan (sandbox) yalıtımı sağlamaz."
+  },
+  "mcp": {
+    "title": "Takım MCP Sunucuları",
+    "button": "MCP",
+    "subtitle": "Takım üyeleri tarafından kullanılabilecek MCP sunucularını yapılandırın.",
+    "disclosureTitle": "MCP Güvenlik ve Erişim",
+    "disclosure": "Seçilen MCP sunucuları Takım Sahibinin kimlik bilgileri ve izinleriyle çalışır ve takım üyeleri tarafından çağrılabilir. Seçilmeyen kişisel MCP sunucuları erişilemez kalır. Hiçbir işbirlikçi kimlik bilgisi kullanılmaz.",
+    "emptyServers": "Henüz yapılandırılmış kişisel MCP sunucusu yok. Önce Ayarlar bölümünden MCP sunucuları ekleyin.",
+    "save": "Kaydet",
+    "saveSuccess": "MCP izin listesi başarıyla güncellendi",
+    "saveFailed": "MCP izin listesi güncellenemedi",
+    "loadFailed": "MCP sunucuları yüklenemedi"
   }
 }

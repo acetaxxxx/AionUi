@@ -222,5 +222,17 @@
     "removeError": "Falha ao remover colaborador",
     "executionNotice": "Aviso de segurança e execução",
     "executionNoticeContent": "Os colaboradores podem enviar mensagens para a equipe e disparar execuções de agentes. Todas as execuções utilizam as credenciais e permissões do proprietário da equipe, acessando o espaço de trabalho da equipe. Os processos de host não fornecem isolamento em sandbox no nível do SO."
+  },
+  "mcp": {
+    "title": "Servidores MCP da equipe",
+    "button": "MCP",
+    "subtitle": "Configure quais servidores MCP podem ser usados pelos membros da equipe.",
+    "disclosureTitle": "Segurança e acesso MCP",
+    "disclosure": "Os servidores MCP selecionados são executados com as credenciais e permissões do proprietário da equipe e podem ser invocados pelos membros da equipe. Servidores MCP pessoais não selecionados permanecem indisponíveis. Nenhuma credencial de colaborador é usada.",
+    "emptyServers": "Nenhum servidor MCP pessoal configurado ainda. Adicione servidores MCP nas Configurações primeiro.",
+    "save": "Salvar",
+    "saveSuccess": "Lista de permissões MCP atualizada com sucesso",
+    "saveFailed": "Falha ao atualizar lista de permissões MCP",
+    "loadFailed": "Falha ao carregar servidores MCP"
   }
 }

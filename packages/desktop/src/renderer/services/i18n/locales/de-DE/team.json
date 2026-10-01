@@ -222,5 +222,17 @@
     "removeError": "Mitwirkender konnte nicht entfernt werden",
     "executionNotice": "Ausführungs- und Sicherheitshinweis",
     "executionNoticeContent": "Mitwirkende können Nachrichten an das Team senden und Agentenausführungen anstoßen. Alle Ausführungen laufen unter den Anmeldedaten und Berechtigungen des Teambesitzers mit Zugriff auf den Team-Arbeitsbereich. Host-Prozesse bieten keine Sandbox-Isolation auf Betriebssystemebene."
+  },
+  "mcp": {
+    "title": "Team MCP-Server",
+    "button": "MCP",
+    "subtitle": "Konfigurieren Sie, welche MCP-Server von Teammitgliedern verwendet werden können.",
+    "disclosureTitle": "MCP-Sicherheit und Zugriff",
+    "disclosure": "Ausgewählte MCP-Server werden mit den Anmeldedaten und Berechtigungen des Teambesitzers ausgeführt und können von Teammitgliedern aufgerufen werden. Nicht ausgewählte persönliche MCP-Server bleiben nicht verfügbar. Es werden keine Anmeldedaten von Mitarbeitern verwendet.",
+    "emptyServers": "Noch keine persönlichen MCP-Server konfiguriert. Fügen Sie zuerst MCP-Server in den Einstellungen hinzu.",
+    "save": "Speichern",
+    "saveSuccess": "MCP-Zulassungsliste erfolgreich aktualisiert",
+    "saveFailed": "Fehler beim Aktualisieren der MCP-Zulassungsliste",
+    "loadFailed": "Fehler beim Laden der MCP-Server"
   }
 }

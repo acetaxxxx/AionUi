@@ -222,5 +222,17 @@
     "removeError": "移除协作者失败",
     "executionNotice": "执行身份与安全提示",
     "executionNoticeContent": "协作者可以在团队中发言并触发 Agent 执行。所有执行均使用团队所有者的凭证与权限，并访问团队工作空间。主机进程不提供操作系统层级沙箱隔离。"
+  },
+  "mcp": {
+    "title": "团队 MCP 服务",
+    "button": "MCP",
+    "subtitle": "配置团队成员可调用的 MCP 服务。",
+    "disclosureTitle": "MCP 安全与访问说明",
+    "disclosure": "所选 MCP 服务将以团队所有者的凭据与权限执行，并可被所有团队成员调用。未选择的个人 MCP 服务保持不可用，且绝不使用协作者凭据。",
+    "emptyServers": "暂无已配置的个人 MCP 服务。请先在「设置」中添加 MCP 服务。",
+    "save": "保存",
+    "saveSuccess": "MCP 白名单更新成功",
+    "saveFailed": "更新 MCP 白名单失败",
+    "loadFailed": "加载 MCP 服务失败"
   }
 }

@@ -222,5 +222,17 @@
     "removeError": "Failed to remove collaborator",
     "executionNotice": "Execution & Security Notice",
     "executionNoticeContent": "Collaborators can message the team and trigger agent runs. All runs execute under the Team Owner's credentials and capabilities with access to the team workspace. Host processes do not provide OS sandbox isolation."
+  },
+  "mcp": {
+    "title": "Team MCP Servers",
+    "button": "MCP",
+    "subtitle": "Configure which MCP servers can be used by team members.",
+    "disclosureTitle": "MCP Security & Access",
+    "disclosure": "Selected MCP servers execute using Team Owner credentials and can be invoked by Team members. Unselected personal MCP servers remain unavailable. No collaborator credentials are used.",
+    "emptyServers": "No personal MCP servers configured yet. Add MCP servers in Settings first.",
+    "save": "Save",
+    "saveSuccess": "MCP allowlist updated successfully",
+    "saveFailed": "Failed to update MCP allowlist",
+    "loadFailed": "Failed to load MCP servers"
   }
 }

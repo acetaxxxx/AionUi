@@ -84,6 +84,8 @@ import type {
   TTeam,
   TeamAssistant,
   TeamContextResetResponse,
+  ReplaceTeamMcpAllowlistRequest,
+  TeamMcpAllowlistResponse,
 } from '../types/team/teamTypes';
 import type {
   AutoUpdateReadyResult,
@@ -1328,6 +1330,8 @@ export const mcpService = {
   getAuthenticatedServers: httpGet<string[], void>('/api/mcp/oauth/authenticated'),
 };
 
+export const mcp = mcpService;
+
 export const openclawConversation = {
   sendMessage: conversation.sendMessage,
   responseStream: conversation.responseStream,
@@ -2349,6 +2353,13 @@ export const team = {
   ),
   removeMember: httpDelete<void, { team_id: string; membership_ref: string }>(
     (p) => `/api/teams/${p.team_id}/members/${encodeURIComponent(p.membership_ref)}`
+  ),
+  getMcpAllowlist: httpGet<TeamMcpAllowlistResponse, { team_id: string }>(
+    (p) => `/api/teams/${p.team_id}/mcp-allowlist`
+  ),
+  setMcpAllowlist: httpPut<void, { team_id: string; mcp_server_ids: string[] }>(
+    (p) => `/api/teams/${p.team_id}/mcp-allowlist`,
+    (p): ReplaceTeamMcpAllowlistRequest => ({ mcp_server_ids: p.mcp_server_ids })
   ),
   addAgent: withResponseMap(
     httpPost<TeamAssistant, IAddTeamAssistantParams>(
