@@ -625,10 +625,12 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
     });
   }, [leaderConversationIdForProject, mutateDispatchConversation]);
 
-  // Use team workspace if specified, otherwise fall back to leader assistant's conversation workspace (temp workspace)
+  // Use team workspace if specified, otherwise fall back to leader assistant's conversation workspace (temp workspace).
+  // Shared teams must never fall back to leader conversation workspace if team.workspace is missing.
   const teamWorkspaceView = resolveTeamWorkspaceView(
     team.workspace,
-    (dispatchConversation?.extra as { workspace?: string } | undefined)?.workspace
+    isSharedTeam ? undefined : (dispatchConversation?.extra as { workspace?: string } | undefined)?.workspace,
+    { isShared: isSharedTeam }
   );
   const effectiveWorkspace = teamWorkspaceView.workspacePath;
   // For project teams the file panel is the Layout-level Explorer host (gated on
