@@ -216,7 +216,9 @@ describe('TeamCollaboratorsModal', () => {
 
     // Select Charlie
     const select = screen.getByTestId('team-collaborator-picker');
-    fireEvent.change(select, { target: { value: 'acc-charlie' } });
+    fireEvent.click(select);
+    fireEvent.click(await screen.findByText('Charlie Partner'));
+    await waitFor(() => expect(addBtn).not.toBeDisabled());
 
     // Click Add
     fireEvent.click(addBtn);
