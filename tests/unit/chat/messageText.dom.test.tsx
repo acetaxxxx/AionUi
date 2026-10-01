@@ -828,13 +828,13 @@ describe('MessageText fork entry point', () => {
         type: 'text',
         created_at: 1700000000,
         content: {
-          text: 'Can we check the flight details?',
+          content: 'Can we check the flight details?',
           speaker_name: 'Bob Collaborator',
         },
       };
 
       render(
-        <ConversationProvider conversationId='conv-shared'>
+        <ConversationProvider value={{ conversation_id: 'conv-shared', type: 'acp' }}>
           <MessageText message={message} isLastMessage={true} />
         </ConversationProvider>
       );
@@ -852,12 +852,12 @@ describe('MessageText fork entry point', () => {
         type: 'text',
         created_at: 1700000000,
         content: {
-          text: 'Regular private message',
+          content: 'Regular private message',
         },
       };
 
       render(
-        <ConversationProvider conversationId='conv-private'>
+        <ConversationProvider value={{ conversation_id: 'conv-private', type: 'acp' }}>
           <MessageText message={message} isLastMessage={true} />
         </ConversationProvider>
       );

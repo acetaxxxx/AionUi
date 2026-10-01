@@ -18,12 +18,13 @@ const setMcpAllowlistMock = vi.fn();
 const listServersMock = vi.fn();
 const messageSuccessMock = vi.fn();
 const messageErrorMock = vi.fn();
+const translationMock = vi.hoisted(() => ({
+  t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue || key,
+  i18n: { language: 'en-US' },
+}));
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue || key,
-    i18n: { language: 'en-US' },
-  }),
+  useTranslation: () => translationMock,
 }));
 
 vi.mock('@renderer/hooks/context/LayoutContext', () => ({

@@ -20,17 +20,18 @@ const removeMemberMock = vi.fn();
 const messageSuccessMock = vi.fn();
 const messageErrorMock = vi.fn();
 const modalConfirmMock = vi.fn();
+const translationMock = vi.hoisted(() => ({
+  t: (key: string, options?: { defaultValue?: string; name?: string }) => {
+    if (options?.name) {
+      return (options.defaultValue || key).replace('{{name}}', options.name);
+    }
+    return options?.defaultValue || key;
+  },
+  i18n: { language: 'en-US' },
+}));
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string; name?: string }) => {
-      if (options?.name) {
-        return (options.defaultValue || key).replace('{{name}}', options.name);
-      }
-      return options?.defaultValue || key;
-    },
-    i18n: { language: 'en-US' },
-  }),
+  useTranslation: () => translationMock,
 }));
 
 const mockUser = { id: 'owner-user-1' };

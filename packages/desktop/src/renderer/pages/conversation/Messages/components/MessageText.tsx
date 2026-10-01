@@ -254,8 +254,8 @@ const MessageText: React.FC<MessageTextProps> = ({
   const cronMeta = message.content.cronMeta;
   const displaySenderName = senderName === 'team_system' ? t('team.systemNotice.sender') : senderName;
   const userSpeakerName = isUserMessage
-    ? (((message.content as Record<string, unknown>).speaker_name as string | undefined) ??
-      ((message.content as Record<string, unknown>).author_name as string | undefined) ??
+    ? (message.content.speaker_name ??
+      message.content.author_name ??
       (senderName && senderName !== 'team_system' ? senderName : undefined))
     : undefined;
   const fallbackBackendLogo = senderAgentType ? resolveAgentLogo(logos, { backend: senderAgentType }) : null;
