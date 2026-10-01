@@ -175,6 +175,8 @@ export type HttpRequestOptions = {
   silentStatuses?: number[];
   /** Extra request headers merged on top of the default `Content-Type`. */
   headers?: Record<string, string>;
+  /** Abort an in-flight browser request when its owning view is disposed. */
+  signal?: AbortSignal;
 };
 
 const SENSITIVE_LOG_KEY_PATTERN =
@@ -246,7 +248,8 @@ function sendHttpRequest(
   method: string,
   path: string,
   headers: Record<string, string>,
-  body?: unknown
+  body?: unknown,
+  signal?: AbortSignal
 ): Promise<Response> {
   const url = `${getBaseUrl()}${path}`;
   return fetch(url, {
@@ -254,6 +257,7 @@ function sendHttpRequest(
     headers,
     credentials: 'include',
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    signal,
   });
 }
 
@@ -288,18 +292,21 @@ export async function httpRequest<T>(
     body !== undefined ? JSON.stringify(redactForLog(body)).slice(0, 500) : '(no body)'
   );
 
-  let response = await sendHttpRequest(method, path, headers, body);
+  let response = await sendHttpRequest(method, path, headers, body, options?.signal);
 
   // Expired access cookie → 401. Attempt one silent session refresh, then replay
   // the original request — the WebUI half of the #4124 fix. refreshSession() is a
   // no-op outside browser mode and single-flights concurrent 401s into one POST.
   // The auth endpoints themselves are skipped to avoid recursion.
   if (response.status === 401 && !isAuthEndpoint(path)) {
+    if (options?.signal?.aborted) {
+      throw options.signal.reason ?? new Error('Request aborted');
+    }
     console.debug(`[httpBridge] ${method} ${path} → 401, attempting session refresh`);
     const refreshed = await refreshSession();
-    if (refreshed) {
+    if (refreshed && !options?.signal?.aborted) {
       console.debug(`[httpBridge] session refreshed, replaying ${method} ${path}`);
-      response = await sendHttpRequest(method, path, headers, body);
+      response = await sendHttpRequest(method, path, headers, body, options?.signal);
     }
   }
 

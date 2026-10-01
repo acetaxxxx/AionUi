@@ -40,6 +40,7 @@ vi.mock('react-i18next', () => ({
 
 import HTMLViewer from '@/renderer/pages/conversation/Preview/components/viewers/HTMLViewer';
 import HTMLRenderer from '@/renderer/pages/conversation/Preview/components/renderers/HTMLRenderer';
+import { ipcBridge } from '@/common';
 
 function createConsoleMessageEvent({
   level,
@@ -85,6 +86,8 @@ describe('HTMLRenderer', () => {
 
   afterEach(() => {
     Reflect.deleteProperty(window, 'electronAPI');
+    vi.mocked(ipcBridge.fs.getImageBase64.invoke).mockReset().mockResolvedValue('');
+    vi.mocked(ipcBridge.fs.readFile.invoke).mockReset().mockResolvedValue('');
     vi.clearAllMocks();
   });
 
@@ -124,6 +127,83 @@ describe('HTMLRenderer', () => {
     expect(webview).toBeInTheDocument();
     expect(webview?.getAttribute('src')).toContain('data:text/html');
     expect(webview?.getAttribute('src')).toContain('Unsaved%20edit');
+  });
+
+  it('loads independent relative images with bounded concurrency', async () => {
+    const resolvers: Array<(value: string | null) => void> = [];
+    vi.mocked(ipcBridge.fs.getImageBase64.invoke).mockImplementation(
+      () => new Promise((resolve) => resolvers.push(resolve))
+    );
+    const images = Array.from({ length: 6 }, (_, index) => `<img src="image-${index}.jpg">`).join('');
+    const { unmount } = render(
+      <HTMLRenderer content={images} file_path="/workspace/index.html" workspace="/workspace" />
+    );
+
+    await waitFor(() => expect(ipcBridge.fs.getImageBase64.invoke).toHaveBeenCalledTimes(4));
+    expect(resolvers).toHaveLength(4);
+
+    for (const resolve of resolvers.splice(0)) resolve('data:image/jpeg;base64,abc');
+    await waitFor(() => expect(ipcBridge.fs.getImageBase64.invoke).toHaveBeenCalledTimes(6));
+    for (const resolve of resolvers.splice(0)) resolve('data:image/jpeg;base64,abc');
+    unmount();
+  });
+
+  it('deduplicates the same asset referenced by HTML and CSS', async () => {
+    vi.mocked(ipcBridge.fs.readFile.invoke).mockResolvedValue('a { background: url("./img/shared.jpg"); }');
+    vi.mocked(ipcBridge.fs.getImageBase64.invoke).mockResolvedValue('data:image/jpeg;base64,abc');
+
+    render(
+      <HTMLRenderer
+        content={'<link rel="stylesheet" href="style.css"><img src="img/shared.jpg">'}
+        file_path="/workspace/index.html"
+        workspace="/workspace"
+      />
+    );
+
+    await waitFor(() => expect(ipcBridge.fs.getImageBase64.invoke).toHaveBeenCalledTimes(1));
+    expect(ipcBridge.fs.getImageBase64.invoke).toHaveBeenCalledWith(
+      { path: '/workspace/img/shared.jpg', workspace: '/workspace' },
+      expect.objectContaining({ signal: expect.anything() })
+    );
+    expect(ipcBridge.fs.readFile.invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads HTML images and stylesheets in the same bounded request phase', async () => {
+    let resolveImage: ((value: string | null) => void) | undefined;
+    vi.mocked(ipcBridge.fs.getImageBase64.invoke).mockImplementation(
+      () => new Promise((resolve) => (resolveImage = resolve))
+    );
+    vi.mocked(ipcBridge.fs.readFile.invoke).mockResolvedValue('body { color: black; }');
+
+    const { unmount } = render(
+      <HTMLRenderer
+        content={'<img src="photo.jpg"><link rel="stylesheet" href="style.css">'}
+        file_path="/workspace/index.html"
+        workspace="/workspace"
+      />
+    );
+
+    await waitFor(() => {
+      expect(ipcBridge.fs.getImageBase64.invoke).toHaveBeenCalledTimes(1);
+      expect(ipcBridge.fs.readFile.invoke).toHaveBeenCalledTimes(1);
+    });
+
+    resolveImage?.('data:image/jpeg;base64,abc');
+    unmount();
+  });
+
+  it('aborts outstanding resource requests when the preview unmounts', async () => {
+    vi.mocked(ipcBridge.fs.getImageBase64.invoke).mockImplementation(() => new Promise(() => {}));
+    const { unmount } = render(
+      <HTMLRenderer content='<img src="slow.jpg">' file_path="/workspace/index.html" workspace="/workspace" />
+    );
+
+    await waitFor(() => expect(ipcBridge.fs.getImageBase64.invoke).toHaveBeenCalledTimes(1));
+    const requestOptions = vi.mocked(ipcBridge.fs.getImageBase64.invoke).mock.calls[0][1];
+    expect(requestOptions?.signal?.aborted).toBe(false);
+
+    unmount();
+    expect(requestOptions?.signal?.aborted).toBe(true);
   });
 
   it('writes preview source selection to the renderer log bridge', async () => {
