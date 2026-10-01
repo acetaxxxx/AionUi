@@ -174,7 +174,7 @@ function createRequestLimiter(limit: number): <T>(operation: () => Promise<T>) =
   let active = 0;
   const waiting: Array<() => void> = [];
 
-  return async <T>(operation: () => Promise<T>): Promise<T> => {
+  return async <T,>(operation: () => Promise<T>): Promise<T> => {
     if (active >= limit) {
       await new Promise<void>((resolve) => waiting.push(resolve));
     } else {
