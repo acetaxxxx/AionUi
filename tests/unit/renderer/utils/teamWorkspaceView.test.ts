@@ -29,24 +29,14 @@ describe('resolveTeamWorkspaceView', () => {
   });
 
   it('does not fall back to leader workspace for shared team when team.workspace is empty', () => {
-    const viewWithOptions = resolveTeamWorkspaceView('', '/tmp/aion/conversations/acp-temp-leader', { isShared: true });
-    expect(viewWithOptions.workspacePath).toBe('');
-    expect(viewWithOptions.workspaceEnabled).toBe(false);
-    expect(viewWithOptions.isTemporaryWorkspace).toBe(true);
-
-    const viewWithMode = resolveTeamWorkspaceView('', '/tmp/aion/conversations/acp-temp-leader', { sharingMode: 'shared' });
-    expect(viewWithMode.workspacePath).toBe('');
-    expect(viewWithMode.workspaceEnabled).toBe(false);
-
-    const viewWithBoolean = resolveTeamWorkspaceView('', '/tmp/aion/conversations/acp-temp-leader', true);
-    expect(viewWithBoolean.workspacePath).toBe('');
-    expect(viewWithBoolean.workspaceEnabled).toBe(false);
+    const view = resolveTeamWorkspaceView('', '/tmp/aion/conversations/acp-temp-leader', 'shared');
+    expect(view.workspacePath).toBe('');
+    expect(view.workspaceEnabled).toBe(false);
+    expect(view.isTemporaryWorkspace).toBe(true);
   });
 
   it('uses team.workspace for shared team when explicitly configured', () => {
-    const view = resolveTeamWorkspaceView('/data/shared-workspace', '/tmp/aion/conversations/acp-temp-leader', {
-      isShared: true,
-    });
+    const view = resolveTeamWorkspaceView('/data/shared-workspace', '/tmp/aion/conversations/acp-temp-leader', 'shared');
     expect(view.workspacePath).toBe('/data/shared-workspace');
     expect(view.workspaceEnabled).toBe(true);
     expect(view.isTemporaryWorkspace).toBe(false);
@@ -58,16 +48,9 @@ describe('resolveTeamWorkspaceView', () => {
     expect(viewDefault.workspaceEnabled).toBe(true);
     expect(viewDefault.isTemporaryWorkspace).toBe(true);
 
-    const viewExplicitFalse = resolveTeamWorkspaceView('', '/tmp/aion/conversations/acp-temp-leader', {
-      isShared: false,
-    });
-    expect(viewExplicitFalse.workspacePath).toBe('/tmp/aion/conversations/acp-temp-leader');
-    expect(viewExplicitFalse.workspaceEnabled).toBe(true);
-
-    const viewPrivateMode = resolveTeamWorkspaceView('', '/tmp/aion/conversations/acp-temp-leader', {
-      sharingMode: 'private',
-    });
-    expect(viewPrivateMode.workspacePath).toBe('/tmp/aion/conversations/acp-temp-leader');
-    expect(viewPrivateMode.workspaceEnabled).toBe(true);
+    const viewExplicitPrivate = resolveTeamWorkspaceView('', '/tmp/aion/conversations/acp-temp-leader', 'private');
+    expect(viewExplicitPrivate.workspacePath).toBe('/tmp/aion/conversations/acp-temp-leader');
+    expect(viewExplicitPrivate.workspaceEnabled).toBe(true);
+    expect(viewExplicitPrivate.isTemporaryWorkspace).toBe(true);
   });
 });

@@ -14,19 +14,14 @@ export function isTemporaryTeamWorkspacePath(workspacePath: string): boolean {
   return TEMP_WORKSPACE_PATTERN.test(workspacePath);
 }
 
-export type ResolveTeamWorkspaceOptions = {
-  isShared?: boolean;
-  sharingMode?: 'private' | 'shared' | string;
-};
+import type { SharingMode } from '@/common/types/team/teamTypes';
 
 export function resolveTeamWorkspaceView(
   teamWorkspace?: string,
   leaderWorkspace?: string,
-  options?: ResolveTeamWorkspaceOptions | boolean
+  sharingMode: SharingMode = 'private'
 ): TeamWorkspaceView {
-  const isShared = typeof options === 'boolean'
-    ? options
-    : Boolean(options?.isShared ?? (options?.sharingMode === 'shared'));
+  const isShared = sharingMode === 'shared';
   const normalizedTeamWorkspace = cleanWorkspace(teamWorkspace);
   const normalizedLeaderWorkspace = isShared ? '' : cleanWorkspace(leaderWorkspace);
   const workspacePath = normalizedTeamWorkspace || normalizedLeaderWorkspace;

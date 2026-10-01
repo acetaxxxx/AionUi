@@ -29,7 +29,7 @@ import TeamAgentIdentity from './components/TeamAgentIdentity';
 import TeamViewToggle from './components/TeamViewToggle';
 import TeamActivityView from './activity/TeamActivityView';
 import TeamWarmupOverlay from './components/TeamWarmupOverlay';
-import TeamCollaboratorsModal from './components/TeamCollaboratorsModal';
+import TeamCollaboratorsModal from './components/collaborators';
 import { useTeamViewMode } from './hooks/useTeamViewMode';
 import { useTeamWarmup, type TeamWarmupMemberState, type TeamWarmupPhase } from './hooks/useTeamWarmup';
 import { TeamTabsProvider, useTeamTabs } from './hooks/TeamTabsContext';
@@ -630,7 +630,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   const teamWorkspaceView = resolveTeamWorkspaceView(
     team.workspace,
     isSharedTeam ? undefined : (dispatchConversation?.extra as { workspace?: string } | undefined)?.workspace,
-    { isShared: isSharedTeam }
+    team.sharing_mode
   );
   const effectiveWorkspace = teamWorkspaceView.workspacePath;
   // For project teams the file panel is the Layout-level Explorer host (gated on
