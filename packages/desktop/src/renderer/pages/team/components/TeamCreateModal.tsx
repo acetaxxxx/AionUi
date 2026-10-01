@@ -87,7 +87,11 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
       return;
     }
     if (selectedMembers.length === 0) {
-      Message.warning(t('team.create.selectAtLeastOneMember', { defaultValue: 'Select at least one team member' }));
+      Message.warning(
+        t('team.create.selectAtLeastOneMember', {
+          defaultValue: 'Select at least one team member',
+        })
+      );
       return;
     }
     if (!hasOneLeader) {
@@ -124,7 +128,7 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
       const team = await ipcBridge.team.create.invoke({
         user_id,
         name,
-        workspace: isShared ? undefined : (workspace.trim() || undefined),
+        workspace: isShared ? undefined : workspace.trim() || undefined,
         workspace_mode: 'shared',
         sharing_mode: sharingMode,
         agents,
@@ -150,7 +154,9 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
     <>
       {allAssistants.length === 0 ? (
         <div className='flex min-h-112px items-center justify-center rounded-8px border border-dashed border-border-2 bg-fill-1 py-14px text-13px text-t-tertiary'>
-          {t('team.create.noSupportedAgents', { defaultValue: 'No supported assistants available' })}
+          {t('team.create.noSupportedAgents', {
+            defaultValue: 'No supported assistants available',
+          })}
         </div>
       ) : (
         <TeamAssistantPicker
@@ -287,7 +293,9 @@ const TeamCreateModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
       onVisibleChange={setAssistantDropdownOpen}
       testIdPrefix='team-create-agent'
       panelTestId='team-create-assistant-pane'
-      emptyText={t('team.create.noSupportedAgents', { defaultValue: 'No supported assistants available' })}
+      emptyText={t('team.create.noSupportedAgents', {
+        defaultValue: 'No supported assistants available',
+      })}
     >
       <Button
         type='outline'

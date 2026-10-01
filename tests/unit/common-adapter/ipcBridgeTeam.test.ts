@@ -90,7 +90,11 @@ describe('ipcBridge team adapter', () => {
   it('updateAgentModel persists the observed model through the team agent route', async () => {
     const { team } = await import('@/common/adapter/ipcBridge');
 
-    await team.updateAgentModel.invoke({ team_id: 'team-1', slot_id: 'worker-1', model_id: 'gpt-5.6-sol' });
+    await team.updateAgentModel.invoke({
+      team_id: 'team-1',
+      slot_id: 'worker-1',
+      model_id: 'gpt-5.6-sol',
+    });
 
     expect(httpBridgeMocks.calls).toContainEqual({
       method: 'PATCH',
@@ -250,33 +254,28 @@ describe('ipcBridge team adapter', () => {
     });
   });
 
-  it(
-    'team.setMcpAllowlist sends strictly mcp_server_ids payload to PUT /api/teams/{team_id}/mcp-allowlist',
-    async () => {
-      const { team } = await import('@/common/adapter/ipcBridge');
+  it('team.setMcpAllowlist sends strictly mcp_server_ids payload to PUT /api/teams/{team_id}/mcp-allowlist', async () => {
+    const { team } = await import('@/common/adapter/ipcBridge');
 
-      await team.setMcpAllowlist.invoke({
-        team_id: 'team-42',
+    await team.setMcpAllowlist.invoke({
+      team_id: 'team-42',
+      mcp_server_ids: ['mcp-srv-1', 'mcp-srv-2'],
+    });
+
+    expect(httpBridgeMocks.calls).toContainEqual({
+      method: 'PUT',
+      path: '/api/teams/team-42/mcp-allowlist',
+      body: {
         mcp_server_ids: ['mcp-srv-1', 'mcp-srv-2'],
-      });
+      },
+    });
 
-      expect(httpBridgeMocks.calls).toContainEqual({
-        method: 'PUT',
-        path: '/api/teams/team-42/mcp-allowlist',
-        body: {
-          mcp_server_ids: ['mcp-srv-1', 'mcp-srv-2'],
-        },
-      });
-
-      const call = httpBridgeMocks.calls.find(
-        (c) => c.method === 'PUT' && c.path === '/api/teams/team-42/mcp-allowlist'
-      );
-      expect(call?.body).toEqual({ mcp_server_ids: ['mcp-srv-1', 'mcp-srv-2'] });
-      expect(call?.body).not.toHaveProperty('team_id');
-      expect(call?.body).not.toHaveProperty('config');
-      expect(call?.body).not.toHaveProperty('credentials');
-    }
-  );
+    const call = httpBridgeMocks.calls.find((c) => c.method === 'PUT' && c.path === '/api/teams/team-42/mcp-allowlist');
+    expect(call?.body).toEqual({ mcp_server_ids: ['mcp-srv-1', 'mcp-srv-2'] });
+    expect(call?.body).not.toHaveProperty('team_id');
+    expect(call?.body).not.toHaveProperty('config');
+    expect(call?.body).not.toHaveProperty('credentials');
+  });
 
   it('team.setMcpAllowlist supports empty allowlist [] as fail-closed selection', async () => {
     const { team } = await import('@/common/adapter/ipcBridge');
@@ -286,9 +285,7 @@ describe('ipcBridge team adapter', () => {
       mcp_server_ids: [],
     });
 
-    const call = httpBridgeMocks.calls.find(
-      (c) => c.method === 'PUT' && c.path === '/api/teams/team-42/mcp-allowlist'
-    );
+    const call = httpBridgeMocks.calls.find((c) => c.method === 'PUT' && c.path === '/api/teams/team-42/mcp-allowlist');
     expect(call?.body).toEqual({ mcp_server_ids: [] });
   });
 

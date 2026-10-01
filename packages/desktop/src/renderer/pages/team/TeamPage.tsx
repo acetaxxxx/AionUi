@@ -45,9 +45,7 @@ import { usePreviewContext } from '@/renderer/pages/conversation/Preview';
 import { previewScopeKey } from '@/renderer/pages/conversation/Preview/context/previewScope';
 import { setCurrentProject } from '@/renderer/pages/conversation/explorer/currentProjectStore';
 import { setCurrentConversation } from '@/renderer/pages/conversation/explorer/currentConversationStore';
-import {
-  getSnapshotConversationProjectId,
-} from '@/renderer/pages/conversation/GroupedHistory/hooks/useConversationListSync';
+import { getSnapshotConversationProjectId } from '@/renderer/pages/conversation/GroupedHistory/hooks/useConversationListSync';
 import { isBackendHttpError } from '@/common/adapter/httpBridge';
 
 type Props = {
@@ -78,16 +76,19 @@ const configErrorMessageKey = (error: unknown) => {
 };
 
 /** Compact aionrs model selector for the agent header */
-const AionrsHeaderModelSelector: React.FC<{ conversation_id: string; initialModel?: TProviderWithModel }> = ({
-  conversation_id,
-  initialModel,
-}) => {
+const AionrsHeaderModelSelector: React.FC<{
+  conversation_id: string;
+  initialModel?: TProviderWithModel;
+}> = ({ conversation_id, initialModel }) => {
   const { t } = useTranslation();
   const teamPermission = useTeamPermission();
   const onSelectModel = useCallback(
     async (_provider: IProvider, modelName: string) => {
       const selected = { ..._provider, use_model: modelName } as TProviderWithModel;
-      const ok = await ipcBridge.conversation.update.invoke({ id: conversation_id, updates: { model: selected } });
+      const ok = await ipcBridge.conversation.update.invoke({
+        id: conversation_id,
+        updates: { model: selected },
+      });
       return Boolean(ok);
     },
     [conversation_id]
@@ -270,7 +271,9 @@ const TeamAgentActions: React.FC<{
   const confirmContextReset = useCallback(() => {
     if (contextResetDisabled || restarting || resetting) return;
     Modal.confirm({
-      title: t('team.agentActions.contextReset.confirmTitle', { memberName: assistant.assistant_name }),
+      title: t('team.agentActions.contextReset.confirmTitle', {
+        memberName: assistant.assistant_name,
+      }),
       content: t('team.agentActions.contextReset.confirmContent'),
       okText: t('team.agentActions.contextReset.confirm'),
       cancelText: t('common.cancel'),
@@ -283,7 +286,9 @@ const TeamAgentActions: React.FC<{
             Message.success(t('team.agentActions.contextReset.success', { memberName: assistant.assistant_name }));
           } else if (outcome.reset_status === 'completed') {
             Message.warning(
-              t('team.agentActions.contextReset.partialSuccess', { memberName: assistant.assistant_name })
+              t('team.agentActions.contextReset.partialSuccess', {
+                memberName: assistant.assistant_name,
+              })
             );
           } else {
             Message.error(t('team.agentActions.contextReset.notApplied'));
@@ -917,7 +922,9 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                 {showLeftArrow && (
                   <div
                     className='absolute start-0 top-0 bottom-0 w-48px z-20 flex items-center justify-center cursor-pointer opacity-80 hover:opacity-100 transition-opacity'
-                    style={{ background: 'linear-gradient(90deg, var(--color-bg-1) 40%, transparent)' }}
+                    style={{
+                      background: 'linear-gradient(90deg, var(--color-bg-1) 40%, transparent)',
+                    }}
                     onClick={scrollToPrev}
                   >
                     <div
@@ -986,7 +993,9 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                 {showRightArrow && (
                   <div
                     className='absolute end-0 top-0 bottom-0 w-48px z-20 flex items-center justify-center cursor-pointer opacity-80 hover:opacity-100 transition-opacity'
-                    style={{ background: 'linear-gradient(270deg, var(--color-bg-1) 40%, transparent)' }}
+                    style={{
+                      background: 'linear-gradient(270deg, var(--color-bg-1) 40%, transparent)',
+                    }}
                     onClick={scrollToNext}
                   >
                     <div
@@ -1009,11 +1018,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
           />
         )}
         {isSharedTeam && isOwner && (
-          <TeamMcpAllowlistModal
-            visible={mcpModalVisible}
-            onClose={() => setMcpModalVisible(false)}
-            team={team}
-          />
+          <TeamMcpAllowlistModal visible={mcpModalVisible} onClose={() => setMcpModalVisible(false)} team={team} />
         )}
       </TeamIdentityProvider>
     </TeamPermissionProvider>
@@ -1050,7 +1055,9 @@ const TeamPage: React.FC<Props> = ({ team }) => {
           ? t('team.removeAgent.confirmContentActive', {
               defaultValue: 'This member is working. Remove it anyway? Its current work will be interrupted.',
             })
-          : t('team.removeAgent.confirmContent', { defaultValue: 'Remove this member from the team?' }),
+          : t('team.removeAgent.confirmContent', {
+              defaultValue: 'Remove this member from the team?',
+            }),
         okButtonProps: { status: 'danger' },
         onOk: doRemoveAssistant,
       });

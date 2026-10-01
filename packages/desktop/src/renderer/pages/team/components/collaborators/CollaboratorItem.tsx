@@ -10,12 +10,7 @@ import { Peoples } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import type { CollaboratorItemProps } from './types';
 
-export const CollaboratorItem: React.FC<CollaboratorItemProps> = ({
-  member,
-  isOwner,
-  isRemoving,
-  onRemove,
-}) => {
+export const CollaboratorItem: React.FC<CollaboratorItemProps> = ({ member, isOwner, isRemoving, onRemove }) => {
   const { t } = useTranslation();
   const isMemberOwner = member.role === 'owner';
   const canRemove = isOwner && !isMemberOwner;
@@ -31,9 +26,7 @@ export const CollaboratorItem: React.FC<CollaboratorItemProps> = ({
         </div>
         <div className='flex flex-col min-w-0'>
           <div className='flex items-center gap-8px'>
-            <span className='text-13px font-500 text-t-primary truncate'>
-              {member.display_name}
-            </span>
+            <span className='text-13px font-500 text-t-primary truncate'>{member.display_name}</span>
             <Tag
               color={isMemberOwner ? 'arcoblue' : 'green'}
               size='small'
@@ -45,9 +38,7 @@ export const CollaboratorItem: React.FC<CollaboratorItemProps> = ({
                 : t('team.collaborators.roleCollaborator', { defaultValue: 'Collaborator' })}
             </Tag>
           </div>
-          {member.email && (
-            <span className='text-12px text-t-tertiary truncate'>{member.email}</span>
-          )}
+          {member.email && <span className='text-12px text-t-tertiary truncate'>{member.email}</span>}
         </div>
       </div>
 

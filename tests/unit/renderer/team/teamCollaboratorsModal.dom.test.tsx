@@ -247,9 +247,7 @@ describe('TeamCollaboratorsModal', () => {
     expect(listEligibleMock).not.toHaveBeenCalled();
 
     // Shows owner-only notice
-    expect(
-      screen.getByText('Only the Team Owner can add or remove collaborators.')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Only the Team Owner can add or remove collaborators.')).toBeInTheDocument();
 
     // Add controls and remove buttons are not shown
     expect(screen.queryByTestId('team-collaborator-picker')).not.toBeInTheDocument();

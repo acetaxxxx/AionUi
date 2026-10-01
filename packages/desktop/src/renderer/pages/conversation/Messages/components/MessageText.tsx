@@ -149,7 +149,10 @@ const MessageText: React.FC<MessageTextProps> = ({
     [contentToRender, isUserMessage]
   );
   const files = useMemo(
-    () => extractMessageFiles(message.content as Record<string, unknown>, parsedFiles, { isUserMessage }),
+    () =>
+      extractMessageFiles(message.content as Record<string, unknown>, parsedFiles, {
+        isUserMessage,
+      }),
     [isUserMessage, message.content, parsedFiles]
   );
   // Cross-session markers. Both live on USER messages: the sender-side
@@ -186,7 +189,11 @@ const MessageText: React.FC<MessageTextProps> = ({
   const resolvedFiles = useMemo(
     () =>
       files
-        .map((file_path) => resolveMessageFilePath(file_path, conversationContext?.workspace, { allowAbsolute: true }))
+        .map((file_path) =>
+          resolveMessageFilePath(file_path, conversationContext?.workspace, {
+            allowAbsolute: true,
+          })
+        )
         .filter((resolved): resolved is string => Boolean(resolved)),
     [conversationContext?.workspace, files]
   );
@@ -247,9 +254,9 @@ const MessageText: React.FC<MessageTextProps> = ({
   const cronMeta = message.content.cronMeta;
   const displaySenderName = senderName === 'team_system' ? t('team.systemNotice.sender') : senderName;
   const userSpeakerName = isUserMessage
-    ? ((message.content as Record<string, unknown>).speaker_name as string | undefined) ??
+    ? (((message.content as Record<string, unknown>).speaker_name as string | undefined) ??
       ((message.content as Record<string, unknown>).author_name as string | undefined) ??
-      (senderName && senderName !== 'team_system' ? senderName : undefined)
+      (senderName && senderName !== 'team_system' ? senderName : undefined))
     : undefined;
   const fallbackBackendLogo = senderAgentType ? resolveAgentLogo(logos, { backend: senderAgentType }) : null;
   // 团队 teammate 消息：按发送者会话取身份色，做气泡左色条 + 彩色发送者名；非团队场景为 undefined。
@@ -269,9 +276,7 @@ const MessageText: React.FC<MessageTextProps> = ({
             <span className='text-12px text-t-secondary' data-testid='message-speaker-name'>
               {userSpeakerName}
             </span>
-            <div
-              className='flex size-18px items-center justify-center rounded-full bg-fill-3 text-t-secondary text-10px font-medium'
-            >
+            <div className='flex size-18px items-center justify-center rounded-full bg-fill-3 text-t-secondary text-10px font-medium'>
               {userSpeakerName.slice(0, 1).toUpperCase()}
             </div>
           </div>
@@ -311,7 +316,9 @@ const MessageText: React.FC<MessageTextProps> = ({
                 style={{ background: 'var(--color-fill-2)' }}
                 title={deliverySource.workspace}
               >
-                {t('conversation.crossSession.otherWorkspace', { defaultValue: 'different workspace' })}
+                {t('conversation.crossSession.otherWorkspace', {
+                  defaultValue: 'different workspace',
+                })}
               </span>
             )}
           </div>

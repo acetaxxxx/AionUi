@@ -14,11 +14,7 @@ import { CollaboratorItem } from './CollaboratorItem';
 import type { TeamCollaboratorsModalProps } from './types';
 import { useCollaborators } from './useCollaborators';
 
-export const TeamCollaboratorsModal: React.FC<TeamCollaboratorsModalProps> = ({
-  visible,
-  onClose,
-  team,
-}) => {
+export const TeamCollaboratorsModal: React.FC<TeamCollaboratorsModalProps> = ({ visible, onClose, team }) => {
   const { t } = useTranslation();
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
@@ -137,9 +133,7 @@ export const TeamCollaboratorsModal: React.FC<TeamCollaboratorsModalProps> = ({
               <Spin />
             </div>
           ) : members.length === 0 ? (
-            <div
-              className='flex h-100px items-center justify-center rounded-8px border border-dashed border-border-2 text-13px text-t-tertiary'
-            >
+            <div className='flex h-100px items-center justify-center rounded-8px border border-dashed border-border-2 text-13px text-t-tertiary'>
               {t('team.collaborators.emptyMembers', { defaultValue: 'No collaborators yet.' })}
             </div>
           ) : (
@@ -165,7 +159,9 @@ export const TeamCollaboratorsModal: React.FC<TeamCollaboratorsModalProps> = ({
           <Info theme='outline' size='14' className='shrink-0 mt-2px text-t-tertiary' />
           <div>
             <div className='font-600 text-t-primary mb-2px'>
-              {t('team.collaborators.executionNotice', { defaultValue: 'Execution & Security Notice' })}
+              {t('team.collaborators.executionNotice', {
+                defaultValue: 'Execution & Security Notice',
+              })}
             </div>
             {t('team.collaborators.executionNoticeContent', {
               defaultValue:

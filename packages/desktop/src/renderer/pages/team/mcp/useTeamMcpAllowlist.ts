@@ -52,9 +52,7 @@ export function useTeamMcpAllowlist(team: TTeam, visible: boolean) {
   }, [visible, fetchData]);
 
   const toggleServer = useCallback((id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   }, []);
 
   const handleSave = useCallback(

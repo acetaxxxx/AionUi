@@ -106,7 +106,9 @@ export function useCollaborators(team: TTeam, visible: boolean) {
             membership_ref: member.membership_ref,
           });
           Message.success(
-            t('team.collaborators.removeSuccess', { defaultValue: 'Collaborator removed successfully' })
+            t('team.collaborators.removeSuccess', {
+              defaultValue: 'Collaborator removed successfully',
+            })
           );
           setMembers((prev) => prev.filter((m) => m.membership_ref !== member.membership_ref));
           if (isOwner) {

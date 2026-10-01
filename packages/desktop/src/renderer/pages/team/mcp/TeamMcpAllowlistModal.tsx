@@ -13,11 +13,7 @@ import AionModal from '@renderer/components/base/AionModal';
 import type { TeamMcpAllowlistModalProps } from './types';
 import { useTeamMcpAllowlist } from './useTeamMcpAllowlist';
 
-export const TeamMcpAllowlistModal: React.FC<TeamMcpAllowlistModalProps> = ({
-  visible,
-  onClose,
-  team,
-}) => {
+export const TeamMcpAllowlistModal: React.FC<TeamMcpAllowlistModalProps> = ({ visible, onClose, team }) => {
   const { t } = useTranslation();
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
