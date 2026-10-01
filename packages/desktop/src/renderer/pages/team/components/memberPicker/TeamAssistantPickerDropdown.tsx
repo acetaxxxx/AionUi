@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trigger } from '@arco-design/web-react';
-import type { TeamAssistantOption } from '../assistantSelectUtils';
+import type { TeamAssistantOption } from './assistantSelectUtils';
 import TeamAssistantPicker from './TeamAssistantPicker';
 
 /**

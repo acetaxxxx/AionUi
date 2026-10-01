@@ -6,9 +6,13 @@
 
 import type {
   BackendTeammateStatus,
+  EligibleCollaborator,
+  SharingMode,
   TeamAssistant,
   TeamContextResetAvailability,
   TeamContextResetCapability,
+  TeamMember,
+  TeamMemberRole,
   TeammateRole,
   TeammateStatus,
   TTeam,
@@ -27,8 +31,9 @@ export type TeamAssistantInput = Pick<TeamAssistant, 'role' | 'assistant_name' |
 export type ICreateTeamParams = {
   user_id: string;
   name: string;
-  workspace: string;
+  workspace?: string;
   workspace_mode: WorkspaceMode;
+  sharing_mode?: SharingMode;
   agents: TeamAssistantInput[];
 };
 
@@ -41,6 +46,8 @@ export type IAddTeamAssistantParams = {
 
 const VALID_ROLES = new Set<TeammateRole>(['leader', 'teammate']);
 const VALID_WORKSPACE_MODES = new Set<WorkspaceMode>(['shared', 'isolated']);
+const VALID_SHARING_MODES = new Set<SharingMode>(['private', 'shared']);
+const VALID_MEMBER_ROLES = new Set<TeamMemberRole>(['owner', 'collaborator']);
 const VALID_CONTEXT_RESET_AVAILABILITY = new Set<TeamContextResetAvailability>([
   'ready',
   'initializing',
@@ -76,6 +83,14 @@ export function normalizeTeamStatus(raw: BackendTeammateStatus | undefined): Tea
 
 function toWorkspaceMode(raw: string | undefined): WorkspaceMode {
   return VALID_WORKSPACE_MODES.has(raw as WorkspaceMode) ? (raw as WorkspaceMode) : 'shared';
+}
+
+function toSharingMode(raw: string | undefined): SharingMode | undefined {
+  return VALID_SHARING_MODES.has(raw as SharingMode) ? (raw as SharingMode) : undefined;
+}
+
+function toMemberRole(raw: string | undefined): TeamMemberRole | undefined {
+  return VALID_MEMBER_ROLES.has(raw as TeamMemberRole) ? (raw as TeamMemberRole) : undefined;
 }
 
 function toContextResetCapability(raw: unknown): TeamContextResetCapability {
@@ -135,6 +150,8 @@ export function fromBackendTeam(raw: unknown): TTeam {
     name: (r.name as string | undefined) ?? '',
     workspace: (r.workspace as string | undefined) ?? '',
     workspace_mode: toWorkspaceMode(r.workspace_mode as string | undefined),
+    sharing_mode: toSharingMode(r.sharing_mode as string | undefined),
+    current_member_role: toMemberRole(r.current_member_role as string | undefined),
     leader_assistant_id: leaderAssistantId,
     assistants,
     leader_agent_id: leaderAssistantId,
@@ -142,6 +159,27 @@ export function fromBackendTeam(raw: unknown): TTeam {
     session_mode: r.session_mode as string | undefined,
     created_at: (r.created_at as number | undefined) ?? 0,
     updated_at: (r.updated_at as number | undefined) ?? 0,
+  };
+}
+
+export function fromBackendEligibleCollaborator(raw: unknown): EligibleCollaborator {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  return {
+    account_ref: String(r.account_ref ?? ''),
+    display_name: String(r.display_name ?? ''),
+    email: r.email != null ? String(r.email) : undefined,
+  };
+}
+
+export function fromBackendTeamMember(raw: unknown): TeamMember {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  return {
+    membership_ref: String(r.membership_ref ?? ''),
+    account_ref: r.account_ref != null ? String(r.account_ref) : undefined,
+    role: toMemberRole(r.role as string | undefined) ?? 'collaborator',
+    display_name: String(r.display_name ?? ''),
+    email: r.email != null ? String(r.email) : undefined,
+    created_at: typeof r.created_at === 'number' ? r.created_at : undefined,
   };
 }
 

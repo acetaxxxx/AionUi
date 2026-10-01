@@ -189,5 +189,50 @@
       "idle_notification": "Boşta bildirimi",
       "shutdown_request": "Kapatma isteği"
     }
+  },
+  "sharing": {
+    "modeLabel": "Paylaşım",
+    "privateOption": "Özel Takım",
+    "sharedOption": "Paylaşılan Takım",
+    "privateHint": "Bu takımı yalnızca siz görüntüleyebilir ve etkileşim kurabilirsiniz.",
+    "sharedHint": "İşbirlikçiler takım çalışma alanını paylaşır ve etkinlikleri görüntüler. Yürütme, takım sahibi kimliği altında çalışır.",
+    "workspaceProvisioned": "Paylaşılan ekip çalışma alanı Aion tarafından sağlanır.",
+    "workspaceRequired": "Paylaşılan takım bir çalışma alanı klasörü seçilmesini gerektirir"
+  },
+  "collaborators": {
+    "title": "Kişiler ve İşbirlikçiler",
+    "button": "Kişiler",
+    "subtitle": "Bu takımı paylaşan insan işbirlikçileri yönetin. Yapay zeka asistanları takım kadrosunda ayrı olarak yönetilir.",
+    "addTitle": "İşbirlikçi Ekle",
+    "selectPlaceholder": "Uygun bir hesap seçin...",
+    "addButton": "Ekle",
+    "membersTitle": "Takım Üyeleri ({{count}})",
+    "roleOwner": "Sahip",
+    "roleCollaborator": "İşbirlikçi",
+    "remove": "Kaldır",
+    "removeConfirmTitle": "İşbirlikçiyi Kaldır",
+    "removeConfirmContent": "{{name}} adlı kullanıcıyı bu takımdan kaldırmak istediğinizden emin misiniz? Takım sohbetlerine ve çalışma alanına erişimini derhal kaybedecektir.",
+    "ownerOnlyNotice": "Yalnızca Takım Sahibi işbirlikçi ekleyebilir veya kaldırabilir.",
+    "emptyMembers": "Henüz işbirlikçi yok.",
+    "emptyEligible": "Eklenebilecek uygun hesap bulunamadı.",
+    "loadError": "İşbirlikçiler yüklenemedi",
+    "addSuccess": "İşbirlikçi başarıyla eklendi",
+    "addError": "İşbirlikçi eklenemedi",
+    "removeSuccess": "İşbirlikçi başarıyla kaldırıldı",
+    "removeError": "İşbirlikçi kaldırılamadı",
+    "executionNotice": "Yürütme ve Güvenlik Bildirimi",
+    "executionNoticeContent": "İşbirlikçiler takıma mesaj gönderebilir ve ajan çalıştırmalarını tetikleyebilir. Tüm çalıştırmalar Takım Sahibinin kimlik bilgileri ve yetkileriyle yürütülür ve takım çalışma alanına erişir. Ana bilgisayar süreçleri işletim sistemi düzeyinde korumalı alan (sandbox) yalıtımı sağlamaz."
+  },
+  "mcp": {
+    "title": "Takım MCP Sunucuları",
+    "button": "MCP",
+    "subtitle": "Takım üyeleri tarafından kullanılabilecek MCP sunucularını yapılandırın.",
+    "disclosureTitle": "MCP Güvenlik ve Erişim",
+    "disclosure": "Seçilen MCP sunucuları Takım Sahibinin kimlik bilgileri ve izinleriyle çalışır ve takım üyeleri tarafından çağrılabilir. Seçilmeyen kişisel MCP sunucuları erişilemez kalır. Hiçbir işbirlikçi kimlik bilgisi kullanılmaz.",
+    "emptyServers": "Henüz yapılandırılmış kişisel MCP sunucusu yok. Önce Ayarlar bölümünden MCP sunucuları ekleyin.",
+    "save": "Kaydet",
+    "saveSuccess": "MCP izin listesi başarıyla güncellendi",
+    "saveFailed": "MCP izin listesi güncellenemedi",
+    "loadFailed": "MCP sunucuları yüklenemedi"
   }
 }

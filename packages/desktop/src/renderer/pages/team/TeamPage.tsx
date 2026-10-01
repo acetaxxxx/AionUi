@@ -1,5 +1,5 @@
-import { Button, Dropdown, Menu, Message, Modal, Spin, Tooltip } from '@arco-design/web-react';
-import { FullScreen, Left, MoreOne, OffScreen, Peoples, Right } from '@icon-park/react';
+import { Button, Dropdown, Menu, Message, Modal, Spin, Tag, Tooltip } from '@arco-design/web-react';
+import { FullScreen, Left, MoreOne, OffScreen, Peoples, Right, SettingOne } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR, { useSWRConfig } from 'swr';
@@ -29,6 +29,8 @@ import TeamAgentIdentity from './components/TeamAgentIdentity';
 import TeamViewToggle from './components/TeamViewToggle';
 import TeamActivityView from './activity/TeamActivityView';
 import TeamWarmupOverlay from './components/TeamWarmupOverlay';
+import TeamCollaboratorsModal from './components/collaborators';
+import TeamMcpAllowlistModal from './mcp';
 import { useTeamViewMode } from './hooks/useTeamViewMode';
 import { useTeamWarmup, type TeamWarmupMemberState, type TeamWarmupPhase } from './hooks/useTeamWarmup';
 import { TeamTabsProvider, useTeamTabs } from './hooks/TeamTabsContext';
@@ -74,16 +76,19 @@ const configErrorMessageKey = (error: unknown) => {
 };
 
 /** Compact aionrs model selector for the agent header */
-const AionrsHeaderModelSelector: React.FC<{ conversation_id: string; initialModel?: TProviderWithModel }> = ({
-  conversation_id,
-  initialModel,
-}) => {
+const AionrsHeaderModelSelector: React.FC<{
+  conversation_id: string;
+  initialModel?: TProviderWithModel;
+}> = ({ conversation_id, initialModel }) => {
   const { t } = useTranslation();
   const teamPermission = useTeamPermission();
   const onSelectModel = useCallback(
     async (_provider: IProvider, modelName: string) => {
       const selected = { ..._provider, use_model: modelName } as TProviderWithModel;
-      const ok = await ipcBridge.conversation.update.invoke({ id: conversation_id, updates: { model: selected } });
+      const ok = await ipcBridge.conversation.update.invoke({
+        id: conversation_id,
+        updates: { model: selected },
+      });
       return Boolean(ok);
     },
     [conversation_id]
@@ -266,7 +271,9 @@ const TeamAgentActions: React.FC<{
   const confirmContextReset = useCallback(() => {
     if (contextResetDisabled || restarting || resetting) return;
     Modal.confirm({
-      title: t('team.agentActions.contextReset.confirmTitle', { memberName: assistant.assistant_name }),
+      title: t('team.agentActions.contextReset.confirmTitle', {
+        memberName: assistant.assistant_name,
+      }),
       content: t('team.agentActions.contextReset.confirmContent'),
       okText: t('team.agentActions.contextReset.confirm'),
       cancelText: t('common.cancel'),
@@ -279,7 +286,9 @@ const TeamAgentActions: React.FC<{
             Message.success(t('team.agentActions.contextReset.success', { memberName: assistant.assistant_name }));
           } else if (outcome.reset_status === 'completed') {
             Message.warning(
-              t('team.agentActions.contextReset.partialSuccess', { memberName: assistant.assistant_name })
+              t('team.agentActions.contextReset.partialSuccess', {
+                memberName: assistant.assistant_name,
+              })
             );
           } else {
             Message.error(t('team.agentActions.contextReset.notApplied'));
@@ -549,6 +558,10 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   // 视图模式（并行/单聊），按团队记忆。单聊 = 全屏当前选中成员。
   const [viewMode, setViewMode] = useTeamViewMode(team.id);
   const isSingleView = viewMode === 'single';
+  const [collaboratorsModalVisible, setCollaboratorsModalVisible] = useState(false);
+  const [mcpModalVisible, setMcpModalVisible] = useState(false);
+  const isSharedTeam = team.sharing_mode === 'shared';
+  const isOwner = team.current_member_role === 'owner';
 
   const activeAssistant = assistants.find((assistant) => assistant.slot_id === activeSlotId);
   const leadAssistant = assistants.find((assistant) => assistant.role === 'leader');
@@ -622,10 +635,12 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
     });
   }, [leaderConversationIdForProject, mutateDispatchConversation]);
 
-  // Use team workspace if specified, otherwise fall back to leader assistant's conversation workspace (temp workspace)
+  // Use team workspace if specified, otherwise fall back to leader assistant's conversation workspace (temp workspace).
+  // Shared teams must never fall back to leader conversation workspace if team.workspace is missing.
   const teamWorkspaceView = resolveTeamWorkspaceView(
     team.workspace,
-    (dispatchConversation?.extra as { workspace?: string } | undefined)?.workspace
+    isSharedTeam ? undefined : (dispatchConversation?.extra as { workspace?: string } | undefined)?.workspace,
+    team.sharing_mode
   );
   const effectiveWorkspace = teamWorkspaceView.workspacePath;
   // For project teams the file panel is the Layout-level Explorer host (gated on
@@ -813,7 +828,47 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
           isTemporaryWorkspace={isTeamWorkspaceTemporary}
           workspacePreferenceKey={team.id}
           onRenameTitle={onRenameTeam}
-          headerExtra={assistants.length > 1 ? <TeamViewToggle value={viewMode} onChange={setViewMode} /> : undefined}
+          headerExtra={
+            <div className='flex items-center gap-8px'>
+              {isSharedTeam && (
+                <>
+                  <Tag
+                    color={team.current_member_role === 'owner' ? 'arcoblue' : 'green'}
+                    size='small'
+                    className='!text-11px'
+                    data-testid='team-role-badge'
+                  >
+                    {team.current_member_role === 'owner'
+                      ? t('team.collaborators.roleOwner', { defaultValue: 'Owner' })
+                      : t('team.collaborators.roleCollaborator', { defaultValue: 'Collaborator' })}
+                  </Tag>
+                  <Button
+                    type='secondary'
+                    size='small'
+                    icon={<Peoples theme='outline' size='14' fill='currentColor' />}
+                    onClick={() => setCollaboratorsModalVisible(true)}
+                    className='!h-28px !rounded-6px !px-8px !text-12px'
+                    data-testid='team-collaborators-button'
+                  >
+                    {t('team.collaborators.button', { defaultValue: 'People' })}
+                  </Button>
+                  {isOwner && (
+                    <Button
+                      type='secondary'
+                      size='small'
+                      icon={<SettingOne theme='outline' size='14' fill='currentColor' />}
+                      onClick={() => setMcpModalVisible(true)}
+                      className='!h-28px !rounded-6px !px-8px !text-12px'
+                      data-testid='team-mcp-allowlist-button'
+                    >
+                      {t('team.mcp.button', { defaultValue: 'MCP' })}
+                    </Button>
+                  )}
+                </>
+              )}
+              {assistants.length > 1 && <TeamViewToggle value={viewMode} onChange={setViewMode} />}
+            </div>
+          }
           headerLeading={
             <span className='inline-flex w-16px h-16px items-center justify-center shrink-0 leading-none text-t-primary'>
               <Peoples theme='outline' size='16' fill='currentColor' style={{ lineHeight: 0 }} />
@@ -867,7 +922,9 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                 {showLeftArrow && (
                   <div
                     className='absolute start-0 top-0 bottom-0 w-48px z-20 flex items-center justify-center cursor-pointer opacity-80 hover:opacity-100 transition-opacity'
-                    style={{ background: 'linear-gradient(90deg, var(--color-bg-1) 40%, transparent)' }}
+                    style={{
+                      background: 'linear-gradient(90deg, var(--color-bg-1) 40%, transparent)',
+                    }}
                     onClick={scrollToPrev}
                   >
                     <div
@@ -936,7 +993,9 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                 {showRightArrow && (
                   <div
                     className='absolute end-0 top-0 bottom-0 w-48px z-20 flex items-center justify-center cursor-pointer opacity-80 hover:opacity-100 transition-opacity'
-                    style={{ background: 'linear-gradient(270deg, var(--color-bg-1) 40%, transparent)' }}
+                    style={{
+                      background: 'linear-gradient(270deg, var(--color-bg-1) 40%, transparent)',
+                    }}
                     onClick={scrollToNext}
                   >
                     <div
@@ -951,6 +1010,16 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
             )}
           </div>
         </ChatLayout>
+        {isSharedTeam && (
+          <TeamCollaboratorsModal
+            visible={collaboratorsModalVisible}
+            onClose={() => setCollaboratorsModalVisible(false)}
+            team={team}
+          />
+        )}
+        {isSharedTeam && isOwner && (
+          <TeamMcpAllowlistModal visible={mcpModalVisible} onClose={() => setMcpModalVisible(false)} team={team} />
+        )}
       </TeamIdentityProvider>
     </TeamPermissionProvider>
   );
@@ -986,7 +1055,9 @@ const TeamPage: React.FC<Props> = ({ team }) => {
           ? t('team.removeAgent.confirmContentActive', {
               defaultValue: 'This member is working. Remove it anyway? Its current work will be interrupted.',
             })
-          : t('team.removeAgent.confirmContent', { defaultValue: 'Remove this member from the team?' }),
+          : t('team.removeAgent.confirmContent', {
+              defaultValue: 'Remove this member from the team?',
+            }),
         okButtonProps: { status: 'danger' },
         onOk: doRemoveAssistant,
       });

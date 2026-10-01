@@ -189,5 +189,50 @@
       "idle_notification": "유휴 알림",
       "shutdown_request": "종료 요청"
     }
+  },
+  "sharing": {
+    "modeLabel": "공유 모드",
+    "privateOption": "비공개 팀",
+    "sharedOption": "공유 팀",
+    "privateHint": "나만 이 팀을 보고 상호 작용할 수 있습니다.",
+    "sharedHint": "공동 작업자가 팀 워크스페이스와 활동을 공유합니다. 실행은 팀 소유자 자격으로 진행됩니다.",
+    "workspaceProvisioned": "공유 팀 워크스페이스는 Aion에서 자동으로 프로비저닝됩니다.",
+    "workspaceRequired": "공유 팀은 워크스페이스 폴더 선택이 필요합니다"
+  },
+  "collaborators": {
+    "title": "구성원 및 공동 작업자",
+    "button": "구성원",
+    "subtitle": "이 팀을 공유하는 실제 사용자 구성원을 관리합니다. AI 어시스턴트는 팀 명단에서 별도로 관리됩니다.",
+    "addTitle": "공동 작업자 추가",
+    "selectPlaceholder": "적격 계정 선택...",
+    "addButton": "추가",
+    "membersTitle": "팀 구성원 ({{count}})",
+    "roleOwner": "소유자",
+    "roleCollaborator": "공동 작업자",
+    "remove": "제거",
+    "removeConfirmTitle": "공동 작업자 제거",
+    "removeConfirmContent": "정말로 {{name}} 님을 이 팀에서 제거하시겠습니까? 팀 대화 및 워크스페이스에 대한 접근 권한이 즉시 취소됩니다.",
+    "ownerOnlyNotice": "팀 소유자만 공동 작업자를 추가하거나 제거할 수 있습니다.",
+    "emptyMembers": "아직 공동 작업자가 없습니다.",
+    "emptyEligible": "추가할 수 있는 적격 계정이 없습니다.",
+    "loadError": "공동 작업자 목록을 불러오지 못했습니다",
+    "addSuccess": "공동 작업자가 성공적으로 추가되었습니다",
+    "addError": "공동 작업자 추가 실패",
+    "removeSuccess": "공동 작업자가 성공적으로 제거되었습니다",
+    "removeError": "공동 작업자 제거 실패",
+    "executionNotice": "실행 권한 및 보안 안내",
+    "executionNoticeContent": "공동 작업자는 팀에 메시지를 보내고 에이전트 실행을 트리거할 수 있습니다. 모든 실행은 팀 소유자의 자격 증명과 권한으로 실행되며 팀 워크스페이스에 액세스합니다. 호스트 프로세스는 OS 수준의 샌드박스 격리를 제공하지 않습니다."
+  },
+  "mcp": {
+    "title": "팀 MCP 서버",
+    "button": "MCP",
+    "subtitle": "팀 멤버가 사용할 수 있는 MCP 서버를 구성합니다.",
+    "disclosureTitle": "MCP 보안 및 액세스",
+    "disclosure": "선택한 MCP 서버는 팀 소유자의 자격 증명과 권한으로 실행되며 모든 팀 멤버가 호출할 수 있습니다. 선택되지 않은 개인 MCP 서버는 사용할 수 없으며, 협업자의 자격 증명은 일체 사용되지 않습니다.",
+    "emptyServers": "구성된 개인 MCP 서버가 없습니다. 설정에서 먼저 MCP 서버를 추가하세요.",
+    "save": "저장",
+    "saveSuccess": "MCP 허용 목록이 성공적으로 업데이트되었습니다",
+    "saveFailed": "MCP 허용 목록 업데이트에 실패했습니다",
+    "loadFailed": "MCP 서버를 불러오지 못했습니다"
   }
 }

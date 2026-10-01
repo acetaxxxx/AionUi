@@ -189,5 +189,50 @@
       "idle_notification": "空闲通知",
       "shutdown_request": "关闭请求"
     }
+  },
+  "sharing": {
+    "modeLabel": "共享模式",
+    "privateOption": "私人团队",
+    "sharedOption": "共享团队",
+    "privateHint": "只有您可以查看并与此团队交互。",
+    "sharedHint": "成员共享团队工作空间与动态。执行沿用团队所有者身份。",
+    "workspaceProvisioned": "共享团队工作空间由 Aion 统一分配。",
+    "workspaceRequired": "共享团队必须选择工作空间文件夹"
+  },
+  "collaborators": {
+    "title": "人员与协作者",
+    "button": "成员",
+    "subtitle": "管理共享此团队的真人成员。AI 助手在团队成员名册中独立管理。",
+    "addTitle": "添加协作者",
+    "selectPlaceholder": "选择合格账号...",
+    "addButton": "添加",
+    "membersTitle": "团队成员 ({{count}})",
+    "roleOwner": "所有者",
+    "roleCollaborator": "协作者",
+    "remove": "移除",
+    "removeConfirmTitle": "移除协作者",
+    "removeConfirmContent": "确定要将 {{name}} 从此团队移除吗？对方将立即失去访问团队对话与工作空间的权限。",
+    "ownerOnlyNotice": "只有团队所有者可以添加或移除协作者。",
+    "emptyMembers": "暂无协作者。",
+    "emptyEligible": "暂无可添加的合格账号。",
+    "loadError": "加载协作者失败",
+    "addSuccess": "已成功添加协作者",
+    "addError": "添加协作者失败",
+    "removeSuccess": "已成功移除协作者",
+    "removeError": "移除协作者失败",
+    "executionNotice": "执行身份与安全提示",
+    "executionNoticeContent": "协作者可以在团队中发言并触发 Agent 执行。所有执行均使用团队所有者的凭证与权限，并访问团队工作空间。主机进程不提供操作系统层级沙箱隔离。"
+  },
+  "mcp": {
+    "title": "团队 MCP 服务",
+    "button": "MCP",
+    "subtitle": "配置团队成员可调用的 MCP 服务。",
+    "disclosureTitle": "MCP 安全与访问说明",
+    "disclosure": "所选 MCP 服务将以团队所有者的凭据与权限执行，并可被所有团队成员调用。未选择的个人 MCP 服务保持不可用，且绝不使用协作者凭据。",
+    "emptyServers": "暂无已配置的个人 MCP 服务。请先在「设置」中添加 MCP 服务。",
+    "save": "保存",
+    "saveSuccess": "MCP 白名单更新成功",
+    "saveFailed": "更新 MCP 白名单失败",
+    "loadFailed": "加载 MCP 服务失败"
   }
 }

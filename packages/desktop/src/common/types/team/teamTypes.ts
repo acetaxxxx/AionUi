@@ -16,6 +16,37 @@ export type TeammateStatus = 'pending' | 'idle' | 'active' | 'completed' | 'fail
 /** Workspace sharing strategy for the team */
 export type WorkspaceMode = 'shared' | 'isolated';
 
+/** Sharing mode for the team: private to the owner or shared with collaborators */
+export type SharingMode = 'private' | 'shared';
+
+/** Role of a human member within a shared team */
+export type TeamMemberRole = 'owner' | 'collaborator';
+
+/** Account eligible to be added as a collaborator to a shared team */
+export type EligibleCollaborator = {
+  account_ref: string;
+  display_name: string;
+  email?: string;
+};
+
+/** Active human member of a team */
+export type TeamMember = {
+  membership_ref: string;
+  account_ref?: string;
+  role: TeamMemberRole;
+  display_name: string;
+  email?: string;
+  created_at?: number;
+};
+
+export type TeamMcpAllowlistResponse = {
+  mcp_server_ids: string[];
+};
+
+export type ReplaceTeamMcpAllowlistRequest = {
+  mcp_server_ids: string[];
+};
+
 export type TeamContextResetAvailability =
   | 'ready'
   | 'initializing'
@@ -61,6 +92,8 @@ export type TTeam = {
   name: string;
   workspace: string;
   workspace_mode: WorkspaceMode;
+  sharing_mode?: SharingMode;
+  current_member_role?: TeamMemberRole;
   leader_assistant_id: string;
   assistants: TeamAssistant[];
   /** @deprecated Use leader_assistant_id. */

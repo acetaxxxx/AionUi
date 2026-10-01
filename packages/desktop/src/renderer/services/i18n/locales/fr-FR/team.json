@@ -189,5 +189,50 @@
       "idle_notification": "Notif. d’inactivité",
       "shutdown_request": "Demande d’arrêt"
     }
+  },
+  "sharing": {
+    "modeLabel": "Partage",
+    "privateOption": "Équipe privée",
+    "sharedOption": "Équipe partagée",
+    "privateHint": "Vous seul pouvez voir cette équipe et interagir avec elle.",
+    "sharedHint": "Les collaborateurs partagent l'espace de travail de l'équipe et consultent l'activité. L'exécution s'effectue sous l'identité du propriétaire de l'équipe.",
+    "workspaceProvisioned": "L'espace de travail d'équipe partagé est provisionné par Aion.",
+    "workspaceRequired": "L'équipe partagée nécessite la sélection d'un dossier d'espace de travail"
+  },
+  "collaborators": {
+    "title": "Personnes et collaborateurs",
+    "button": "Personnes",
+    "subtitle": "Gérez les collaborateurs humains partageant cette équipe. Les assistants IA sont gérés séparément dans la composition de l'équipe.",
+    "addTitle": "Ajouter un collaborateur",
+    "selectPlaceholder": "Sélectionner un compte éligible...",
+    "addButton": "Ajouter",
+    "membersTitle": "Membres de l'équipe ({{count}})",
+    "roleOwner": "Propriétaire",
+    "roleCollaborator": "Collaborateur",
+    "remove": "Retirer",
+    "removeConfirmTitle": "Retirer le collaborateur",
+    "removeConfirmContent": "Voulez-vous vraiment retirer {{name}} de cette équipe ? Cette personne perdra immédiatement l'accès aux conversations et à l'espace de travail de l'équipe.",
+    "ownerOnlyNotice": "Seul le propriétaire de l'équipe peut ajouter ou retirer des collaborateurs.",
+    "emptyMembers": "Aucun collaborateur pour l'instant.",
+    "emptyEligible": "Aucun compte éligible disponible à ajouter.",
+    "loadError": "Échec du chargement des collaborateurs",
+    "addSuccess": "Collaborateur ajouté avec succès",
+    "addError": "Échec de l'ajout du collaborateur",
+    "removeSuccess": "Collaborateur retiré avec succès",
+    "removeError": "Échec du retrait du collaborateur",
+    "executionNotice": "Avis d'exécution et de sécurité",
+    "executionNoticeContent": "Les collaborateurs peuvent envoyer des messages à l'équipe et déclencher des exécutions d'agents. Toutes les exécutions s'effectuent avec les identifiants et autorisations du propriétaire de l'équipe et accèdent à l'espace de travail de l'équipe. Les processus hôtes ne fournissent pas d'isolation de type bac à sable au niveau du système d'exploitation."
+  },
+  "mcp": {
+    "title": "Serveurs MCP de l'équipe",
+    "button": "MCP",
+    "subtitle": "Configurez les serveurs MCP accessibles aux membres de l'équipe.",
+    "disclosureTitle": "Sécurité et accès MCP",
+    "disclosure": "Les serveurs MCP sélectionnés s'exécutent avec les identifiants et autorisations du propriétaire de l'équipe et peuvent être appelés par les membres de l'équipe. Les serveurs MCP personnels non sélectionnés restent inaccessibles. Aucun identifiant de collaborateur n'est utilisé.",
+    "emptyServers": "Aucun serveur MCP personnel n'est configuré. Ajoutez d'abord des serveurs MCP dans les Paramètres.",
+    "save": "Enregistrer",
+    "saveSuccess": "Liste autorisée MCP mise à jour avec succès",
+    "saveFailed": "Échec de la mise à jour de la liste autorisée MCP",
+    "loadFailed": "Échec du chargement des serveurs MCP"
   }
 }

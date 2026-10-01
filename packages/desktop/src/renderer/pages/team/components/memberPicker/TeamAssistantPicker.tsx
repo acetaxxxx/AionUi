@@ -3,7 +3,7 @@ import { Button, Empty, Spin, Tooltip } from '@arco-design/web-react';
 import { Plus } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { AionSearchInput, AionInlineSearchInput } from '@renderer/components/base';
-import { AssistantOptionLabel, assistantKey, type TeamAssistantOption } from '../assistantSelectUtils';
+import { AssistantOptionLabel, assistantKey, type TeamAssistantOption } from './assistantSelectUtils';
 
 type Props = {
   assistants: TeamAssistantOption[];

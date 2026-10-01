@@ -189,5 +189,50 @@
       "idle_notification": "閒置通知",
       "shutdown_request": "關閉請求"
     }
+  },
+  "sharing": {
+    "modeLabel": "共享模式",
+    "privateOption": "私人團隊",
+    "sharedOption": "共享團隊",
+    "privateHint": "只有您可以檢視並與此團隊互動。",
+    "sharedHint": "成員共享團隊工作空間與動態。執行沿用團隊擁有者身分。",
+    "workspaceProvisioned": "共享團隊工作空間由 Aion 統一配置。",
+    "workspaceRequired": "共享團隊必須選擇工作空間資料夾"
+  },
+  "collaborators": {
+    "title": "人員與協作者",
+    "button": "成員",
+    "subtitle": "管理共享此團隊的真人成員。AI 助手在團隊成員名單中獨立管理。",
+    "addTitle": "新增協作者",
+    "selectPlaceholder": "選擇合格帳號...",
+    "addButton": "新增",
+    "membersTitle": "團隊成員 ({{count}})",
+    "roleOwner": "擁有者",
+    "roleCollaborator": "協作者",
+    "remove": "移除",
+    "removeConfirmTitle": "移除協作者",
+    "removeConfirmContent": "確定要將 {{name}} 從此團隊移除嗎？對方將立即失去存取團隊對話與工作空間的權限。",
+    "ownerOnlyNotice": "只有團隊擁有者可以新增或移除協作者。",
+    "emptyMembers": "尚無協作者。",
+    "emptyEligible": "無可新增的合格帳號。",
+    "loadError": "載入協作者失敗",
+    "addSuccess": "已成功新增協作者",
+    "addError": "新增協作者失敗",
+    "removeSuccess": "已成功移除協作者",
+    "removeError": "移除協作者失敗",
+    "executionNotice": "執行身分與安全提示",
+    "executionNoticeContent": "協作者可以在團隊中發言並觸發 Agent執行。所有執行均使用團隊擁有者的憑證與權限，並存取團隊工作空間。主機行程不提供作業系統層級沙箱隔離。"
+  },
+  "mcp": {
+    "title": "團隊 MCP 服務",
+    "button": "MCP",
+    "subtitle": "設定團隊成員可調用的 MCP 服務。",
+    "disclosureTitle": "MCP 安全與存取說明",
+    "disclosure": "所選 MCP 服務將以團隊擁有者的憑證與權限執行，並可由所有團隊成員調用。未選取的個人 MCP 服務維持無法使用，且絕不使用協作者憑證。",
+    "emptyServers": "尚無已設定的個人 MCP 服務。請先在「設定」中新增 MCP 服務。",
+    "save": "儲存",
+    "saveSuccess": "MCP 白名單更新成功",
+    "saveFailed": "更新 MCP 白名單失敗",
+    "loadFailed": "載入 MCP 服務失敗"
   }
 }

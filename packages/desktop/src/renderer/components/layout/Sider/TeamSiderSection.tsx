@@ -154,14 +154,22 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
                         <Spin size={16} />
                       </span>
                     ) : (
-                      <Peoples
-                        data-testid={`collapsed-team-icon-${team.id}`}
-                        data-icon-fill={iconColors.primary}
-                        theme='outline'
-                        size='16'
-                        fill={iconColors.primary}
-                        style={{ lineHeight: 0 }}
-                      />
+                      <span className='relative inline-flex items-center justify-center'>
+                        <Peoples
+                          data-testid={`collapsed-team-icon-${team.id}`}
+                          data-icon-fill={iconColors.primary}
+                          theme='outline'
+                          size='16'
+                          fill={iconColors.primary}
+                          style={{ lineHeight: 0 }}
+                        />
+                        {team.sharing_mode === 'shared' && (
+                          <span
+                            data-testid={`collapsed-team-shared-badge-${team.id}`}
+                            className='absolute -bottom-2px -end-2px size-6px rounded-full bg-primary-6'
+                          />
+                        )}
+                      </span>
                     )}
                     {(teamBadgeCounts.get(team.id) ?? 0) > 0 && (
                       <span
@@ -247,13 +255,21 @@ const TeamSiderSection: React.FC<TeamSiderSectionProps> = ({
                           <Spin size={16} />
                         </span>
                       ) : (
-                        <Peoples
-                          data-testid={`team-icon-${team.id}`}
-                          theme='outline'
-                          size='16'
-                          fill='currentColor'
-                          style={{ lineHeight: 0 }}
-                        />
+                        <span className='relative inline-flex items-center justify-center'>
+                          <Peoples
+                            data-testid={`team-icon-${team.id}`}
+                            theme='outline'
+                            size='16'
+                            fill='currentColor'
+                            style={{ lineHeight: 0 }}
+                          />
+                          {team.sharing_mode === 'shared' && (
+                            <span
+                              data-testid={`team-shared-badge-${team.id}`}
+                              className='absolute -bottom-2px -end-2px size-6px rounded-full bg-primary-6'
+                            />
+                          )}
+                        </span>
                       )
                     }
                     name={team.name}

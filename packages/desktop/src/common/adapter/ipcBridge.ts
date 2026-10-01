@@ -50,6 +50,7 @@ import type {
   UpdateProviderRequest,
 } from '../types/provider/providerApi';
 import type {
+  EligibleCollaborator,
   ITeamAgentRemovedEvent,
   ITeamAgentRenamedEvent,
   ITeamAgentRuntimeStatusEvent,
@@ -79,9 +80,12 @@ import type {
   ISendTeamMessageParams,
   ITeamTeammateMessageEvent,
   ITeamInterruptAgentResponse,
+  TeamMember,
   TTeam,
   TeamAssistant,
   TeamContextResetResponse,
+  ReplaceTeamMcpAllowlistRequest,
+  TeamMcpAllowlistResponse,
 } from '../types/team/teamTypes';
 import type {
   AutoUpdateReadyResult,
@@ -123,8 +127,10 @@ import { fromApiSidebar, fromApiSidebarItems } from './sidebarMapper';
 import type { IAddTeamAssistantParams, ICreateTeamParams } from './teamMapper';
 import {
   fromBackendAssistant,
+  fromBackendEligibleCollaborator,
   fromBackendTeam,
   fromBackendTeamList,
+  fromBackendTeamMember,
   fromBackendTeamOptional,
   toBackendAssistant,
 } from './teamMapper';
@@ -1330,6 +1336,8 @@ export const mcpService = {
   getAuthenticatedServers: httpGet<string[], void>('/api/mcp/oauth/authenticated'),
 };
 
+export const mcp = mcpService;
+
 export const openclawConversation = {
   sendMessage: conversation.sendMessage,
   responseStream: conversation.responseStream,
@@ -2301,6 +2309,7 @@ export const hub = {
 // ---------------------------------------------------------------------------
 
 export type { IAddTeamAssistantParams, ICreateTeamParams } from './teamMapper';
+export type { EligibleCollaborator, TeamMember, TeamMemberRole, SharingMode } from '../types/team/teamTypes';
 
 export type IRealtimeReconnectedEvent = {
   timestamp: number;
@@ -2312,11 +2321,16 @@ export const realtime = {
 
 export const team = {
   create: withResponseMap(
-    httpPost<TTeam, ICreateTeamParams>('/api/teams', (p) => ({
-      name: p.name,
-      agents: p.agents.map(toBackendAssistant),
-      ...(p.workspace ? { workspace: p.workspace } : {}),
-    })),
+    httpPost<TTeam, ICreateTeamParams>('/api/teams', (p) => {
+      const isShared = p.sharing_mode === 'shared';
+      return {
+        name: p.name,
+        agents: p.agents.map(toBackendAssistant),
+        workspace_mode: p.workspace_mode,
+        ...(p.sharing_mode ? { sharing_mode: p.sharing_mode } : {}),
+        ...(!isShared && p.workspace ? { workspace: p.workspace } : {}),
+      };
+    }),
     fromBackendTeam
   ),
   list: withResponseMap(
@@ -2328,6 +2342,31 @@ export const team = {
     fromBackendTeamOptional
   ),
   remove: httpDelete<void, { id: string }>((p) => `/api/teams/${p.id}`),
+  listEligibleCollaborators: withResponseMap(
+    httpGet<EligibleCollaborator[], void>('/api/teams/eligible-collaborators'),
+    (raw) => (Array.isArray(raw) ? (raw as unknown[]).map(fromBackendEligibleCollaborator) : [])
+  ),
+  listMembers: withResponseMap(
+    httpGet<TeamMember[], { team_id: string }>((p) => `/api/teams/${p.team_id}/members`),
+    (raw) => (Array.isArray(raw) ? (raw as unknown[]).map(fromBackendTeamMember) : [])
+  ),
+  addMember: withResponseMap(
+    httpPost<TeamMember, { team_id: string; account_ref: string }>(
+      (p) => `/api/teams/${p.team_id}/members`,
+      (p) => ({ account_ref: p.account_ref })
+    ),
+    fromBackendTeamMember
+  ),
+  removeMember: httpDelete<void, { team_id: string; membership_ref: string }>(
+    (p) => `/api/teams/${p.team_id}/members/${encodeURIComponent(p.membership_ref)}`
+  ),
+  getMcpAllowlist: httpGet<TeamMcpAllowlistResponse, { team_id: string }>(
+    (p) => `/api/teams/${p.team_id}/mcp-allowlist`
+  ),
+  setMcpAllowlist: httpPut<void, { team_id: string; mcp_server_ids: string[] }>(
+    (p) => `/api/teams/${p.team_id}/mcp-allowlist`,
+    (p): ReplaceTeamMcpAllowlistRequest => ({ mcp_server_ids: p.mcp_server_ids })
+  ),
   addAgent: withResponseMap(
     httpPost<TeamAssistant, IAddTeamAssistantParams>(
       (p) => `/api/teams/${p.team_id}/agents`,

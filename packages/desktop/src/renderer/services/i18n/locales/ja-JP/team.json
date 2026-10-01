@@ -189,5 +189,50 @@
       "idle_notification": "アイドル通知",
       "shutdown_request": "停止リクエスト"
     }
+  },
+  "sharing": {
+    "modeLabel": "共有モード",
+    "privateOption": "プライベートチーム",
+    "sharedOption": "共有チーム",
+    "privateHint": "あなただけがこのチームを表示および操作できます。",
+    "sharedHint": "共同作業者はチームのワークスペースとアクティビティを共有します。実行はチーム所有者のIDで実行されます。",
+    "workspaceProvisioned": "共有チームのワークスペースは Aion によってプロビジョニングされます。",
+    "workspaceRequired": "共有チームにはワークスペースフォルダーの選択が必要です"
+  },
+  "collaborators": {
+    "title": "メンバーと共同作業者",
+    "button": "メンバー",
+    "subtitle": "このチームを共有する人間の共同作業者を管理します。AIアシスタントはチームメンバー名簿で個別に管理されます。",
+    "addTitle": "共同作業者を追加",
+    "selectPlaceholder": "対象アカウントを選択...",
+    "addButton": "追加",
+    "membersTitle": "チームメンバー ({{count}})",
+    "roleOwner": "所有者",
+    "roleCollaborator": "共同作業者",
+    "remove": "削除",
+    "removeConfirmTitle": "共同作業者を削除",
+    "removeConfirmContent": "本当に {{name}} をこのチームから削除しますか？チームの会話やワークスペースへのアクセス権は直ちに失われます。",
+    "ownerOnlyNotice": "共同作業者の追加または削除は、チーム所有者のみが行えます。",
+    "emptyMembers": "共同作業者はまだいません。",
+    "emptyEligible": "追加可能なアカウントがありません。",
+    "loadError": "共同作業者の読み込みに失敗しました",
+    "addSuccess": "共同作業者を正常に追加しました",
+    "addError": "共同作業者の追加に失敗しました",
+    "removeSuccess": "共同作業者を正常に削除しました",
+    "removeError": "共同作業者の削除に失敗しました",
+    "executionNotice": "実行権限とセキュリティに関する注意事項",
+    "executionNoticeContent": "共同作業者はチームにメッセージを送信し、エージェントの実行をトリガーできます。すべての実行はチーム所有者の資格情報と権限で実行され、チームワークスペースにアクセスします。ホストプロセスはOSレベルのサンドボックス分離を提供しません。"
+  },
+  "mcp": {
+    "title": "チーム MCP サーバー",
+    "button": "MCP",
+    "subtitle": "チームメンバーが利用可能な MCP サーバーを設定します。",
+    "disclosureTitle": "MCP セキュリティとアクセス",
+    "disclosure": "選択された MCP サーバーはチーム所有者の認証情報と権限で実行され、チームメンバー全員が呼び出すことができます。未選択の個人用 MCP サーバーは利用できず、コラボレーターの認証情報は一切使用されません。",
+    "emptyServers": "設定済みの個人用 MCP サーバーがありません。先に設定から MCP サーバーを追加してください。",
+    "save": "保存",
+    "saveSuccess": "MCP 許可リストを更新しました",
+    "saveFailed": "MCP 許可リストの更新に失敗しました",
+    "loadFailed": "MCP サーバーの読み込みに失敗しました"
   }
 }

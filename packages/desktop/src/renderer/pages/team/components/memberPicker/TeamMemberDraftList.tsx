@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@arco-design/web-react';
 import { CloseSmall, Crown } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
-import { AssistantOptionLabel, type TeamAssistantOption } from '../assistantSelectUtils';
+import { AssistantOptionLabel, type TeamAssistantOption } from './assistantSelectUtils';
 
 export type TeamMemberDraft = {
   selectionId: string;

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assistantToOption,
   filterTeamSupportedAssistants,
-} from '@/renderer/pages/team/components/assistantSelectUtils';
+} from '@/renderer/pages/team/components/memberPicker/assistantSelectUtils';
 import type { Assistant } from '@/common/types/agent/assistantTypes';
 
 describe('team agent type policy', () => {

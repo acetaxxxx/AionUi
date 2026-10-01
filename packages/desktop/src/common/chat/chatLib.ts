@@ -127,6 +127,10 @@ export type IMessageText = IMessage<
   'text',
   {
     content: string;
+    /** Human account label attached to a shared Team message. */
+    speaker_name?: string;
+    /** Legacy alias for speaker_name. */
+    author_name?: string;
     /** Backend explicitly replaced the accumulated text for this msg_id. */
     replace?: boolean;
     cronMeta?: CronMessageMeta;
