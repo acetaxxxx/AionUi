@@ -189,5 +189,38 @@
       "idle_notification": "Aviso de inatividade",
       "shutdown_request": "Pedido de encerramento"
     }
+  },
+  "sharing": {
+    "modeLabel": "Compartilhamento",
+    "privateOption": "Equipe privada",
+    "sharedOption": "Equipe compartilhada",
+    "privateHint": "Apenas você pode visualizar e interagir com esta equipe.",
+    "sharedHint": "Os colaboradores compartilham o espaço de trabalho da equipe e visualizam as atividades. A execução ocorre com a identidade do proprietário da equipe.",
+    "workspaceRequired": "A equipe compartilhada requer a seleção de uma pasta de espaço de trabalho"
+  },
+  "collaborators": {
+    "title": "Pessoas e colaboradores",
+    "button": "Pessoas",
+    "subtitle": "Gerencie os colaboradores humanos que compartilham esta equipe. Os assistentes de IA são gerenciados separadamente no elenco da equipe.",
+    "addTitle": "Adicionar colaborador",
+    "selectPlaceholder": "Selecione uma conta qualificada...",
+    "addButton": "Adicionar",
+    "membersTitle": "Membros da equipe ({{count}})",
+    "roleOwner": "Proprietário",
+    "roleCollaborator": "Colaborador",
+    "remove": "Remover",
+    "removeConfirmTitle": "Remover colaborador",
+    "removeConfirmContent": "Tem certeza de que deseja remover {{name}} desta equipe? O usuário perderá imediatamente o acesso às conversas e ao espaço de trabalho da equipe.",
+    "ownerOnlyNotice": "Apenas o proprietário da equipe pode adicionar ou remover colaboradores.",
+    "emptyMembers": "Nenhum colaborador ainda.",
+    "emptyEligible": "Nenhuma conta qualificada disponível para adicionar.",
+    "loadError": "Falha ao carregar colaboradores",
+    "addSuccess": "Colaborador adicionado com sucesso",
+    "addError": "Falha ao adicionar colaborador",
+    "removeSuccess": "Colaborador removido com sucesso",
+    "removeError": "Falha ao remover colaborador",
+    "executionNotice": "Aviso de segurança e execução",
+    "executionNoticeContent": "Os colaboradores podem enviar mensagens para a equipe e disparar execuções de agentes. Todas as execuções utilizam as credenciais e permissões do proprietário da equipe, acessando o espaço de trabalho da equipe. Os processos de host não fornecem isolamento em sandbox no nível do SO."
   }
 }
+

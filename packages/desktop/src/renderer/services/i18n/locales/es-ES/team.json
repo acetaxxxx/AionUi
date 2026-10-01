@@ -189,5 +189,38 @@
       "idle_notification": "Aviso de inactividad",
       "shutdown_request": "Solicitud de cierre"
     }
+  },
+  "sharing": {
+    "modeLabel": "Compartir",
+    "privateOption": "Equipo privado",
+    "sharedOption": "Equipo compartido",
+    "privateHint": "Solo tú puedes ver e interactuar con este equipo.",
+    "sharedHint": "Los colaboradores comparten el espacio de trabajo del equipo y ven la actividad. La ejecución se realiza bajo la identidad del propietario del equipo.",
+    "workspaceRequired": "El equipo compartido requiere seleccionar una carpeta de espacio de trabajo"
+  },
+  "collaborators": {
+    "title": "Personas y colaboradores",
+    "button": "Personas",
+    "subtitle": "Gestiona los colaboradores humanos que comparten este equipo. Los asistentes de IA se gestionan por separado en la plantilla del equipo.",
+    "addTitle": "Añadir colaborador",
+    "selectPlaceholder": "Seleccionar una cuenta apta...",
+    "addButton": "Añadir",
+    "membersTitle": "Miembros del equipo ({{count}})",
+    "roleOwner": "Propietario",
+    "roleCollaborator": "Colaborador",
+    "remove": "Eliminar",
+    "removeConfirmTitle": "Eliminar colaborador",
+    "removeConfirmContent": "¿Seguro que deseas eliminar a {{name}} de este equipo? Perderá inmediatamente el acceso a las conversaciones y al espacio de trabajo del equipo.",
+    "ownerOnlyNotice": "Solo el propietario del equipo puede añadir o eliminar colaboradores.",
+    "emptyMembers": "Aún no hay colaboradores.",
+    "emptyEligible": "No hay cuentas aptas disponibles para añadir.",
+    "loadError": "Error al cargar los colaboradores",
+    "addSuccess": "Colaborador añadido correctamente",
+    "addError": "Error al añadir el colaborador",
+    "removeSuccess": "Colaborador eliminado correctamente",
+    "removeError": "Error al eliminar el colaborador",
+    "executionNotice": "Aviso de ejecución y seguridad",
+    "executionNoticeContent": "Los colaboradores pueden enviar mensajes al equipo y desencadenar ejecuciones de agentes. Todas las ejecuciones se realizan bajo las credenciales y capacidades del propietario del equipo con acceso al espacio de trabajo del equipo. Los procesos de host no proporcionan aislamiento de sandbox a nivel de SO."
   }
 }
+

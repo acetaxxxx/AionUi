@@ -95,7 +95,7 @@ vi.mock('@/common', () => ({
   },
 }));
 
-import TeamCollaboratorsModal from '@/renderer/pages/team/components/collaborators/TeamCollaboratorsModal';
+import TeamCollaboratorsModal from '@/renderer/pages/team/components/TeamCollaboratorsModal';
 
 const sampleTeam: TTeam = {
   id: 'team-1',
