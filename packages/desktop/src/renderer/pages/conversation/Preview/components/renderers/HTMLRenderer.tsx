@@ -195,7 +195,7 @@ async function mapWithConcurrency<T, R>(
   mapper: (item: T, index: number) => Promise<R>,
   signal?: AbortSignal
 ): Promise<Array<R | undefined>> {
-  const results: Array<R | undefined> = Array.from({ length: items.length }, () => undefined);
+  const results: Array<R | undefined> = Array.from({ length: items.length }, (): R | undefined => undefined);
   let nextIndex = 0;
   const workerCount = Math.min(RESOURCE_REQUEST_CONCURRENCY, items.length);
 
@@ -211,10 +211,7 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
-function replaceMatches(
-  source: string,
-  entries: Array<{ match: RegExpMatchArray; replacement?: string }>
-): string {
+function replaceMatches(source: string, entries: Array<{ match: RegExpMatchArray; replacement?: string }>): string {
   let result = '';
   let cursor = 0;
 

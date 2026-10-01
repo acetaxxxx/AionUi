@@ -44,9 +44,7 @@ describe('ipcBridge image-base64 adapter', () => {
   ])(
     'does not retry a $label image request through the general local-file endpoint',
     async ({ status }) => {
-      httpBridgeMocks.httpRequest.mockRejectedValue(
-        Object.assign(new Error('Image request failed'), { status })
-      );
+      httpBridgeMocks.httpRequest.mockRejectedValue(Object.assign(new Error('Image request failed'), { status }));
       const { fs } = await import('@/common/adapter/ipcBridge');
 
       await expect(

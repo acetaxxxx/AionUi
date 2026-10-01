@@ -239,9 +239,7 @@ describe('HTMLRenderer', () => {
       '<script>window.previewApp = true;</script>',
       '<img src="data:image/jpeg;base64,second">',
     ].join('');
-    await waitFor(() =>
-      expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toContain(expectedMarkup)
-    );
+    await waitFor(() => expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toContain(expectedMarkup));
   });
 
   it('aborts outstanding resource requests when the preview unmounts', async () => {
