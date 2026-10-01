@@ -5,7 +5,7 @@
  */
 
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import React from 'react';
 
 const writeRendererLogInvoke = vi.hoisted(() => vi.fn(() => Promise.resolve()));
@@ -190,6 +190,55 @@ describe('HTMLRenderer', () => {
 
     resolveImage?.('data:image/jpeg;base64,abc');
     unmount();
+  });
+
+  it('keeps inlined HTML, CSS, scripts, and images in source order when requests finish out of order', async () => {
+    const imageResolvers = new Map<string, (value: string | null) => void>();
+    const fileResolvers = new Map<string, (value: string | null) => void>();
+    vi.mocked(ipcBridge.fs.getImageBase64.invoke).mockImplementation(
+      ({ path }) => new Promise((resolve) => imageResolvers.set(path, resolve))
+    );
+    vi.mocked(ipcBridge.fs.readFile.invoke).mockImplementation(
+      ({ path }) => new Promise((resolve) => fileResolvers.set(path, resolve))
+    );
+
+    const { container } = render(
+      <HTMLRenderer
+        content={
+          '<img src="first.jpg"><link href="style.css" rel="stylesheet"><script src="app.js"></script><img src="second.jpg">'
+        }
+        file_path="/workspace/index.html"
+        workspace="/workspace"
+      />
+    );
+
+    await waitFor(() => {
+      expect(imageResolvers.size).toBe(2);
+      expect(fileResolvers.size).toBe(2);
+    });
+
+    await act(async () => {
+      fileResolvers.get('/workspace/app.js')?.('window.previewApp = true;');
+      imageResolvers.get('/workspace/second.jpg')?.('data:image/jpeg;base64,second');
+    });
+    await act(async () => {
+      fileResolvers.get('/workspace/style.css')?.('body { background-image: url("./bg.jpg"); }');
+    });
+    await waitFor(() => expect(imageResolvers.has('/workspace/bg.jpg')).toBe(true));
+    await act(async () => {
+      imageResolvers.get('/workspace/bg.jpg')?.('data:image/png;base64,bg');
+      imageResolvers.get('/workspace/first.jpg')?.('data:image/jpeg;base64,first');
+    });
+
+    const expectedMarkup = [
+      '<img src="data:image/jpeg;base64,first">',
+      '<style>body { background-image: url("data:image/png;base64,bg"); }</style>',
+      '<script>window.previewApp = true;</script>',
+      '<img src="data:image/jpeg;base64,second">',
+    ].join('');
+    await waitFor(() =>
+      expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toContain(expectedMarkup)
+    );
   });
 
   it('aborts outstanding resource requests when the preview unmounts', async () => {
