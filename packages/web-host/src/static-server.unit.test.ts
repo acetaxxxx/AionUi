@@ -514,6 +514,58 @@ describe('static-server', () => {
     expect(response.headers.get('set-cookie')).toBeNull();
   });
 
+  it('serves the SPA document when Cloudflare cannot verify the assertion', async () => {
+    vi.mocked(getCloudflareAccessIdentity).mockResolvedValue(null);
+    const backend = await startMockBackend((_req, res) => res.writeHead(404).end());
+    stopBackend = backend.close;
+    handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+    const response = await fetch(`${handle.localUrl}/`, {
+      headers: { 'cf-access-jwt-assertion': 'temporarily-unverifiable-token' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('<title>root</title>');
+    expect(response.headers.get('set-cookie')).toBeNull();
+  });
+
+  it('serves renderer assets needed by the recovery UI with an unverifiable assertion', async () => {
+    vi.mocked(getCloudflareAccessIdentity).mockResolvedValue(null);
+    const backend = await startMockBackend((_req, res) => res.writeHead(404).end());
+    stopBackend = backend.close;
+    handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+    const response = await fetch(`${handle.localUrl}/assets/main.js`, {
+      headers: { 'cf-access-jwt-assertion': 'temporarily-unverifiable-token' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('hi');
+  });
+
+  it('serves GET /login as the SPA instead of proxying it to the POST-only backend route', async () => {
+    vi.mocked(getCloudflareAccessIdentity).mockResolvedValue(null);
+    let backendRequested = false;
+    const backend = await startMockBackend((_req, res) => {
+      backendRequested = true;
+      res.writeHead(404).end();
+    });
+    stopBackend = backend.close;
+    handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+    const responses = await Promise.all([
+      fetch(`${handle.localUrl}/login`),
+      fetch(`${handle.localUrl}/login`, {
+        headers: { 'cf-access-jwt-assertion': 'temporarily-unverifiable-token' },
+      }),
+    ]);
+    const bodies = await Promise.all(responses.map((response) => response.text()));
+
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    expect(bodies.every((body) => body.includes('<title>root</title>'))).toBe(true);
+    expect(backendRequested).toBe(false);
+  });
+
   it('rejects collection APIs with 401 CF_ACCESS_UNVERIFIED when Cloudflare verification fails', async () => {
     vi.mocked(getCloudflareAccessIdentity).mockResolvedValue(null);
     const backend = await startMockBackend((req, res) => {
