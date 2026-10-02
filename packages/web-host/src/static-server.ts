@@ -1,11 +1,10 @@
 /**
  * WebUI static server.
  *
- * Serves out/renderer/ as the SPA and reverse-proxies /api/*, /ws, /api/stt/stream,
- * /login and /logout to aioncore. All auth goes to backend's aionui-auth crate;
- * /login and /logout are aionui-auth's top-level paths, the rest live under
- * /api/auth/*. /ws and /api/stt/stream are WebSocket/stream upgrades spliced at
- * TCP level; /api/stt/stream is the STT streaming endpoint.
+ * Serves out/renderer/ as the SPA and reverse-proxies /api/*, POST /login, and
+ * /logout to aioncore. POST /login and /logout are aionui-auth's top-level paths;
+ * GET /login serves the SPA navigation shell. The rest of auth lives under
+ * /api/auth/*. /ws and /api/stt/stream upgrades are spliced at TCP level.
  *
  * Design: Node native http + serve-handler. No Express. No business routes.
  */
@@ -403,45 +402,42 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
 
       // Cloudflare Access is the source of truth for remote WebUI identity.
       // Local requests without a Cloudflare token keep the normal AION login flow.
+      const pathname = new URL(req.url, 'http://localhost').pathname;
+      const isLoginNavigation = pathname === '/login' && req.method === 'GET';
       const isApiOrAuth =
-        req.url.startsWith('/api/') ||
-        req.url.startsWith('/api?') ||
-        req.url.startsWith('/login') ||
-        req.url.startsWith('/logout');
-      const isDocumentGet =
-        req.method === 'GET' && !isApiOrAuth && (!req.url.includes('.') || req.url === '/' || req.url.startsWith('/?'));
+        pathname === '/api' ||
+        pathname.startsWith('/api/') ||
+        (pathname.startsWith('/login') && !isLoginNavigation) ||
+        pathname.startsWith('/logout');
+      // Renderer files are public application code, not user data. When an
+      // Access assertion is stale, serve these GETs so the SPA can render its
+      // existing expired-session recovery UI; keep every API/auth request gated.
+      const isPublicStaticGet =
+        req.method === 'GET' && !isApiOrAuth && !pathname.startsWith('/cdn-cgi/');
 
       const cloudflareAccessToken = extractCloudflareAccessToken(req.headers);
-      if (cloudflareAccessToken) {
+      if (cloudflareAccessToken && !isPublicStaticGet) {
         const cfConfig = resolveCloudflareAccessConfig();
         if (cfConfig) {
           const cfIdentity = await getCloudflareAccessIdentity(req.headers);
           if (!cfIdentity) {
-            // Edge verification failed: reject immediately, never fallback to random or local user
+            // Edge verification failed: reject protected requests immediately,
+            // never falling back to a local or random user.
             writeCloudflareAuthFailure(req, res, 401, 'CF_ACCESS_UNVERIFIED');
             return;
           }
         }
 
-        // For all API and auth endpoints, forward to backend so backend verifies and provisions user
+        // Forward API and auth requests so the backend verifies and provisions users.
         if (isApiOrAuth) {
           forwardToBackend(req, res, opts.backendPort);
-          return;
-        }
-
-        // For initial document request with Cloudflare token, serve SPA index
-        if (isDocumentGet) {
-          await serveHandler(req, res, {
-            public: opts.staticDir,
-            rewrites: [{ source: '**', destination: '/index.html' }],
-          });
           return;
         }
       }
 
       // /api/* — reverse proxy to backend (includes /api/auth/*).
-      // /login and /logout are aionui-auth's top-level auth endpoints: proxy them too
-      // so WebUI browser clients reach the backend without a path-rewrite.
+      // POST /login and /logout are aionui-auth's top-level auth endpoints:
+      // proxy them so WebUI clients reach the backend without a path-rewrite.
       if (isApiOrAuth) {
         forwardToBackend(req, res, opts.backendPort);
         return;
