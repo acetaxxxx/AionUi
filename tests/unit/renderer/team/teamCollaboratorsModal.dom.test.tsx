@@ -309,13 +309,12 @@ describe('TeamCollaboratorsModal', () => {
 
   it('handles rate-limited refresh after member removal gracefully without crashing', async () => {
     removeMemberMock.mockResolvedValue(undefined);
-    listEligibleMock
-      .mockResolvedValueOnce(sampleEligible)
-      .mockRejectedValueOnce({
-        status: 429,
-        code: 'RATE_LIMITED',
-        message: 'Too many requests',
-      });
+    listEligibleMock.mockResolvedValueOnce(sampleEligible);
+    listEligibleMock.mockRejectedValueOnce({
+      status: 429,
+      code: 'RATE_LIMITED',
+      message: 'Too many requests',
+    });
 
     render(<TeamCollaboratorsModal visible onClose={vi.fn()} team={sampleTeam} />);
 
