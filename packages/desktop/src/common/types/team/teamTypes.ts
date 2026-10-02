@@ -29,6 +29,10 @@ export type EligibleCollaborator = {
   email?: string;
 };
 
+export type ListEligibleCollaboratorsParams = {
+  team_id: string;
+};
+
 /** Active human member of a team */
 export type TeamMember = {
   membership_ref: string;

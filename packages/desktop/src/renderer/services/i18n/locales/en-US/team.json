@@ -215,6 +215,7 @@
     "ownerOnlyNotice": "Only the Team Owner can add or remove collaborators.",
     "emptyMembers": "No collaborators yet.",
     "emptyEligible": "No eligible accounts available to add.",
+    "rateLimited": "Too many requests. Please wait a moment before trying again.",
     "loadError": "Failed to load collaborators",
     "addSuccess": "Collaborator added successfully",
     "addError": "Failed to add collaborator",

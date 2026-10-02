@@ -28,8 +28,10 @@ export const TeamCollaboratorsModal: React.FC<TeamCollaboratorsModalProps> = ({ 
     loading,
     adding,
     removingRef,
+    rateLimited,
     handleAddMember,
     handleRemoveMember,
+    retryEligible,
   } = useCollaborators(team, visible);
 
   return (
@@ -101,7 +103,28 @@ export const TeamCollaboratorsModal: React.FC<TeamCollaboratorsModalProps> = ({ 
                 {t('team.collaborators.addButton', { defaultValue: 'Add' })}
               </Button>
             </div>
-            {eligibleAccounts.length === 0 && !loading && (
+            {rateLimited && !loading && (
+              <div
+                className='flex items-center justify-between gap-8px rounded-6px border border-warning-2 bg-warning-1 p-8px text-12px text-warning-6'
+                data-testid='team-collaborator-rate-limited'
+              >
+                <span>
+                  {t('team.collaborators.rateLimited', {
+                    defaultValue: 'Too many requests. Please wait a moment before trying again.',
+                  })}
+                </span>
+                <Button
+                  size='mini'
+                  type='text'
+                  onClick={retryEligible}
+                  className='!p-0 shrink-0 text-12px text-warning-6 underline hover:text-warning-5'
+                  data-testid='team-collaborator-retry-btn'
+                >
+                  {t('common.retry', { defaultValue: 'Retry' })}
+                </Button>
+              </div>
+            )}
+            {!rateLimited && eligibleAccounts.length === 0 && !loading && (
               <div className='text-12px text-t-tertiary'>
                 {t('team.collaborators.emptyEligible', {
                   defaultValue: 'No eligible accounts available to add.',

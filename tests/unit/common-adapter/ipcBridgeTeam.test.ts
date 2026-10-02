@@ -254,6 +254,18 @@ describe('ipcBridge team adapter', () => {
     });
   });
 
+  it('team.listEligibleCollaborators calls GET /api/teams/eligible-collaborators?team_id={team_id}', async () => {
+    const { team } = await import('@/common/adapter/ipcBridge');
+
+    await team.listEligibleCollaborators.invoke({ team_id: 'team-42' });
+
+    expect(httpBridgeMocks.calls).toContainEqual({
+      method: 'GET',
+      path: '/api/teams/eligible-collaborators?team_id=team-42',
+      body: undefined,
+    });
+  });
+
   it('team.setMcpAllowlist sends strictly mcp_server_ids payload to PUT /api/teams/{team_id}/mcp-allowlist', async () => {
     const { team } = await import('@/common/adapter/ipcBridge');
 

@@ -215,6 +215,7 @@
     "ownerOnlyNotice": "只有團隊擁有者可以新增或移除協作者。",
     "emptyMembers": "尚無協作者。",
     "emptyEligible": "無可新增的合格帳號。",
+    "rateLimited": "請求過於頻繁，請稍後再試。",
     "loadError": "載入協作者失敗",
     "addSuccess": "已成功新增協作者",
     "addError": "新增協作者失敗",

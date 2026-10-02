@@ -215,6 +215,7 @@
     "ownerOnlyNotice": "Nur der Teambesitzer kann Mitwirkende hinzufügen oder entfernen.",
     "emptyMembers": "Noch keine Mitwirkenden.",
     "emptyEligible": "Keine berechtigten Konten zum Hinzufügen verfügbar.",
+    "rateLimited": "Zu viele Anfragen. Bitte warten Sie einen Moment, bevor Sie es erneut versuchen.",
     "loadError": "Mitwirkende konnten nicht geladen werden",
     "addSuccess": "Mitwirkender erfolgreich hinzugefügt",
     "addError": "Mitwirkender konnte nicht hinzugefügt werden",
