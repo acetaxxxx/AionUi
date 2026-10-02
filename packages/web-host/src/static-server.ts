@@ -412,8 +412,7 @@ export async function startStaticServer(opts: StaticServerOptions): Promise<Stat
       // Renderer files are public application code, not user data. When an
       // Access assertion is stale, serve these GETs so the SPA can render its
       // existing expired-session recovery UI; keep every API/auth request gated.
-      const isPublicStaticGet =
-        req.method === 'GET' && !isApiOrAuth && !pathname.startsWith('/cdn-cgi/');
+      const isPublicStaticGet = req.method === 'GET' && !isApiOrAuth && !pathname.startsWith('/cdn-cgi/');
 
       const cloudflareAccessToken = extractCloudflareAccessToken(req.headers);
       if (cloudflareAccessToken && !isPublicStaticGet) {
