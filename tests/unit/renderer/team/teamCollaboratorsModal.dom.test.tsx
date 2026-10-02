@@ -135,7 +135,6 @@ const sampleEligible: EligibleCollaborator[] = [
 describe('TeamCollaboratorsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUser.id = 'owner-user-1';
     listMembersMock.mockResolvedValue(sampleMembers);
     listEligibleMock.mockResolvedValue(sampleEligible);
   });
