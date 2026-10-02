@@ -8,7 +8,7 @@ import type { TMessage } from '@/common/chat/chatLib';
 import { emitter } from '@/renderer/utils/emitter';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { useOptionalPreviewContext } from '@/renderer/pages/conversation/Preview/context/PreviewContext';
-import { openExternalUrl } from '@/renderer/utils/platform';
+import { isElectronDesktop, openExternalUrl } from '@/renderer/utils/platform';
 import { resolveSelectionHttpUrl } from '@/renderer/utils/url';
 import { Browser, Earth, Quote } from '@icon-park/react';
 import React, { useEffect, useRef, useState } from 'react';
@@ -82,6 +82,7 @@ const SelectionReplyButton: React.FC<{ messages: TMessage[] }> = ({ messages }) 
   const { t } = useTranslation();
   const layout = useLayoutContext();
   const preview = useOptionalPreviewContext();
+  const canUseBuiltinBrowser = isElectronDesktop();
   const isMobile = layout?.isMobile ?? false;
   const [pos, setPos] = useState<ReplyPos | null>(null);
   const messagesRef = useRef(messages);
@@ -198,7 +199,7 @@ const SelectionReplyButton: React.FC<{ messages: TMessage[] }> = ({ messages }) 
         <Quote theme='outline' size='14' fill='currentColor' />
         <span className='text-12px font-medium'>{t('common.reply', { defaultValue: 'Reply' })}</span>
       </div>
-      {url && preview && (
+      {url && preview && canUseBuiltinBrowser && (
         <div
           className={itemClassName}
           onMouseDown={(e) => {

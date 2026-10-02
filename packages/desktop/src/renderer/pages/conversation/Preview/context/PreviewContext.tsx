@@ -8,6 +8,7 @@ import { ipcBridge } from '@/common';
 import type { PreviewContentType } from '@/common/types/office/preview';
 import type { ChatFileRef, ContentEncoding } from '@/common/types/chatFile';
 import { chatFileRefKey, isChatFileRef } from '@/common/types/chatFile';
+import { isElectronDesktop } from '@/renderer/utils/platform';
 import { emitter } from '@/renderer/utils/emitter';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { BROWSER_BLANK_URL, BROWSER_TAB_FALLBACK_TITLE, MAX_BROWSER_TABS } from '../browser/constants';
@@ -425,7 +426,10 @@ const loadScopeState = (scope: string): PersistedScopeState => {
     const raw = localStorage.getItem(previewScopeStorageKey(scope));
     if (!raw) return EMPTY_SCOPE_STATE;
     const parsed = JSON.parse(raw) as { isOpen?: unknown; tabs?: unknown; activeTabId?: unknown };
-    const tabs = parsePersistedTabs(parsed.tabs);
+    // Browser tabs use Electron's <webview> and must not be restored into a
+    // WebUI/PWA session, where they would render as a non-functional custom tag.
+    const parsedTabs = parsePersistedTabs(parsed.tabs);
+    const tabs = isElectronDesktop() ? parsedTabs : parsedTabs.filter((tab) => tab.content_type !== 'browser');
     let activeTabId = typeof parsed.activeTabId === 'string' ? parsed.activeTabId : null;
     if (activeTabId && !tabs.some((tab) => tab.id === activeTabId)) activeTabId = tabs[0]?.id || null;
     return { isOpen: parsed.isOpen === true && tabs.length > 0, tabs, activeTabId };
@@ -734,6 +738,11 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const openPreview = useCallback(
     (new_content: string, type: PreviewContentType, meta?: PreviewMetadata, options?: OpenPreviewOptions) => {
+      // The in-app browser is backed by Electron's <webview> and CDP bridge.
+      // Ignore browser-open events in WebUI/PWA rather than creating a tab that
+      // cannot display or be controlled in the user's browser.
+      if (type === 'browser' && !isElectronDesktop()) return;
+
       /**
        * 所有决策都在调用 setTabs 之前基于 tabsRef 做完，updater 只负责按决策产出
        * 新数组。
