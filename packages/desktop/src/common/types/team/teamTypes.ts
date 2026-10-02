@@ -97,7 +97,8 @@ export type TTeam = {
   workspace: string;
   workspace_mode: WorkspaceMode;
   sharing_mode?: SharingMode;
-  current_member_role?: TeamMemberRole;
+  /** Current user's authorization role on this team. */
+  role?: TeamMemberRole;
   leader_assistant_id: string;
   assistants: TeamAssistant[];
   /** @deprecated Use leader_assistant_id. */

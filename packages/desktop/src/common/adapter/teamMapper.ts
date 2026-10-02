@@ -151,7 +151,7 @@ export function fromBackendTeam(raw: unknown): TTeam {
     workspace: (r.workspace as string | undefined) ?? '',
     workspace_mode: toWorkspaceMode(r.workspace_mode as string | undefined),
     sharing_mode: toSharingMode(r.sharing_mode as string | undefined),
-    current_member_role: toMemberRole(r.current_member_role as string | undefined),
+    role: toMemberRole(r.role as string | undefined),
     leader_assistant_id: leaderAssistantId,
     assistants,
     leader_agent_id: leaderAssistantId,

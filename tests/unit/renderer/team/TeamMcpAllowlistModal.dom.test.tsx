@@ -86,7 +86,7 @@ const sampleTeam: TTeam = {
   workspace: '/workspace/teams/team-123',
   workspace_mode: 'shared',
   sharing_mode: 'shared',
-  current_member_role: 'owner',
+  role: 'owner',
   leader_assistant_id: 'assistant-lead',
   assistants: [],
   created_at: 1000,

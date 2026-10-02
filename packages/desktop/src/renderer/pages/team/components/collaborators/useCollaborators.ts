@@ -9,7 +9,6 @@ import { Message, Modal } from '@arco-design/web-react';
 import { useTranslation } from 'react-i18next';
 import { ipcBridge } from '@/common';
 import type { EligibleCollaborator, TeamMember, TTeam } from '@/common/types/team/teamTypes';
-import { useAuth } from '@renderer/hooks/context/AuthContext';
 
 function isRateLimitError(err: unknown): boolean {
   if (!err) return false;
@@ -31,9 +30,7 @@ function isRateLimitError(err: unknown): boolean {
 
 export function useCollaborators(team: TTeam, visible: boolean) {
   const { t } = useTranslation();
-  const { user } = useAuth();
-
-  const isOwner = team.current_member_role === 'owner' || team.user_id === user?.id;
+  const isOwner = team.role === 'owner';
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [eligibleAccounts, setEligibleAccounts] = useState<EligibleCollaborator[]>([]);
