@@ -19,6 +19,7 @@ const addMemberMock = vi.fn();
 const removeMemberMock = vi.fn();
 const messageSuccessMock = vi.fn();
 const messageErrorMock = vi.fn();
+const messageWarningMock = vi.fn();
 const modalConfirmMock = vi.fn();
 const translationMock = vi.hoisted(() => ({
   t: (key: string, options?: { defaultValue?: string; name?: string }) => {
@@ -51,6 +52,7 @@ vi.mock('@arco-design/web-react', async () => {
       ...actual.Message,
       success: (...args: unknown[]) => messageSuccessMock(...args),
       error: (...args: unknown[]) => messageErrorMock(...args),
+      warning: (...args: unknown[]) => messageWarningMock(...args),
     },
     Modal: {
       ...actual.Modal,
@@ -256,5 +258,86 @@ describe('TeamCollaboratorsModal', () => {
     expect(screen.queryByTestId('team-collaborator-picker')).not.toBeInTheDocument();
     expect(screen.queryByTestId('team-collaborator-add-btn')).not.toBeInTheDocument();
     expect(screen.queryByTestId('team-collaborator-remove-mem-collab-1')).not.toBeInTheDocument();
+  });
+
+  it('passes team_id when querying eligible collaborators for the active team', async () => {
+    render(<TeamCollaboratorsModal visible onClose={vi.fn()} team={sampleTeam} />);
+
+    await waitFor(() => {
+      expect(listEligibleMock).toHaveBeenCalledWith({ team_id: 'team-1' });
+    });
+  });
+
+  it('surfaces rate limit notice and allows retry when eligible collaborators list is rate-limited', async () => {
+    listEligibleMock.mockRejectedValueOnce({
+      status: 429,
+      code: 'TEAM_COLLABORATOR_LIST_RATE_LIMITED',
+      message: 'Rate limit exceeded',
+    });
+
+    render(<TeamCollaboratorsModal visible onClose={vi.fn()} team={sampleTeam} />);
+
+    await waitFor(() => expect(listEligibleMock).toHaveBeenCalledWith({ team_id: 'team-1' }));
+
+    // Warning message triggered
+    expect(messageWarningMock).toHaveBeenCalledWith('Too many requests. Please wait a moment before trying again.');
+
+    // Rate-limited warning banner rendered with retry button
+    const banner = await screen.findByTestId('team-collaborator-rate-limited');
+    expect(banner).toHaveTextContent('Too many requests. Please wait a moment before trying again.');
+
+    const retryBtn = screen.getByTestId('team-collaborator-retry-btn');
+    expect(retryBtn).toBeInTheDocument();
+
+    // Empty state text is NOT shown while rate limited
+    expect(screen.queryByText('No eligible accounts available to add.')).not.toBeInTheDocument();
+
+    // Now mock success for retry
+    listEligibleMock.mockResolvedValueOnce(sampleEligible);
+    fireEvent.click(retryBtn);
+
+    await waitFor(() => {
+      expect(listEligibleMock).toHaveBeenCalledTimes(2);
+      expect(listEligibleMock).toHaveBeenLastCalledWith({ team_id: 'team-1' });
+    });
+
+    // Banner clears after successful retry
+    await waitFor(() => {
+      expect(screen.queryByTestId('team-collaborator-rate-limited')).not.toBeInTheDocument();
+    });
+  });
+
+  it('handles rate-limited refresh after member removal gracefully without crashing', async () => {
+    removeMemberMock.mockResolvedValue(undefined);
+    listEligibleMock.mockResolvedValueOnce(sampleEligible);
+    listEligibleMock.mockRejectedValueOnce({
+      status: 429,
+      code: 'RATE_LIMITED',
+      message: 'Too many requests',
+    });
+
+    render(<TeamCollaboratorsModal visible onClose={vi.fn()} team={sampleTeam} />);
+
+    await waitFor(() => expect(screen.getByText('Bob Collab')).toBeInTheDocument());
+
+    const removeBtn = screen.getByTestId('team-collaborator-remove-mem-collab-1');
+    fireEvent.click(removeBtn);
+
+    await waitFor(() => {
+      expect(removeMemberMock).toHaveBeenCalledWith({
+        team_id: 'team-1',
+        membership_ref: 'mem-collab-1',
+      });
+    });
+
+    // List refresh after removal called with team_id
+    await waitFor(() => {
+      expect(listEligibleMock).toHaveBeenCalledTimes(2);
+      expect(listEligibleMock).toHaveBeenLastCalledWith({ team_id: 'team-1' });
+    });
+
+    // Warning is surfaced and retry notice shown
+    expect(messageWarningMock).toHaveBeenCalledWith('Too many requests. Please wait a moment before trying again.');
+    expect(await screen.findByTestId('team-collaborator-rate-limited')).toBeInTheDocument();
   });
 });

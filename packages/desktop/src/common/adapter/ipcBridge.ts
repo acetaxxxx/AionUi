@@ -86,6 +86,7 @@ import type {
   TeamContextResetResponse,
   ReplaceTeamMcpAllowlistRequest,
   TeamMcpAllowlistResponse,
+  ListEligibleCollaboratorsParams,
 } from '../types/team/teamTypes';
 import type {
   AutoUpdateReadyResult,
@@ -2343,7 +2344,9 @@ export const team = {
   ),
   remove: httpDelete<void, { id: string }>((p) => `/api/teams/${p.id}`),
   listEligibleCollaborators: withResponseMap(
-    httpGet<EligibleCollaborator[], void>('/api/teams/eligible-collaborators'),
+    httpGet<EligibleCollaborator[], ListEligibleCollaboratorsParams>(
+      (p) => `/api/teams/eligible-collaborators?team_id=${encodeURIComponent(p.team_id)}`
+    ),
     (raw) => (Array.isArray(raw) ? (raw as unknown[]).map(fromBackendEligibleCollaborator) : [])
   ),
   listMembers: withResponseMap(

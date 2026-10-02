@@ -215,6 +215,7 @@
     "ownerOnlyNotice": "Yalnızca Takım Sahibi işbirlikçi ekleyebilir veya kaldırabilir.",
     "emptyMembers": "Henüz işbirlikçi yok.",
     "emptyEligible": "Eklenebilecek uygun hesap bulunamadı.",
+    "rateLimited": "Çok fazla istek. Lütfen tekrar denemeden önce bir süre bekleyin.",
     "loadError": "İşbirlikçiler yüklenemedi",
     "addSuccess": "İşbirlikçi başarıyla eklendi",
     "addError": "İşbirlikçi eklenemedi",

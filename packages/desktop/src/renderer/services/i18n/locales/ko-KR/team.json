@@ -215,6 +215,7 @@
     "ownerOnlyNotice": "팀 소유자만 공동 작업자를 추가하거나 제거할 수 있습니다.",
     "emptyMembers": "아직 공동 작업자가 없습니다.",
     "emptyEligible": "추가할 수 있는 적격 계정이 없습니다.",
+    "rateLimited": "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
     "loadError": "공동 작업자 목록을 불러오지 못했습니다",
     "addSuccess": "공동 작업자가 성공적으로 추가되었습니다",
     "addError": "공동 작업자 추가 실패",

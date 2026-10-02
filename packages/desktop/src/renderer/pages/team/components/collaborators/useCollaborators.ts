@@ -11,6 +11,24 @@ import { ipcBridge } from '@/common';
 import type { EligibleCollaborator, TeamMember, TTeam } from '@/common/types/team/teamTypes';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
 
+function isRateLimitError(err: unknown): boolean {
+  if (!err) return false;
+  if (typeof err === 'object') {
+    const e = err as { status?: number; code?: string; message?: string; error?: string };
+    if (e.status === 429) return true;
+    if (e.code === 'TEAM_COLLABORATOR_LIST_RATE_LIMITED' || e.code === 'RATE_LIMITED') return true;
+    if (
+      typeof e.message === 'string' &&
+      (e.message.includes('429') ||
+        e.message.includes('TEAM_COLLABORATOR_LIST_RATE_LIMITED') ||
+        e.message.includes('RATE_LIMITED'))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function useCollaborators(team: TTeam, visible: boolean) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -23,6 +41,7 @@ export function useCollaborators(team: TTeam, visible: boolean) {
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(false);
   const [removingRef, setRemovingRef] = useState<string | null>(null);
+  const [rateLimited, setRateLimited] = useState(false);
 
   const fetchMembersAndEligible = useCallback(async () => {
     if (!team.id) return;
@@ -30,7 +49,27 @@ export function useCollaborators(team: TTeam, visible: boolean) {
     try {
       const memberListPromise = ipcBridge.team.listMembers.invoke({ team_id: team.id });
       const eligiblePromise = isOwner
-        ? ipcBridge.team.listEligibleCollaborators.invoke()
+        ? ipcBridge.team.listEligibleCollaborators
+            .invoke({ team_id: team.id })
+            .then((list) => {
+              setRateLimited(false);
+              return list;
+            })
+            .catch((err: unknown): null => {
+              console.error('Failed to load eligible collaborators:', err);
+              if (isRateLimitError(err)) {
+                setRateLimited(true);
+                Message.warning(
+                  t('team.collaborators.rateLimited', {
+                    defaultValue: 'Too many requests. Please wait a moment before trying again.',
+                  })
+                );
+              } else {
+                setRateLimited(false);
+                Message.error(t('team.collaborators.loadError', { defaultValue: 'Failed to load collaborators' }));
+              }
+              return null;
+            })
         : Promise.resolve([] as EligibleCollaborator[]);
 
       const [memberList, eligibleList] = await Promise.all([memberListPromise, eligiblePromise]);
@@ -112,9 +151,30 @@ export function useCollaborators(team: TTeam, visible: boolean) {
           );
           setMembers((prev) => prev.filter((m) => m.membership_ref !== member.membership_ref));
           if (isOwner) {
-            void ipcBridge.team.listEligibleCollaborators.invoke().then((list) => {
-              if (Array.isArray(list)) setEligibleAccounts(list);
-            });
+            try {
+              const list = await ipcBridge.team.listEligibleCollaborators.invoke({ team_id: team.id });
+              if (Array.isArray(list)) {
+                setEligibleAccounts(list);
+                setRateLimited(false);
+              }
+            } catch (refreshErr) {
+              console.error('Failed to refresh eligible collaborators after removal:', refreshErr);
+              if (isRateLimitError(refreshErr)) {
+                setRateLimited(true);
+                Message.warning(
+                  t('team.collaborators.rateLimited', {
+                    defaultValue: 'Too many requests. Please wait a moment before trying again.',
+                  })
+                );
+              } else {
+                setRateLimited(false);
+                Message.error(
+                  t('team.collaborators.loadError', {
+                    defaultValue: 'Failed to load collaborators',
+                  })
+                );
+              }
+            }
           }
         } catch (err) {
           console.error('Failed to remove collaborator:', err);
@@ -135,7 +195,9 @@ export function useCollaborators(team: TTeam, visible: boolean) {
     loading,
     adding,
     removingRef,
+    rateLimited,
     handleAddMember,
     handleRemoveMember,
+    retryEligible: fetchMembersAndEligible,
   };
 }

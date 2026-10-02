@@ -215,6 +215,7 @@
     "ownerOnlyNotice": "Apenas o proprietário da equipe pode adicionar ou remover colaboradores.",
     "emptyMembers": "Nenhum colaborador ainda.",
     "emptyEligible": "Nenhuma conta qualificada disponível para adicionar.",
+    "rateLimited": "Muitas solicitações. Aguarde um momento antes de tentar novamente.",
     "loadError": "Falha ao carregar colaboradores",
     "addSuccess": "Colaborador adicionado com sucesso",
     "addError": "Falha ao adicionar colaborador",

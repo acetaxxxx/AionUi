@@ -215,6 +215,7 @@
     "ownerOnlyNotice": "只有团队所有者可以添加或移除协作者。",
     "emptyMembers": "暂无协作者。",
     "emptyEligible": "暂无可添加的合格账号。",
+    "rateLimited": "请求过于频繁，请稍候再试。",
     "loadError": "加载协作者失败",
     "addSuccess": "已成功添加协作者",
     "addError": "添加协作者失败",

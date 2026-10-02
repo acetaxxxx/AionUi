@@ -2823,6 +2823,7 @@ export type I18nKey =
   | 'team.collaborators.loadError'
   | 'team.collaborators.membersTitle'
   | 'team.collaborators.ownerOnlyNotice'
+  | 'team.collaborators.rateLimited'
   | 'team.collaborators.remove'
   | 'team.collaborators.removeConfirmContent'
   | 'team.collaborators.removeConfirmTitle'
