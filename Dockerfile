@@ -12,6 +12,11 @@ COPY . .
 RUN bun install --frozen-lockfile --ignore-scripts
 RUN bun run package
 
+# README-only media is not part of the packaged app. Keep this cleanup scoped
+# to the self-host artifact stage; runtime and desktop build contexts retain it.
+RUN while IFS= read -r path; do rm -f -- "$path"; done < self-host-artifact-media.txt \
+    && rm self-host-artifact-media.txt
+
 # The private package carries the prebuilt app consumed by aion-self-deploy.
 FROM scratch AS self-host-artifact
 COPY --from=self-host-builder /app /app/AionUi
