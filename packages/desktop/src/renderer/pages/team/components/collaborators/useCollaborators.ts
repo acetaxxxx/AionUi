@@ -55,7 +55,7 @@ export function useCollaborators(team: TTeam, visible: boolean) {
               setRateLimited(false);
               return list;
             })
-            .catch((err) => {
+            .catch((err: unknown): null => {
               console.error('Failed to load eligible collaborators:', err);
               if (isRateLimitError(err)) {
                 setRateLimited(true);
