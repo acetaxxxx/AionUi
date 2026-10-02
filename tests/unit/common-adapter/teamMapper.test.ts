@@ -201,22 +201,33 @@ describe('teamMapper', () => {
   });
 
   describe('shared team and collaborator mapping', () => {
-    it('maps sharing_mode and current_member_role in fromBackendTeam', () => {
+    it('maps sharing_mode and the backend caller role in fromBackendTeam', () => {
       const team = fromBackendTeam({
         id: 'team-shared-1',
         name: 'Family Travel',
         workspace: '/data/shared/travel',
         workspace_mode: 'shared',
         sharing_mode: 'shared',
-        current_member_role: 'collaborator',
+        role: 'collaborator',
         assistants: [],
       });
 
       expect(team.sharing_mode).toBe('shared');
-      expect(team.current_member_role).toBe('collaborator');
+      expect(team.role).toBe('collaborator');
     });
 
-    it('handles undefined sharing_mode and current_member_role gracefully', () => {
+    it('maps the owner caller role in fromBackendTeam', () => {
+      const team = fromBackendTeam({
+        id: 'team-owner-1',
+        sharing_mode: 'shared',
+        role: 'owner',
+        assistants: [],
+      });
+
+      expect(team.role).toBe('owner');
+    });
+
+    it('handles undefined sharing_mode and caller role gracefully', () => {
       const team = fromBackendTeam({
         id: 'team-legacy-1',
         name: 'Solo Project',
@@ -226,7 +237,7 @@ describe('teamMapper', () => {
       });
 
       expect(team.sharing_mode).toBeUndefined();
-      expect(team.current_member_role).toBeUndefined();
+      expect(team.role).toBeUndefined();
     });
 
     it('maps eligible collaborators correctly', () => {

@@ -35,11 +35,6 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => translationMock,
 }));
 
-const mockUser = { id: 'owner-user-1' };
-vi.mock('@renderer/hooks/context/AuthContext', () => ({
-  useAuth: () => ({ user: mockUser }),
-}));
-
 vi.mock('@renderer/hooks/context/LayoutContext', () => ({
   useLayoutContext: () => ({ isMobile: false }),
 }));
@@ -107,7 +102,7 @@ const sampleTeam: TTeam = {
   workspace: '/workspace/family',
   workspace_mode: 'shared',
   sharing_mode: 'shared',
-  current_member_role: 'owner',
+  role: 'owner',
   leader_assistant_id: 'lead-1',
   assistants: [],
   created_at: 1000,
@@ -140,7 +135,6 @@ const sampleEligible: EligibleCollaborator[] = [
 describe('TeamCollaboratorsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUser.id = 'owner-user-1';
     listMembersMock.mockResolvedValue(sampleMembers);
     listEligibleMock.mockResolvedValue(sampleEligible);
   });
@@ -240,10 +234,8 @@ describe('TeamCollaboratorsModal', () => {
     const nonOwnerTeam: TTeam = {
       ...sampleTeam,
       user_id: 'another-user',
-      current_member_role: 'collaborator',
+      role: 'collaborator',
     };
-    mockUser.id = 'collaborator-user-2';
-
     render(<TeamCollaboratorsModal visible onClose={vi.fn()} team={nonOwnerTeam} />);
 
     await waitFor(() => expect(listMembersMock).toHaveBeenCalled());

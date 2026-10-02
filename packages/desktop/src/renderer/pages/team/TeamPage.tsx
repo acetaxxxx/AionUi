@@ -561,7 +561,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   const [collaboratorsModalVisible, setCollaboratorsModalVisible] = useState(false);
   const [mcpModalVisible, setMcpModalVisible] = useState(false);
   const isSharedTeam = team.sharing_mode === 'shared';
-  const isOwner = team.current_member_role === 'owner';
+  const isOwner = team.role === 'owner';
 
   const activeAssistant = assistants.find((assistant) => assistant.slot_id === activeSlotId);
   const leadAssistant = assistants.find((assistant) => assistant.role === 'leader');
@@ -833,12 +833,12 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
               {isSharedTeam && (
                 <>
                   <Tag
-                    color={team.current_member_role === 'owner' ? 'arcoblue' : 'green'}
+                    color={team.role === 'owner' ? 'arcoblue' : 'green'}
                     size='small'
                     className='!text-11px'
                     data-testid='team-role-badge'
                   >
-                    {team.current_member_role === 'owner'
+                    {team.role === 'owner'
                       ? t('team.collaborators.roleOwner', { defaultValue: 'Owner' })
                       : t('team.collaborators.roleCollaborator', { defaultValue: 'Collaborator' })}
                   </Tag>
