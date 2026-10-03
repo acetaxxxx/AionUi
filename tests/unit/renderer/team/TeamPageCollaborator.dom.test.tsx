@@ -67,6 +67,11 @@ vi.mock('@/renderer/hooks/context/LayoutContext', () => ({
   useLayoutContext: () => layoutState,
 }));
 
+vi.mock('@/renderer/components/base/AionModal', () => ({
+  __esModule: true,
+  default: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+}));
+
 vi.mock('@/common', () => ({
   ipcBridge: {
     team: {
@@ -280,60 +285,65 @@ describe('TeamPage collaborator view', () => {
     localStorage.clear();
   });
 
-  it('collaborator lead chat mounts real TeamChatView with team_id, composer send control, and worker renders inaccessible placeholder', async () => {
-    getTeamConversationMock.mockImplementation(async ({ conversation_id }: { team_id: string; conversation_id: string }) => {
-      if (conversation_id === 'conv-lead') {
-        return makeConversation('conv-lead');
-      }
-      throw new Error('Unauthorized');
-    });
+  it(
+    'collaborator Lead chat sends through Team API and hides worker pane',
+    async () => {
+      getTeamConversationMock.mockImplementation(
+        async ({ conversation_id }: { team_id: string; conversation_id: string }) => {
+          if (conversation_id === 'conv-lead') {
+            return makeConversation('conv-lead');
+          }
+          throw new Error('Unauthorized');
+        }
+      );
 
-    render(
-      <MemoryRouter>
-        <TeamPage team={makeTeam()} />
-      </MemoryRouter>
-    );
+      render(
+        <MemoryRouter>
+          <TeamPage team={makeTeam()} />
+        </MemoryRouter>
+      );
 
-    // 1. Lead conversation is fetched via ipcBridge.team.getConversation
-    await waitFor(() => {
-      expect(getTeamConversationMock).toHaveBeenCalledWith({
-        team_id: 'team-collab-1',
-        conversation_id: 'conv-lead',
+      // 1. Lead conversation is fetched via ipcBridge.team.getConversation
+      await waitFor(() => {
+        expect(getTeamConversationMock).toHaveBeenCalledWith({
+          team_id: 'team-collab-1',
+          conversation_id: 'conv-lead',
+        });
       });
-    });
 
-    // 2. Worker conversation is NOT queried via ipcBridge.team.getConversation or generic conversation.get
-    expect(getTeamConversationMock).not.toHaveBeenCalledWith(
-      expect.objectContaining({ conversation_id: 'conv-worker' })
-    );
-    expect(getConversationMock).not.toHaveBeenCalled();
+      // 2. Worker conversation is NOT queried via ipcBridge.team.getConversation or generic conversation.get
+      expect(getTeamConversationMock).not.toHaveBeenCalledWith(
+        expect.objectContaining({ conversation_id: 'conv-worker' })
+      );
+      expect(getConversationMock).not.toHaveBeenCalled();
 
-    // 3. Lead conversation mounts real TeamChatView and renders AcpChat with team_id and composer send control
-    expect(await screen.findByTestId('acp-chat-conv-lead')).toBeInTheDocument();
-    expect(screen.getByTestId('acp-chat-conv-lead')).toHaveAttribute('data-team-id', 'team-collab-1');
-    expect(screen.getByTestId('acp-send-btn-conv-lead')).toBeInTheDocument();
+      // 3. Lead conversation mounts real TeamChatView and renders AcpChat with team_id and composer send control
+      expect(await screen.findByTestId('acp-chat-conv-lead')).toBeInTheDocument();
+      expect(screen.getByTestId('acp-chat-conv-lead')).toHaveAttribute('data-team-id', 'team-collab-1');
+      expect(screen.getByTestId('acp-send-btn-conv-lead')).toBeInTheDocument();
 
-    // 4. Executing send invokes ipcBridge.team.sendMessage with team_id
-    await act(async () => {
-      screen.getByTestId('acp-send-btn-conv-lead').click();
-    });
-    expect(teamSendMessageMock).toHaveBeenCalledWith({
-      team_id: 'team-collab-1',
-      input: 'test lead input',
-      files: [],
-    });
+      // 4. Executing send invokes ipcBridge.team.sendMessage with team_id
+      await act(async () => {
+        screen.getByTestId('acp-send-btn-conv-lead').click();
+      });
+      expect(teamSendMessageMock).toHaveBeenCalledWith({
+        team_id: 'team-collab-1',
+        input: 'test lead input',
+        files: [],
+      });
 
-    // 5. Worker slot renders intentional non-chat placeholder
-    expect(screen.getByTestId('team-worker-inaccessible-slot-worker')).toBeInTheDocument();
-    expect(screen.queryByTestId('acp-chat-conv-worker')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('acp-send-btn-conv-worker')).not.toBeInTheDocument();
+      // 5. Worker slot renders intentional non-chat placeholder
+      expect(screen.getByTestId('team-worker-inaccessible-slot-worker')).toBeInTheDocument();
+      expect(screen.queryByTestId('acp-chat-conv-worker')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('acp-send-btn-conv-worker')).not.toBeInTheDocument();
 
-    // 6. Non-owner collaborator does NOT render model selectors or restart controls
-    expect(screen.queryByTestId('acp-model-selector-conv-lead')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('runtime-restart-conv-lead')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('acp-model-selector-conv-worker')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('team-agent-actions')).not.toBeInTheDocument();
-  });
+      // 6. Non-owner collaborator does NOT render model selectors or restart controls
+      expect(screen.queryByTestId('acp-model-selector-conv-lead')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('runtime-restart-conv-lead')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('acp-model-selector-conv-worker')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('team-agent-actions')).not.toBeInTheDocument();
+    }
+  );
 
   it('owner mounts both lead and worker conversations via team-scoped adapter and renders owner controls', async () => {
     getTeamConversationMock.mockImplementation(async ({ conversation_id }: { conversation_id: string }) => {

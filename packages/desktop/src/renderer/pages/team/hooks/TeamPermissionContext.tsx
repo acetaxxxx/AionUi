@@ -97,7 +97,16 @@ export const TeamPermissionProvider: React.FC<{
       warmupSession,
       configOptionsPort,
     }),
-    [team_id, isOwner, isLeaderAgent, leaderConversationId, allConversationIds, propagateMode, warmupSession, configOptionsPort]
+    [
+      team_id,
+      isOwner,
+      isLeaderAgent,
+      leaderConversationId,
+      allConversationIds,
+      propagateMode,
+      warmupSession,
+      configOptionsPort,
+    ]
   );
 
   return <TeamPermissionContext.Provider value={value}>{children}</TeamPermissionContext.Provider>;

@@ -9,7 +9,10 @@ import { isBackendHttpError } from '@/common/adapter/httpBridge';
 import type { TChatConversation } from '@/common/config/storage';
 import { mutate } from 'swr';
 
-export function teamConversationCacheKey(team_id: string, conversation_id: string): [string, string, string] {
+export function teamConversationCacheKey(
+  team_id: string,
+  conversation_id: string
+): [string, string, string] {
   return ['team-conversation', team_id, conversation_id];
 }
 
@@ -51,7 +54,11 @@ export async function refreshTeamConversationCache(
   const conversation = await getTeamConversationOrNull(team_id, conversation_id);
   if (!conversation) return;
 
-  await mutate<TChatConversation>(teamConversationCacheKey(team_id, conversation_id), conversation, false);
+  await mutate<TChatConversation>(
+    teamConversationCacheKey(team_id, conversation_id),
+    conversation,
+    false
+  );
 }
 
 export async function refreshConversationCache(conversation_id: string): Promise<void> {

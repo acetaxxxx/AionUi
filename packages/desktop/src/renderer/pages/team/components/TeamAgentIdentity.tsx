@@ -58,9 +58,14 @@ const TeamAgentIdentity: React.FC<Props> = ({
   const shouldFetchConversation = conversation_id && (resolvedIsOwner || isLeader || !resolvedTeamId);
   const { data: conversation } = useSWR(
     shouldFetchConversation
-      ? (resolvedTeamId ? teamConversationCacheKey(resolvedTeamId, conversation_id) : ['team-conversation', conversation_id])
+      ? resolvedTeamId
+        ? teamConversationCacheKey(resolvedTeamId, conversation_id)
+        : ['team-conversation', conversation_id]
       : null,
-    () => (resolvedTeamId ? getTeamConversationOrNull(resolvedTeamId, conversation_id!) : getConversationOrNull(conversation_id!))
+    () =>
+      resolvedTeamId
+        ? getTeamConversationOrNull(resolvedTeamId, conversation_id!)
+        : getConversationOrNull(conversation_id!)
   );
   const { info: presetInfo } = usePresetAssistantInfo(conversation ?? undefined);
   const displayName = assistant_name || presetInfo?.name || 'Assistant';

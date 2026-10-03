@@ -32,7 +32,11 @@ vi.mock('@renderer/hooks/agent/usePresetAssistantInfo', () => ({
 vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
   getConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
   getTeamConversationOrNull: (...args: unknown[]) => getTeamConversationOrNullMock(...args),
-  teamConversationCacheKey: (team_id: string, conversation_id: string) => ['team-conversation', team_id, conversation_id],
+  teamConversationCacheKey: (team_id: string, conversation_id: string) => [
+    'team-conversation',
+    team_id,
+    conversation_id,
+  ],
 }));
 
 vi.mock('@icon-park/react', () => ({

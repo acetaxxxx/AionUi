@@ -41,9 +41,14 @@ const TeammateMessageAvatar: React.FC<Props> = ({ senderName, senderConversation
   // instead of firing another fetch for the same conversation.
   const { data: conversation } = useSWR(
     senderConversationId
-      ? (effectiveTeamId ? teamConversationCacheKey(effectiveTeamId, senderConversationId) : ['team-conversation', senderConversationId])
+      ? effectiveTeamId
+        ? teamConversationCacheKey(effectiveTeamId, senderConversationId)
+        : ['team-conversation', senderConversationId]
       : null,
-    () => (effectiveTeamId ? getTeamConversationOrNull(effectiveTeamId, senderConversationId!) : getConversationOrNull(senderConversationId!))
+    () =>
+      effectiveTeamId
+        ? getTeamConversationOrNull(effectiveTeamId, senderConversationId!)
+        : getConversationOrNull(senderConversationId!)
   );
   const { info: presetInfo } = usePresetAssistantInfo(conversation ?? undefined);
 

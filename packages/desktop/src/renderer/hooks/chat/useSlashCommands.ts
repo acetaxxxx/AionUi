@@ -121,7 +121,16 @@ export function useSlashCommands(conversation_id: string, options: UseSlashComma
     return () => {
       isCancelled = true;
     };
-  }, [conversation_id, key, team_id, canUseCachedCommands, codexStatus, conversation_type, agentStatus, prepareRuntime]);
+  }, [
+    conversation_id,
+    key,
+    team_id,
+    canUseCachedCommands,
+    codexStatus,
+    conversation_type,
+    agentStatus,
+    prepareRuntime,
+  ]);
 
   return commands;
 }

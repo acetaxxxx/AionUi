@@ -214,11 +214,13 @@ describe('Shared Team collaborator owner-only controls', () => {
     teamPermission.mockReturnValue({ isOwner: true });
     rerender(<SkillSuggestCard {...skillSuggestion} />);
     fireEvent.click(screen.getByTestId('skill-suggest-dismiss'));
-    await waitFor(() => expect(dismissArtifact).toHaveBeenCalledWith({
-      conversation_id: 'team-conversation',
-      artifact_id: 'artifact-1',
-      status: 'dismissed',
-    }));
+    await waitFor(() =>
+      expect(dismissArtifact).toHaveBeenCalledWith({
+        conversation_id: 'team-conversation',
+        artifact_id: 'artifact-1',
+        status: 'dismissed',
+      })
+    );
   });
 
   it('shows AskUserQuestion without answer controls to collaborators and never invokes the generic answer route', () => {
@@ -237,21 +239,25 @@ describe('Shared Team collaborator owner-only controls', () => {
     const { unmount } = render(<MessageQuestion message={askMessage} />);
     fireEvent.click(screen.getByTestId('message-question-option-0-Tabs'));
     fireEvent.click(screen.getByTestId('message-question-submit'));
-    await waitFor(() => expect(answerAsk).toHaveBeenCalledWith({
-      conversation_id: 'team-conversation',
-      request_id: 'request-1',
-      answers: [{ question: 'Which style?', labels: ['Tabs'] }],
-    }));
+    await waitFor(() =>
+      expect(answerAsk).toHaveBeenCalledWith({
+        conversation_id: 'team-conversation',
+        request_id: 'request-1',
+        answers: [{ question: 'Which style?', labels: ['Tabs'] }],
+      })
+    );
     unmount();
 
     answerAsk.mockClear();
     render(<MessageQuestion message={askMessage} />);
     fireEvent.click(screen.getByTestId('message-question-decline'));
-    await waitFor(() => expect(answerAsk).toHaveBeenCalledWith({
-      conversation_id: 'team-conversation',
-      request_id: 'request-1',
-      decline: true,
-    }));
+    await waitFor(() =>
+      expect(answerAsk).toHaveBeenCalledWith({
+        conversation_id: 'team-conversation',
+        request_id: 'request-1',
+        decline: true,
+      })
+    );
   });
 
   it('keeps standalone AskUserQuestion controls available outside Team context', () => {

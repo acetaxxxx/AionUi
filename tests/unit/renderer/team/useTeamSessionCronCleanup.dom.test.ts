@@ -55,6 +55,7 @@ vi.mock('@/common', () => ({
 
 vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
   getConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
+  getTeamConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
 }));
 
 import { ipcBridge } from '@/common';
@@ -79,7 +80,7 @@ describe('useTeamSession cron cleanup', () => {
       await result.current.removeAssistant('member-slot');
     });
 
-    expect(getConversationOrNullMock).toHaveBeenCalledWith('member-conv');
+    expect(getConversationOrNullMock).toHaveBeenCalledWith('team-1', 'member-conv');
     expect(ipcBridge.cron.removeJob.invoke).toHaveBeenCalledWith({ job_id: 'cron-member' });
     expect(ipcBridge.team.removeAgent.invoke).toHaveBeenCalledWith({ team_id: 'team-1', slot_id: 'member-slot' });
     expect(vi.mocked(ipcBridge.cron.removeJob.invoke).mock.invocationCallOrder[0]).toBeLessThan(

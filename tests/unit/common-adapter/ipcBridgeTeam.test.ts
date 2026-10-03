@@ -3,6 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { HttpRequestOptions } from '@/common/adapter/httpBridge';
 
 type HttpCall = {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -14,14 +15,20 @@ const httpBridgeMocks = vi.hoisted(() => {
   const calls: HttpCall[] = [];
   const provider =
     (method: HttpCall['method']) =>
-    <Data, Params = undefined>(path: string | ((params: Params) => string), mapBody?: (params: Params) => unknown) => ({
+    <Data, Params = undefined>(
+      path: string | ((params: Params) => string),
+      mapBodyOrOptions?: ((params: Params) => unknown) | HttpRequestOptions
+    ) => ({
       provider: vi.fn(),
       invoke: vi.fn(async (params?: Params) => {
         const resolvedPath = typeof path === 'function' ? path(params as Params) : path;
         calls.push({
           method,
           path: resolvedPath,
-          body: mapBody && params !== undefined ? mapBody(params as Params) : undefined,
+          body:
+            typeof mapBodyOrOptions === 'function' && params !== undefined
+              ? mapBodyOrOptions(params as Params)
+              : undefined,
         });
         return { active_run: null } as Data;
       }),
