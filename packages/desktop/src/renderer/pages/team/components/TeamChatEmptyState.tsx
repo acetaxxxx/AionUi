@@ -2,13 +2,17 @@ import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 import type { TChatConversation } from '@/common/config/storage';
-import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
+import {
+  getTeamConversationOrNull,
+  teamConversationCacheKey,
+} from '@/renderer/pages/conversation/utils/conversationCache';
 import { getSendBoxDraftHook } from '@renderer/hooks/chat/useSendBoxDraft';
 import { resolveAgentAvatar, useAgentLogos } from '@renderer/utils/model/agentLogo';
 import ThemedLogo from '@/renderer/components/agent/ThemedLogo';
 import { usePresetAssistantInfo } from '@renderer/hooks/agent/usePresetAssistantInfo';
 import { resolveConversationBackend } from '@/renderer/pages/conversation/utils/conversationAssistantIdentity';
 import { useTeammateColor } from '../identity/TeamIdentityContext';
+import { useTeamPermission } from '../hooks/TeamPermissionContext';
 import { Robot } from '@icon-park/react';
 
 const useAcpDraft = getSendBoxDraftHook('acp', { _type: 'acp', atPath: [], content: '', uploadFile: [] });
@@ -20,6 +24,7 @@ type Props = {
   assistant_backend?: string;
   icon?: string;
   isLeader?: boolean;
+  team_id?: string;
 };
 
 const SUGGESTIONS = [
@@ -64,15 +69,19 @@ const TeamChatEmptyState: React.FC<Props> = ({
   assistant_backend,
   icon,
   isLeader = false,
+  team_id: explicitTeamId,
 }) => {
   const { t } = useTranslation();
   const logos = useAgentLogos();
+  const teamPermission = useTeamPermission();
+  const effectiveTeamId = explicitTeamId ?? teamPermission?.team_id;
   // 头像下方的名字用该成员的身份色（拿不到时回退到主文字色）。
   const identityColor = useTeammateColor(conversation_id);
 
   // Reuse the same SWR key as AgentChatSlot so this hits cache instead of a new fetch.
-  const { data: conversation } = useSWR(conversation_id ? ['team-conversation', conversation_id] : null, () =>
-    getConversationOrNull(conversation_id)
+  const { data: conversation } = useSWR(
+    conversation_id && effectiveTeamId ? teamConversationCacheKey(effectiveTeamId, conversation_id) : null,
+    () => (effectiveTeamId ? getTeamConversationOrNull(effectiveTeamId, conversation_id) : null)
   );
   const { info: presetInfo } = usePresetAssistantInfo(conversation ?? undefined);
 
@@ -94,6 +103,7 @@ const TeamChatEmptyState: React.FC<Props> = ({
 
   if (!conversation) return null;
   const team_id = (
+    effectiveTeamId ??
     (conversation.extra as { team_id?: string; teamId?: string } | undefined)?.team_id ??
     (conversation.extra as { teamId?: string } | undefined)?.teamId
   )?.trim();

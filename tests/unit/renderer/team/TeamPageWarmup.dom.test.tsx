@@ -123,6 +123,8 @@ vi.mock('@/common', () => ({
 
 vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
   getConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
+  getTeamConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
+  teamConversationCacheKey: (team_id: string, conversation_id: string) => ['team-conversation', team_id, conversation_id],
 }));
 
 vi.mock('@/renderer/pages/conversation/components/ChatLayout', () => ({
@@ -208,7 +210,10 @@ describe('TeamPage teammate warmup wiring', () => {
     modalConfirmMock.mockReset();
     layoutState.isMobile = false;
     for (const key of Object.keys(teamEventHandlers)) delete teamEventHandlers[key];
-    getConversationOrNullMock.mockImplementation(async (id: string) => conversation({ id, name: id }));
+    getConversationOrNullMock.mockImplementation(async (a: string, b?: string) => {
+      const id = b ?? a;
+      return conversation({ id, name: id });
+    });
     localStorage.clear();
   });
 
@@ -474,6 +479,30 @@ describe('TeamPage teammate warmup wiring', () => {
     expect(await screen.findByRole('button', { name: 'team.agentActions.label' })).toBeInTheDocument();
     expect(screen.getByTestId('runtime-restart-leader-conv')).toBeInTheDocument();
     expect(screen.queryByTestId('acp-model-selector-member-conv')).not.toBeInTheDocument();
+  });
+
+  it('mounts collaborator Lead composer via team conversation metadata and renders worker inaccessible pane', async () => {
+    ensureSessionMock.mockResolvedValue(undefined);
+
+    const collabTeam: TTeam = {
+      ...team(),
+      role: 'collaborator',
+      sharing_mode: 'shared',
+    };
+
+    render(
+      <MemoryRouter>
+        <TeamPage team={collabTeam} />
+      </MemoryRouter>
+    );
+
+    // Lead conversation mounts TeamChatView (composer)
+    expect(await screen.findByTestId('team-chat-view-leader-conv')).toBeInTheDocument();
+
+    // Worker conversation is inaccessible to collaborator: renders intentional placeholder and no spinner
+    expect(screen.getByTestId('team-worker-inaccessible-member-slot')).toBeInTheDocument();
+    expect(screen.queryByTestId('acp-model-selector-member-conv')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'team.agentActions.label' })).not.toBeInTheDocument();
   });
 });
 

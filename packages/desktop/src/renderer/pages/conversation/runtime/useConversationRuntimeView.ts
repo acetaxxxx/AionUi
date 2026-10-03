@@ -9,9 +9,12 @@ import type { TConversationRuntimeSummary } from '@/common/config/storage';
 import {
   reconcileGeneratingFromRuntime,
   reconcileWaitingConfirmationFromRuntime,
-} from '@/renderer/pages/conversation/GroupedHistory/hooks/useConversationListSync';
-import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import {
+  getConversationOrNull,
+  getTeamConversationOrNull,
+} from '@/renderer/pages/conversation/utils/conversationCache';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
+import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
 import {
   conversationDeleted,
   getConversationRuntimeViewSnapshot,
@@ -78,9 +81,15 @@ const flushRuntimeViewLogs = (logs: ConversationRuntimeViewLogEntry[]): void => 
 const getRuntimeOrNull = (runtime: TConversationRuntimeSummary | undefined): TConversationRuntimeSummary | null =>
   runtime ?? null;
 
-export const useConversationRuntimeView = (conversation_id: string): UseConversationRuntimeViewReturn => {
+export const useConversationRuntimeView = (
+  conversation_id: string,
+  options?: { team_id?: string }
+): UseConversationRuntimeViewReturn => {
   const getSnapshot = useCallback(() => getConversationRuntimeViewSnapshot(conversation_id), [conversation_id]);
   const view = useSyncExternalStore(subscribeConversationRuntimeView, getSnapshot, getSnapshot);
+  const teamPermission = useTeamPermission();
+  const conversationContext = useConversationContextSafe();
+  const effectiveTeamId = options?.team_id ?? teamPermission?.team_id ?? conversationContext?.team_id;
 
   useEffect(() => {
     if (!conversation_id) {
@@ -90,7 +99,11 @@ export const useConversationRuntimeView = (conversation_id: string): UseConversa
     let cancelled = false;
     flushRuntimeViewLogs(hydrateStarted(conversation_id));
 
-    void getConversationOrNull(conversation_id)
+    const fetchPromise = effectiveTeamId
+      ? getTeamConversationOrNull(effectiveTeamId, conversation_id)
+      : getConversationOrNull(conversation_id);
+
+    void fetchPromise
       .then((conversation) => {
         if (cancelled) {
           return;
@@ -116,7 +129,7 @@ export const useConversationRuntimeView = (conversation_id: string): UseConversa
     return () => {
       cancelled = true;
     };
-  }, [conversation_id]);
+  }, [conversation_id, effectiveTeamId]);
 
   useEffect(() => {
     if (!conversation_id) {

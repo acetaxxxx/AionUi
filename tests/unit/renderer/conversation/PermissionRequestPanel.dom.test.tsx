@@ -377,4 +377,17 @@ describe('permission option normalization', () => {
     expect(getSafePermissionOptionId([{ ...options[1], disabled: true }])).toBeNull();
     expect(getPermissionOptionsIdentity(options)).toContain('once:1');
   });
+
+  it('renders owner approval notice and hides action buttons when ownerApprovalRequired is true', () => {
+    const onConfirm = vi.fn();
+    renderPanel({
+      ownerApprovalRequired: true,
+      onConfirm,
+    });
+
+    expect(screen.getByTestId('message-permission-owner-approval')).toBeInTheDocument();
+    expect(screen.queryByTestId('message-permission-options')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('message-permission-option-once')).not.toBeInTheDocument();
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
 });

@@ -19,6 +19,7 @@ const {
   emitterEmitMock,
   setSendBoxHandlerMock,
   useAcpConfigOptionsMock,
+  useAcpModelInfoMock,
   useTeamPermissionMock,
   isMobileMock,
   mobileActionSheetEntries,
@@ -41,6 +42,11 @@ const {
   emitterEmitMock: vi.fn(),
   setSendBoxHandlerMock: vi.fn(),
   useAcpConfigOptionsMock: vi.fn(),
+  useAcpModelInfoMock: vi.fn(() => ({
+    model_info: null,
+    canSwitch: false,
+    selectModel: vi.fn(),
+  })),
   useTeamPermissionMock: vi.fn(),
   sendBoxPropsSpy: vi.fn(),
   isMobileMock: { current: false },
@@ -170,7 +176,9 @@ vi.mock('@/renderer/components/chat/SendBox', () => ({
   },
 }));
 
-vi.mock('@/renderer/components/agent/AgentModeSelector', () => ({ default: () => null }));
+vi.mock('@/renderer/components/agent/AgentModeSelector', () => ({
+  default: () => <div data-testid='mock-agent-mode-selector' />,
+}));
 vi.mock('@/renderer/components/chat/CommandQueuePanel', () => ({
   default: (props: { onSendNow: (item: unknown) => void }) => {
     commandQueuePanelPropsSpy(props);
@@ -200,11 +208,7 @@ vi.mock('@/renderer/components/media/HorizontalFileList', () => ({
   default: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock('@/renderer/hooks/agent/useAcpModelInfo', () => ({
-  useAcpModelInfo: () => ({
-    model_info: null,
-    canSwitch: false,
-    selectModel: vi.fn(),
-  }),
+  useAcpModelInfo: (args: unknown) => useAcpModelInfoMock(args),
 }));
 vi.mock('@/renderer/hooks/agent/useAcpConfigOptions', () => ({
   classifyConfigSetError: () => 'unknown',
@@ -1081,6 +1085,103 @@ describe('AcpSendBox', () => {
         isTeamConversation?: boolean;
       };
       expect(props.isTeamConversation).toBe(true);
+    });
+  });
+
+  describe('team collaborator permissions', () => {
+    it('disables config options, hides mode selector, and omits model/mode/thought from mobile sheet for collaborators', async () => {
+      isMobileMock.current = true;
+      useTeamPermissionMock.mockReturnValue({
+        isTeamMode: true,
+        team_id: 'team-1',
+        isOwner: false,
+        isLeaderAgent: true,
+        leaderConversationId: 'conv-1',
+        allConversationIds: ['conv-1'],
+        propagateMode: vi.fn(),
+        warmupSession: vi.fn().mockResolvedValue(undefined),
+      });
+
+      render(
+        <AcpSendBox
+          conversation_id='conv-1'
+          backend='claude'
+          workspacePath='/tmp/workspace'
+          messageState={makeMessageState()}
+        />
+      );
+
+      // useAcpConfigOptions disabled for collaborator
+      expect(useAcpConfigOptionsMock).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
+      // useAcpModelInfo disabled for collaborator on mobile
+      expect(useAcpModelInfoMock).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
+      // Mode selector not rendered
+      expect(screen.queryByTestId('mock-agent-mode-selector')).not.toBeInTheDocument();
+      // Mobile sheet does not include model, thought-level, or permission
+      const keys = mobileActionSheetEntries.current.map((entry) => entry.key);
+      expect(keys).not.toContain('model');
+      expect(keys).not.toContain('thought-level');
+      expect(keys).not.toContain('permission');
+    });
+
+    it('enables config options, shows mode selector, and includes options in mobile sheet for owners', async () => {
+      isMobileMock.current = true;
+      useTeamPermissionMock.mockReturnValue({
+        isTeamMode: true,
+        team_id: 'team-1',
+        isOwner: true,
+        isLeaderAgent: true,
+        leaderConversationId: 'conv-1',
+        allConversationIds: ['conv-1'],
+        propagateMode: vi.fn(),
+        warmupSession: vi.fn().mockResolvedValue(undefined),
+      });
+      useAcpModelInfoMock.mockReturnValue({
+        model_info: {
+          current_model_id: 'claude-3-5',
+          current_model_label: 'Claude 3.5 Sonnet',
+          available_models: [{ id: 'claude-3-5', label: 'Claude 3.5 Sonnet' }],
+        },
+        canSwitch: true,
+        selectModel: vi.fn(),
+      });
+      useAcpConfigOptionsMock.mockReturnValue({
+        mode: {
+          id: 'mode',
+          category: 'mode',
+          currentValue: 'default',
+          options: [{ value: 'default', label: 'Default' }],
+        },
+        model: null,
+        thoughtLevel: {
+          id: 'reasoning_effort',
+          category: 'thought_level',
+          currentValue: 'high',
+          options: [{ value: 'high', label: 'High' }],
+        },
+        setStatus: { state: 'idle' },
+        setConfigOption: vi.fn(),
+        reload: vi.fn(),
+        isLoading: false,
+        configOptions: [],
+      });
+
+      render(
+        <AcpSendBox
+          conversation_id='conv-1'
+          backend='claude'
+          workspacePath='/tmp/workspace'
+          messageState={makeMessageState()}
+        />
+      );
+
+      expect(useAcpConfigOptionsMock).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }));
+      expect(useAcpModelInfoMock).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }));
+      expect(screen.getByTestId('mock-agent-mode-selector')).toBeInTheDocument();
+      const keys = mobileActionSheetEntries.current.map((entry) => entry.key);
+      expect(keys).toContain('model');
+      expect(keys).toContain('thought-level');
+      expect(keys).toContain('permission');
     });
   });
 });

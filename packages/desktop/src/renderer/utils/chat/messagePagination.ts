@@ -16,6 +16,7 @@ export type LoadConversationMessagePageOptions = {
   after?: string;
   anchorMessageId?: string;
   contentMode?: MessageContentMode;
+  teamId?: string;
 };
 
 export const DEFAULT_MESSAGE_PAGE_LIMIT = 50;
@@ -25,6 +26,17 @@ export async function loadConversationMessagePage(
   conversationId: string,
   options: LoadConversationMessagePageOptions = {}
 ): Promise<MessageCursorPage<TMessage>> {
+  if (options.teamId) {
+    return ipcBridge.team.getConversationMessages.invoke({
+      team_id: options.teamId,
+      conversation_id: conversationId,
+      limit: options.limit ?? DEFAULT_MESSAGE_PAGE_LIMIT,
+      ...(options.before ? { before: options.before } : {}),
+      ...(options.after ? { after: options.after } : {}),
+      ...(options.anchorMessageId ? { anchor_message_id: options.anchorMessageId } : {}),
+      content_mode: options.contentMode ?? 'compact',
+    });
+  }
   return ipcBridge.database.getConversationMessages.invoke({
     conversation_id: conversationId,
     limit: options.limit ?? DEFAULT_MESSAGE_PAGE_LIMIT,
@@ -37,7 +49,7 @@ export async function loadConversationMessagePage(
 
 export function loadLatestConversationMessages(
   conversationId: string,
-  options: Pick<LoadConversationMessagePageOptions, 'limit' | 'contentMode'> = {}
+  options: Pick<LoadConversationMessagePageOptions, 'limit' | 'contentMode' | 'teamId'> = {}
 ): Promise<MessageCursorPage<TMessage>> {
   return loadConversationMessagePage(conversationId, options);
 }
@@ -45,7 +57,7 @@ export function loadLatestConversationMessages(
 export function loadConversationAnchorWindow(
   conversationId: string,
   messageId: string,
-  options: Pick<LoadConversationMessagePageOptions, 'limit' | 'contentMode'> = {}
+  options: Pick<LoadConversationMessagePageOptions, 'limit' | 'contentMode' | 'teamId'> = {}
 ): Promise<MessageCursorPage<TMessage>> {
   return loadConversationMessagePage(conversationId, {
     ...options,

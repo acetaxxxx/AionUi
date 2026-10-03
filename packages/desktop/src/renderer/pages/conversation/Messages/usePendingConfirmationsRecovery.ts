@@ -7,6 +7,7 @@
 import { ipcBridge } from '@/common';
 import type { IConfirmation, IMessageAsk, IMessagePermission, TMessage } from '@/common/chat/chatLib';
 import { useEffect } from 'react';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import { useUpdateMessageList } from './hooks';
 
 export const pendingConfirmationMsgId = (confirmationId: string) => `confirmation:${confirmationId}`;
@@ -73,15 +74,20 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function usePendingConfirmationsRecovery(conversation_id: string) {
+export function usePendingConfirmationsRecovery(conversation_id: string, options?: { team_id?: string }) {
   const updateMessageList = useUpdateMessageList();
+  const teamPermission = useTeamPermission();
+  const team_id = options?.team_id ?? teamPermission?.team_id;
 
   useEffect(() => {
     if (!conversation_id) return;
     let cancelled = false;
 
-    void ipcBridge.conversation.confirmation.list
-      .invoke({ conversation_id })
+    const fetchPromise = team_id
+      ? ipcBridge.team.getConfirmations.invoke({ team_id, conversation_id })
+      : ipcBridge.conversation.confirmation.list.invoke({ conversation_id });
+
+    void fetchPromise
       .then((confirmations) => {
         if (cancelled) return;
         updateMessageList((list) => {
@@ -96,6 +102,7 @@ export function usePendingConfirmationsRecovery(conversation_id: string) {
       .catch((error) => {
         console.warn('[pending-confirmations] failed to recover pending confirmations', {
           conversation_id,
+          team_id,
           error: errorMessage(error),
         });
       });
@@ -109,5 +116,5 @@ export function usePendingConfirmationsRecovery(conversation_id: string) {
       cancelled = true;
       off();
     };
-  }, [conversation_id, updateMessageList]);
+  }, [conversation_id, team_id, updateMessageList]);
 }

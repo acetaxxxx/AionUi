@@ -64,6 +64,7 @@ const AionrsTeamChat: React.FC<{
   loadedSkills?: string[];
   loadedMcpServers?: string[];
   loadedMcpStatuses?: IConversationMcpStatus[];
+  team_id?: string;
 }> = ({
   conversation,
   emptySlot,
@@ -73,6 +74,7 @@ const AionrsTeamChat: React.FC<{
   loadedSkills,
   loadedMcpServers,
   loadedMcpStatuses,
+  team_id,
 }) => {
   const onSelectModel = useCallback(
     async (_provider: IProvider, modelName: string) => {
@@ -88,7 +90,7 @@ const AionrsTeamChat: React.FC<{
   return (
     <AionrsChat
       conversation_id={conversation.id}
-      workspace={conversation.extra.workspace}
+      workspace={conversation.extra?.workspace ?? ''}
       modelSelection={modelSelection}
       emptySlot={emptySlot}
       agent_name={assistant_name}
@@ -97,6 +99,7 @@ const AionrsTeamChat: React.FC<{
       loadedSkills={loadedSkills}
       loadedMcpServers={loadedMcpServers}
       loadedMcpStatuses={loadedMcpStatuses}
+      team_id={team_id}
     />
   );
 };
@@ -147,6 +150,7 @@ const TeamChatView: React.FC<TeamChatViewProps> = ({
   const emptySlot = team_id ? (
     <TeamChatEmptyState
       conversation_id={conversation.id}
+      team_id={team_id}
       assistant_name={assistant_name}
       assistant_backend={assistant_backend}
       icon={agent_icon}
@@ -271,6 +275,7 @@ const TeamChatView: React.FC<TeamChatViewProps> = ({
             loadedSkills={capabilitySnapshot?.skills}
             loadedMcpServers={capabilitySnapshot?.mcp_servers}
             loadedMcpStatuses={capabilitySnapshot?.mcp_statuses}
+            team_id={team_id}
           />
         );
       case 'aionrs':
@@ -285,6 +290,7 @@ const TeamChatView: React.FC<TeamChatViewProps> = ({
             loadedSkills={capabilitySnapshot?.skills}
             loadedMcpServers={capabilitySnapshot?.mcp_servers}
             loadedMcpStatuses={capabilitySnapshot?.mcp_statuses}
+            team_id={team_id}
           />
         );
       default:

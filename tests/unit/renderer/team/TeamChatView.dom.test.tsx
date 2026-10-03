@@ -476,4 +476,43 @@ describe('TeamChatView', () => {
     const props = acpChatMock.mock.calls[0]?.[0] as { teamRuntime?: { isActive?: boolean } };
     expect(props.teamRuntime?.isActive).toBe(false);
   });
+
+  it('wires teamSendMessage to ipcBridge.team.sendMessage and passes team_id to AcpChat for lead conversation', async () => {
+    const sendSpy = vi.fn(async () => ({ run_id: 'run-1' }));
+    vi.spyOn(ipcBridge.team.sendMessage, 'invoke').mockImplementation(sendSpy as any);
+
+    render(
+      <TeamChatView
+        team_id='team-1'
+        slot_id='leader-slot'
+        isLeader={true}
+        conversation={{
+          id: 'conv-lead',
+          type: 'acp',
+          name: 'Team - Leader',
+          created_at: Date.now(),
+          updated_at: Date.now(),
+          extra: { workspace: '/tmp' },
+        }}
+      />
+    );
+
+    expect(await screen.findByTestId('mock-acp-chat')).toBeInTheDocument();
+    expect(acpChatMock).toHaveBeenCalled();
+    const props = acpChatMock.mock.calls[0]?.[0] as {
+      team_id?: string;
+      hideSendBox?: boolean;
+      teamSendMessage?: (payload: { input: string; files: [] }) => Promise<void>;
+    };
+    expect(props.team_id).toBe('team-1');
+    expect(props.hideSendBox).toBeFalsy();
+    expect(props.teamSendMessage).toBeInstanceOf(Function);
+
+    await props.teamSendMessage!({ input: 'hello leader', files: [] });
+    expect(sendSpy).toHaveBeenCalledWith({
+      team_id: 'team-1',
+      input: 'hello leader',
+      files: [],
+    });
+  });
 });

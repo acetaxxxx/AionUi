@@ -3,7 +3,12 @@ import useSWR from 'swr';
 import { resolveAgentAvatar, useAgentLogos } from '@renderer/utils/model/agentLogo';
 import ThemedLogo from '@/renderer/components/agent/ThemedLogo';
 import { usePresetAssistantInfo } from '@renderer/hooks/agent/usePresetAssistantInfo';
-import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
+import {
+  getConversationOrNull,
+  getTeamConversationOrNull,
+  teamConversationCacheKey,
+} from '@/renderer/pages/conversation/utils/conversationCache';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import { Robot } from '@icon-park/react';
 
 type Props = {
@@ -12,6 +17,8 @@ type Props = {
   icon?: string;
   /** When provided, enables preset-aware avatar (emoji / custom svg) via the agent's conversation extras. */
   conversation_id?: string;
+  team_id?: string;
+  isOwner?: boolean;
   isLeader?: boolean;
   className?: string;
   logoClassName?: string;
@@ -30,6 +37,8 @@ const TeamAgentIdentity: React.FC<Props> = ({
   assistant_backend,
   icon,
   conversation_id,
+  team_id,
+  isOwner,
   isLeader = false,
   className,
   logoClassName,
@@ -41,9 +50,17 @@ const TeamAgentIdentity: React.FC<Props> = ({
   avatarOverlay,
 }) => {
   const logos = useAgentLogos();
-  // Share the SWR key with AgentChatSlot / TeamChatEmptyState so this hits cache instead of firing a fetch
-  const { data: conversation } = useSWR(conversation_id ? ['team-conversation', conversation_id] : null, () =>
-    getConversationOrNull(conversation_id!)
+  const teamPermission = useTeamPermission();
+  const resolvedTeamId = team_id ?? teamPermission?.team_id;
+  const resolvedIsOwner = isOwner ?? teamPermission?.isOwner ?? true;
+  // Share the SWR key with AgentChatSlot / TeamChatEmptyState so this hits cache instead of firing a fetch.
+  // When in collaborator mode, skip fetching worker assistant conversations that are inaccessible (404).
+  const shouldFetchConversation = conversation_id && (resolvedIsOwner || isLeader || !resolvedTeamId);
+  const { data: conversation } = useSWR(
+    shouldFetchConversation
+      ? (resolvedTeamId ? teamConversationCacheKey(resolvedTeamId, conversation_id) : ['team-conversation', conversation_id])
+      : null,
+    () => (resolvedTeamId ? getTeamConversationOrNull(resolvedTeamId, conversation_id!) : getConversationOrNull(conversation_id!))
   );
   const { info: presetInfo } = usePresetAssistantInfo(conversation ?? undefined);
   const displayName = assistant_name || presetInfo?.name || 'Assistant';

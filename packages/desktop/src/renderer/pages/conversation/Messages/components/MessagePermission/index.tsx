@@ -8,6 +8,8 @@ import { ipcBridge } from '@/common';
 import type { IMessagePermission } from '@/common/chat/chatLib';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import { PermissionRequestPanel } from './PermissionRequestPanel';
 import {
   classifyLegacyPermission,
@@ -21,6 +23,12 @@ type MessagePermissionProps = {
 
 const MessagePermission: React.FC<MessagePermissionProps> = React.memo(({ message }) => {
   const { t } = useTranslation();
+  const teamPermission = useTeamPermission();
+  const conversationContext = useConversationContextSafe();
+  const isTeam = Boolean(teamPermission || conversationContext?.team_id);
+  const isOwner = teamPermission ? teamPermission.isOwner : true;
+  const isCollaborator = isTeam && !isOwner;
+
   const content = message.content || ({} as IMessagePermission['content']);
   const { description, title, action, call_id, command_type } = content;
   const options = Array.isArray(content.options) ? content.options : [];
@@ -45,6 +53,9 @@ const MessagePermission: React.FC<MessagePermissionProps> = React.memo(({ messag
 
   const handleConfirm = useCallback(
     async (selectedValue: string) => {
+      if (isCollaborator) {
+        return;
+      }
       await ipcBridge.conversation.confirmation.confirm.invoke({
         conversation_id: message.conversation_id,
         call_id,
@@ -53,7 +64,7 @@ const MessagePermission: React.FC<MessagePermissionProps> = React.memo(({ messag
         always_allow: selectedValue === 'proceed_always',
       });
     },
-    [call_id, message.conversation_id, message.msg_id]
+    [call_id, isCollaborator, message.conversation_id, message.msg_id]
   );
 
   return (
@@ -66,6 +77,7 @@ const MessagePermission: React.FC<MessagePermissionProps> = React.memo(({ messag
       detail={command_type}
       options={panelOptions}
       onConfirm={handleConfirm}
+      ownerApprovalRequired={isCollaborator}
     />
   );
 });

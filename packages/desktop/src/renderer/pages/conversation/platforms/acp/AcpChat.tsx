@@ -45,6 +45,7 @@ const AcpChat: React.FC<{
   assistantId?: string;
   forkCapability?: { at_turn: boolean };
   promptCapability?: { image: boolean; audio: boolean };
+  team_id?: string;
 }> = ({
   conversation_id,
   workspace,
@@ -62,20 +63,24 @@ const AcpChat: React.FC<{
   assistantId,
   forkCapability,
   promptCapability,
+  team_id,
 }) => {
-  useMessageLstCache(conversation_id);
-  usePendingConfirmationsRecovery(conversation_id);
-  usePlanRecovery(conversation_id);
   const teamPermission = useTeamPermission();
+  const effectiveTeamId = team_id || teamPermission?.team_id;
+  useMessageLstCache(conversation_id, { teamId: effectiveTeamId });
+  usePendingConfirmationsRecovery(conversation_id, { team_id: effectiveTeamId });
+  usePlanRecovery(conversation_id, { team_id: effectiveTeamId });
   const messageState = useAcpMessage(conversation_id, {
     skipWarmup: Boolean(teamPermission),
     prepareRuntime: teamPermission?.warmupSession,
+    team_id: effectiveTeamId,
   });
 
   return (
     <ConversationProvider
       value={{
         conversation_id: conversation_id,
+        team_id: effectiveTeamId,
         workspace,
         type: 'acp',
         cron_job_id,
@@ -88,7 +93,7 @@ const AcpChat: React.FC<{
         promptCapability,
       }}
     >
-      <ConversationArtifactProvider conversation_id={conversation_id}>
+      <ConversationArtifactProvider conversation_id={conversation_id} team_id={effectiveTeamId}>
         <div className={`${CHAT_SURFACE_CONTAINER_CLASS} flex-1 flex flex-col px-12px md:px-20px min-h-0`}>
           <FlexFullContainer>
             <MessageList className='flex-1' emptySlot={emptySlot} />

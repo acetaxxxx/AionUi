@@ -126,8 +126,9 @@ const AcpSendBox: React.FC<{
   } = messageState;
   const { t } = useTranslation();
   const teamPermission = useTeamPermission();
-  // In team mode, all agents show the permission mode selector (members don't propagate)
-  const showModeSelector = true;
+  const isOwner = teamPermission ? teamPermission.isOwner : true;
+  // In team mode, only owners show the permission mode selector
+  const showModeSelector = isOwner;
   const isLeaderInTeam = teamPermission && conversation_id === teamPermission.leaderConversationId;
   const { checkAndUpdateTitle } = useAutoTitle();
   const { atPath, uploadFile, setAtPath, setUploadFile, content, setContent } = useSendBoxDraft(conversation_id);
@@ -170,7 +171,7 @@ const AcpSendBox: React.FC<{
     prepareRuntime: prepareRuntimeConfig,
     prepareSetRuntime: teamPermission?.warmupSession,
     configOptionsPort: teamPermission?.configOptionsPort,
-    enabled: true,
+    enabled: isOwner,
   });
   const runtimeMode = runtimeConfig.mode;
   const runtimeThoughtLevel = runtimeConfig.thoughtLevel;
@@ -190,7 +191,7 @@ const AcpSendBox: React.FC<{
     prepareRuntime: prepareRuntimeConfig,
     prepareSetRuntime: teamPermission?.warmupSession,
     configOptionsPort: teamPermission?.configOptionsPort,
-    enabled: isMobile,
+    enabled: isMobile && isOwner,
     onSelectModelSuccess: () => Message.success(t('agent.model.switchSuccess')),
     onSelectModelFailed: (_modelId, error) => Message.error(t(configErrorMessageKey(error))),
   });
@@ -541,12 +542,13 @@ Please check your local CLI tool authentication status`,
   const sheetEntries = useMemo<MobileActionSheetEntry[]>(() => {
     if (!isMobile) return [];
 
-    const availableModes =
-      runtimeMode?.options.map((item) => ({
-        value: item.value,
-        label: item.label,
-        description: item.description ?? undefined,
-      })) ?? [];
+    const availableModes = isOwner
+      ? (runtimeMode?.options.map((item) => ({
+          value: item.value,
+          label: item.label,
+          description: item.description ?? undefined,
+        })) ?? [])
+      : [];
     const modeOptions: MobileActionSheetOption[] = availableModes.map((mode) => ({
       key: mode.value,
       label: t(`agentMode.${mode.value}`, { defaultValue: mode.label }),
@@ -554,14 +556,15 @@ Please check your local CLI tool authentication status`,
       active: (runtimeMode?.currentValue ?? currentMode) === mode.value,
     }));
 
-    const modelOptions: MobileActionSheetOption[] = canSwitchModel
-      ? (model_info?.available_models ?? []).map((model) => ({
-          key: model.id,
-          label: model.label || model.id,
-          description: model.description,
-          active: model_info?.current_model_id === model.id,
-        }))
-      : [];
+    const modelOptions: MobileActionSheetOption[] =
+      isOwner && canSwitchModel
+        ? (model_info?.available_models ?? []).map((model) => ({
+            key: model.id,
+            label: model.label || model.id,
+            description: model.description,
+            active: model_info?.current_model_id === model.id,
+          }))
+        : [];
 
     const currentModelLabel =
       model_info?.current_model_label || model_info?.current_model_id || t('conversation.welcome.useCliModel');
@@ -570,9 +573,8 @@ Please check your local CLI tool authentication status`,
 
     const entries: MobileActionSheetEntry[] = [];
 
-    // Model entry: only when the agent exposes a switchable list. Otherwise
-    // (Codex with no list, no info) skip — exposing a no-op row would be noise.
-    if (modelOptions.length > 0) {
+    // Model entry: only when the agent exposes a switchable list and user is owner.
+    if (isOwner && modelOptions.length > 0) {
       entries.push({
         key: 'model',
         icon: <Brain theme='outline' size='16' />,
@@ -586,7 +588,7 @@ Please check your local CLI tool authentication status`,
       });
     }
 
-    if (runtimeThoughtLevel) {
+    if (isOwner && runtimeThoughtLevel) {
       entries.push({
         key: 'thought-level',
         icon: <Brain theme='outline' size='16' />,
@@ -612,7 +614,7 @@ Please check your local CLI tool authentication status`,
       });
     }
 
-    if (modeOptions.length > 0) {
+    if (isOwner && modeOptions.length > 0) {
       entries.push({
         key: 'permission',
         icon: <Shield theme='outline' size='16' />,
@@ -687,6 +689,7 @@ Please check your local CLI tool authentication status`,
     handleSheetModeChange,
     handleThoughtLevelSetOption,
     isMobile,
+    isOwner,
     loadedMcpStatuses,
     loadedSkills,
     model_info,

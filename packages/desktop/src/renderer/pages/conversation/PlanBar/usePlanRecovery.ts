@@ -7,6 +7,7 @@
 import { ipcBridge } from '@/common';
 import { normalizeDbMessage, useUpdateMessageList } from '@renderer/pages/conversation/Messages/hooks';
 import { useConversationRuntimeView } from '@renderer/pages/conversation/runtime/useConversationRuntimeView';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import { useEffect, useRef } from 'react';
 
 /**
@@ -20,9 +21,11 @@ import { useEffect, useRef } from 'react';
  * view resolves that flag asynchronously, so firing early reads a false `false`
  * and the bar silently stays empty in exactly the case this hook exists for.
  */
-export const usePlanRecovery = (conversation_id: string): void => {
+export const usePlanRecovery = (conversation_id: string, options?: { team_id?: string }): void => {
   const update = useUpdateMessageList();
   const { hydrated, isProcessing } = useConversationRuntimeView(conversation_id);
+  const teamPermission = useTeamPermission();
+  const team_id = options?.team_id ?? teamPermission?.team_id;
   const requestedRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -31,8 +34,11 @@ export const usePlanRecovery = (conversation_id: string): void => {
     requestedRef.current = conversation_id;
 
     let cancelled = false;
-    void ipcBridge.database.getLatestConversationMessageOfType
-      .invoke({ conversation_id, type: 'plan' })
+    const fetchLatest = team_id
+      ? ipcBridge.team.getLatestConversationMessageOfType.invoke({ team_id, conversation_id, type: 'plan' })
+      : ipcBridge.database.getLatestConversationMessageOfType.invoke({ conversation_id, type: 'plan' });
+
+    void fetchLatest
       .then((message) => {
         if (cancelled || !message) return;
         const normalized = normalizeDbMessage(message);
@@ -47,5 +53,5 @@ export const usePlanRecovery = (conversation_id: string): void => {
     return () => {
       cancelled = true;
     };
-  }, [conversation_id, hydrated, isProcessing, update]);
+  }, [conversation_id, hydrated, isProcessing, team_id, update]);
 };

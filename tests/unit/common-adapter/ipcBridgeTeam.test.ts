@@ -301,6 +301,102 @@ describe('ipcBridge team adapter', () => {
     expect(call?.body).toEqual({ mcp_server_ids: [] });
   });
 
+  describe('team conversation adapters', () => {
+    it('team.getConversation calls GET /api/teams/{team_id}/conversations/{conversation_id}', async () => {
+      const { team } = await import('@/common/adapter/ipcBridge');
+
+      await team.getConversation.invoke({ team_id: 'team-42', conversation_id: 'conv-lead-1' });
+
+      expect(httpBridgeMocks.calls).toContainEqual({
+        method: 'GET',
+        path: '/api/teams/team-42/conversations/conv-lead-1',
+        body: undefined,
+      });
+    });
+
+    it('team.getConversationMessages calls GET /api/teams/{team_id}/conversations/{conversation_id}/messages with query params', async () => {
+      const { team } = await import('@/common/adapter/ipcBridge');
+
+      await team.getConversationMessages.invoke({
+        team_id: 'team-42',
+        conversation_id: 'conv-lead-1',
+        limit: 30,
+        before: 'msg-cursor-1',
+        content_mode: 'compact',
+      });
+
+      expect(httpBridgeMocks.calls).toContainEqual({
+        method: 'GET',
+        path: '/api/teams/team-42/conversations/conv-lead-1/messages?limit=30&before=msg-cursor-1&content_mode=compact',
+        body: undefined,
+      });
+    });
+
+    it('team.getLatestConversationMessageOfType calls GET /api/teams/{team_id}/conversations/{conversation_id}/messages/latest?type=...', async () => {
+      const { team } = await import('@/common/adapter/ipcBridge');
+
+      await team.getLatestConversationMessageOfType.invoke({
+        team_id: 'team-42',
+        conversation_id: 'conv-lead-1',
+        type: 'plan',
+      });
+
+      expect(httpBridgeMocks.calls).toContainEqual({
+        method: 'GET',
+        path: '/api/teams/team-42/conversations/conv-lead-1/messages/latest?type=plan',
+        body: undefined,
+      });
+    });
+
+    it('team.getConfirmations calls GET /api/teams/{team_id}/conversations/{conversation_id}/confirmations', async () => {
+      const { team } = await import('@/common/adapter/ipcBridge');
+
+      await team.getConfirmations.invoke({ team_id: 'team-42', conversation_id: 'conv-lead-1' });
+
+      expect(httpBridgeMocks.calls).toContainEqual({
+        method: 'GET',
+        path: '/api/teams/team-42/conversations/conv-lead-1/confirmations',
+        body: undefined,
+      });
+    });
+
+    it('team.listArtifacts calls GET /api/teams/{team_id}/conversations/{conversation_id}/artifacts', async () => {
+      const { team } = await import('@/common/adapter/ipcBridge');
+
+      await team.listArtifacts.invoke({ team_id: 'team-42', conversation_id: 'conv-lead-1' });
+
+      expect(httpBridgeMocks.calls).toContainEqual({
+        method: 'GET',
+        path: '/api/teams/team-42/conversations/conv-lead-1/artifacts',
+        body: undefined,
+      });
+    });
+
+    it('team.getSlashCommands calls GET /api/teams/{team_id}/conversations/{conversation_id}/slash-commands', async () => {
+      const { team } = await import('@/common/adapter/ipcBridge');
+
+      await team.getSlashCommands.invoke({ team_id: 'team-42', conversation_id: 'conv-lead-1' });
+
+      expect(httpBridgeMocks.calls).toContainEqual({
+        method: 'GET',
+        path: '/api/teams/team-42/conversations/conv-lead-1/slash-commands',
+        body: undefined,
+      });
+    });
+
+    it('team.getUsage calls GET /api/teams/{team_id}/conversations/{conversation_id}/usage', async () => {
+      const { team } = await import('@/common/adapter/ipcBridge');
+
+      await team.getUsage.invoke({ team_id: 'team-42', conversation_id: 'conv-lead-1' });
+
+      expect(httpBridgeMocks.calls).toContainEqual({
+        method: 'GET',
+        path: '/api/teams/team-42/conversations/conv-lead-1/usage',
+        body: undefined,
+      });
+    });
+  });
+
   it('exports mcp alias pointing to mcpService', async () => {
     const { mcp, mcpService } = await import('@/common/adapter/ipcBridge');
     expect(mcp).toBe(mcpService);

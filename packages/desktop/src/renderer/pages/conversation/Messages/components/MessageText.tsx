@@ -287,6 +287,7 @@ const MessageText: React.FC<MessageTextProps> = ({
               senderName={displaySenderName}
               senderConversationId={senderConversationId}
               backendLogo={fallbackBackendLogo}
+              team_id={conversationContext?.team_id}
             />
             <span
               className='text-12px'

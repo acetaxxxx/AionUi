@@ -12,9 +12,14 @@ import { uuid } from '@/common/utils';
 import type { ThoughtData } from '@/renderer/components/chat/ThoughtDisplay';
 import { useMergeLiveMessage } from '@/renderer/pages/conversation/Messages/hooks';
 import { logStreamTerminalObserved } from '@/renderer/pages/conversation/runtime/useConversationRuntimeView';
-import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
+import {
+  getConversationOrNull,
+  getTeamConversationOrNull,
+} from '@/renderer/pages/conversation/utils/conversationCache';
 import { isConversationProcessing } from '@/renderer/pages/conversation/utils/conversationRuntime';
 import { beginConversationTurn, endConversationTurn } from '@/renderer/pages/conversation/utils/conversationTurnClock';
+import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { processLocalCronResponse } from './localCronCommands';
 
@@ -28,10 +33,14 @@ export const useAionrsMessage = (
   options?: {
     onError?: (message: IResponseMessage) => void;
     onConfigChanged?: (capabilities: Record<string, unknown>) => void;
+    team_id?: string;
   }
 ) => {
   const onError = options?.onError;
   const onConfigChanged = options?.onConfigChanged;
+  const teamPermission = useTeamPermission();
+  const conversationContext = useConversationContextSafe();
+  const effectiveTeamId = options?.team_id || teamPermission?.team_id || conversationContext?.team_id;
   const onConfigChangedRef = useRef(onConfigChanged);
   const mergeLiveMessage = useMergeLiveMessage();
   const [streamRunning, setStreamRunning] = useState(false);
@@ -274,13 +283,15 @@ export const useAionrsMessage = (
                 total_tokens: (usageData.input_tokens || 0) + (usageData.output_tokens || 0),
               };
               setTokenUsage(newTokenUsage);
-              void ipcBridge.conversation.update.invoke({
-                id: conversation_id,
-                updates: {
-                  extra: { last_token_usage: newTokenUsage } as TChatConversation['extra'],
-                },
-                merge_extra: true,
-              });
+              if (!effectiveTeamId) {
+                void ipcBridge.conversation.update.invoke({
+                  id: conversation_id,
+                  updates: {
+                    extra: { last_token_usage: newTokenUsage } as TChatConversation['extra'],
+                  },
+                  merge_extra: true,
+                });
+              }
             }
             setStreamRunning(false);
             setWaitingResponse(false);
@@ -397,7 +408,11 @@ export const useAionrsMessage = (
 
     // Check actual conversation status from backend before resetting all running states
     // to avoid flicker when switching to a running conversation
-    void getConversationOrNull(conversation_id).then((res) => {
+    const fetchConversation = effectiveTeamId
+      ? getTeamConversationOrNull(effectiveTeamId, conversation_id)
+      : getConversationOrNull(conversation_id);
+
+    void fetchConversation.then((res) => {
       if (cancelled) {
         return;
       }
@@ -443,7 +458,7 @@ export const useAionrsMessage = (
     return () => {
       cancelled = true;
     };
-  }, [conversation_id]);
+  }, [conversation_id, effectiveTeamId]);
 
   const resetState = useCallback(() => {
     setWaitingResponse(false);

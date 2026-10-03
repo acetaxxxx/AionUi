@@ -18,7 +18,7 @@ import type {
 import { useCallback, useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { revalidateAcpConfigOptions } from '@/renderer/hooks/agent/useAcpConfigOptions';
-import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
+import { getTeamConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 import { removeTeamAssistantWithCronCleanup } from '../utils/removeTeamAssistantWithCronCleanup';
 import {
   applyTeamRuntimeStatusToMembershipMutationState,
@@ -149,7 +149,7 @@ export function useTeamSession(team: TTeam, warmupPhase?: TeamWarmupPhase) {
       await removeTeamAssistantWithCronCleanup({
         team,
         slot_id,
-        getConversation: getConversationOrNull,
+        getConversation: (conversation_id) => getTeamConversationOrNull(team.id, conversation_id),
         removeCronJob: (job_id) => ipcBridge.cron.removeJob.invoke({ job_id }),
         removeAgent: (params) => ipcBridge.team.removeAgent.invoke(params),
       });

@@ -41,6 +41,11 @@ export interface ConversationContextValue {
   hideSendBox?: boolean;
 
   /**
+   * Team ID when conversation belongs to a team
+   */
+  team_id?: string;
+
+  /**
    * Loaded skill names for this conversation (snapshot from conversation.extra.skills).
    * Surfaced inside the SendBox `+` menu so users can review/jump to active skills.
    */

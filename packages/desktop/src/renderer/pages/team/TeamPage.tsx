@@ -1,5 +1,5 @@
 import { Button, Dropdown, Menu, Message, Modal, Spin, Tag, Tooltip } from '@arco-design/web-react';
-import { FullScreen, Left, MoreOne, OffScreen, Peoples, Right, SettingOne } from '@icon-park/react';
+import { FullScreen, Left, MoreOne, OffScreen, Peoples, Right, Robot, SettingOne } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR, { useSWRConfig } from 'swr';
@@ -38,7 +38,11 @@ import { TeamIdentityProvider } from './identity/TeamIdentityContext';
 import { TeamPermissionProvider, useTeamPermission } from './hooks/TeamPermissionContext';
 import { useTeamSession } from './hooks/useTeamSession';
 import { useTeamRunView, type TeamRunViewState } from './hooks/useTeamRunView';
-import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
+import {
+  getConversationOrNull,
+  getTeamConversationOrNull,
+  teamConversationCacheKey,
+} from '@/renderer/pages/conversation/utils/conversationCache';
 import { useActiveLease } from '@/renderer/pages/conversation/hooks/useActiveLease';
 import { resolveTeamWorkspaceView } from './utils/teamWorkspaceView';
 import { usePreviewContext } from '@/renderer/pages/conversation/Preview';
@@ -369,6 +373,7 @@ const AssistantChatSlot: React.FC<{
   assistant: TeamAssistant;
   team_id: string;
   isLeader: boolean;
+  isOwner?: boolean;
   /** 成员身份色（列头名字 / 列身淡底）。 */
   color: string;
   isFullscreen?: boolean;
@@ -387,6 +392,7 @@ const AssistantChatSlot: React.FC<{
   assistant,
   team_id,
   isLeader,
+  isOwner,
   color,
   isFullscreen = false,
   onToggleFullscreen,
@@ -402,9 +408,11 @@ const AssistantChatSlot: React.FC<{
   const layout = useLayoutContext();
   const teamPermission = useTeamPermission();
   const isMobile = layout?.isMobile ?? false;
+  const isOwnerSlot = isOwner ?? teamPermission?.isOwner ?? true;
+  const shouldFetchConversation = Boolean(assistant.conversation_id && (isOwnerSlot || isLeader));
   const { data: conversation, mutate: mutateConversation } = useSWR(
-    assistant.conversation_id ? ['team-conversation', assistant.conversation_id] : null,
-    () => getConversationOrNull(assistant.conversation_id)
+    shouldFetchConversation ? teamConversationCacheKey(team_id, assistant.conversation_id) : null,
+    () => getTeamConversationOrNull(team_id, assistant.conversation_id)
   );
 
   const isAionrs = conversation?.type === 'aionrs';
@@ -451,6 +459,8 @@ const AssistantChatSlot: React.FC<{
           assistant_backend={assistant.assistant_backend}
           icon={assistant.icon}
           conversation_id={assistant.conversation_id}
+          team_id={team_id}
+          isOwner={isOwnerSlot}
           isLeader={isLeader}
           className='min-w-0'
           nameClassName='text-13px font-600'
@@ -458,7 +468,7 @@ const AssistantChatSlot: React.FC<{
         />
         <div className='flex items-center gap-8px shrink-0'>
           {conversation && <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />}
-          {!isMobile && assistant.conversation_id && !isAionrs && isAcpLike && (
+          {!isMobile && assistant.conversation_id && !isAionrs && isAcpLike && isOwnerSlot && (
             <div className='min-w-0 max-w-140px [&_button]:max-w-full [&_button_span]:truncate'>
               <AcpModelSelector
                 key={assistant.conversation_id}
@@ -471,7 +481,7 @@ const AssistantChatSlot: React.FC<{
               />
             </div>
           )}
-          {assistant.conversation_id && !isAionrs && isAcpLike && isLeader && (
+          {assistant.conversation_id && !isAionrs && isAcpLike && isLeader && isOwnerSlot && (
             <div className='shrink-0'>
               <AcpRuntimeRestartButton
                 conversation_id={assistant.conversation_id}
@@ -484,7 +494,7 @@ const AssistantChatSlot: React.FC<{
               />
             </div>
           )}
-          {assistant.conversation_id && !isAionrs && isAcpLike && !isLeader && (
+          {assistant.conversation_id && !isAionrs && isAcpLike && !isLeader && isOwnerSlot && (
             <div className='shrink-0'>
               <TeamAgentActions
                 assistant={assistant}
@@ -495,7 +505,7 @@ const AssistantChatSlot: React.FC<{
               />
             </div>
           )}
-          {!isMobile && isAionrs && assistant.conversation_id && (
+          {!isMobile && isAionrs && assistant.conversation_id && isOwnerSlot && (
             <div className='min-w-0 max-w-140px [&_button]:max-w-full [&_button_span]:truncate'>
               <AionrsHeaderModelSelector
                 key={assistant.conversation_id}
@@ -528,6 +538,24 @@ const AssistantChatSlot: React.FC<{
             onTeamSlotPaused={onTeamSlotPaused}
             onRunStateStale={() => onRunStateStale('pause.result')}
           />
+        ) : !isOwnerSlot && !isLeader ? (
+          <div
+            className='flex flex-1 flex-col items-center justify-center p-24px text-center gap-12px select-none'
+            data-testid={`team-worker-inaccessible-${assistant.slot_id}`}
+          >
+            <div className='w-48px h-48px rounded-full bg-[var(--fill-2)] flex items-center justify-center text-[var(--color-text-3)] text-24px'>
+              <Robot theme='outline' size={24} />
+            </div>
+            <div className='text-14px font-500 text-[var(--color-text-1)]'>
+              {assistant.assistant_name || t('team.collaborators.roleTeammate', { defaultValue: 'Teammate' })}
+            </div>
+            <div className='text-12px text-[var(--color-text-3)] max-w-280px leading-relaxed'>
+              {t('team.collaborators.workerInaccessibleNotice', {
+                defaultValue:
+                  'This assistant coordinates with the Team Lead. Collaborators interact directly with the Team Lead conversation.',
+              })}
+            </div>
+          </div>
         ) : (
           <div className='flex flex-1 items-center justify-center'>
             <Spin loading />
@@ -592,8 +620,8 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   // Fetch leader assistant's conversation for the workspace sider. Its
   // project_id (populated by the shared mapper) is the team's project.
   const { data: dispatchConversation, mutate: mutateDispatchConversation } = useSWR(
-    leadAssistant?.conversation_id ? ['team-conversation', leadAssistant.conversation_id] : null,
-    () => getConversationOrNull(leadAssistant!.conversation_id)
+    leadAssistant?.conversation_id ? teamConversationCacheKey(team.id, leadAssistant.conversation_id) : null,
+    () => getTeamConversationOrNull(team.id, leadAssistant!.conversation_id)
   );
   const leaderConversationIdForProject = leadAssistant?.conversation_id;
   // Prefer the synchronous list-snapshot project id for the leader conversation
@@ -808,6 +836,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   return (
     <TeamPermissionProvider
       team_id={team.id}
+      isOwner={isOwner}
       isLeaderAgent={isLeaderAssistant}
       leaderConversationId={leaderConversationId}
       allConversationIds={allConversationIds}
@@ -969,6 +998,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                           assistant={assistant}
                           team_id={team.id}
                           isLeader={isLeaderSlot}
+                          isOwner={isOwner}
                           color={colorOf(assistant.slot_id)}
                           onToggleFullscreen={() => {
                             switchTab(assistant.slot_id);
