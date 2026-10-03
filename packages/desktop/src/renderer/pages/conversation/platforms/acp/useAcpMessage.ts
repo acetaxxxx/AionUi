@@ -13,10 +13,14 @@ import type { IResponseMessage } from '@/common/adapter/ipcBridge';
 import type { TokenUsageBreakdown, TokenUsageData } from '@/common/config/storage';
 import { useMergeLiveMessage } from '@/renderer/pages/conversation/Messages/hooks';
 import { logStreamTerminalObserved } from '@/renderer/pages/conversation/runtime/useConversationRuntimeView';
-import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
+import {
+  getConversationOrNull,
+  getTeamConversationOrNull,
+} from '@/renderer/pages/conversation/utils/conversationCache';
 import { isConversationProcessing } from '@/renderer/pages/conversation/utils/conversationRuntime';
 import { beginConversationTurn, endConversationTurn } from '@/renderer/pages/conversation/utils/conversationTurnClock';
 import { ensureConversationRuntime } from '@/renderer/pages/conversation/utils/ensureConversationRuntime';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import type { ThoughtData } from '@/renderer/components/chat/ThoughtDisplay';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -81,29 +85,35 @@ export function tokenUsageFromAcpUsage(data: {
 
 const slashCommandsInFlight = new Map<string, Promise<SlashCommandItem[]>>();
 
-function fetchAcpSlashCommands(conversation_id: string): Promise<SlashCommandItem[]> {
-  const existing = slashCommandsInFlight.get(conversation_id);
+function fetchAcpSlashCommands(conversation_id: string, team_id?: string): Promise<SlashCommandItem[]> {
+  const flightKey = team_id ? `${team_id}:${conversation_id}` : conversation_id;
+  const existing = slashCommandsInFlight.get(flightKey);
   if (existing) return existing;
 
-  const promise = ipcBridge.conversation.getSlashCommands
-    .invoke({ conversation_id })
+  const fetchPromise = team_id
+    ? ipcBridge.team.getSlashCommands.invoke({ team_id, conversation_id })
+    : ipcBridge.conversation.getSlashCommands.invoke({ conversation_id });
+
+  const promise = fetchPromise
     .then((result) => {
       if (!result || !Array.isArray(result) || result.length === 0) return [];
       return mapAcpCommandsToSlashCommands(result);
     })
     .finally(() => {
-      if (slashCommandsInFlight.get(conversation_id) === promise) {
-        slashCommandsInFlight.delete(conversation_id);
+      if (slashCommandsInFlight.get(flightKey) === promise) {
+        slashCommandsInFlight.delete(flightKey);
       }
     });
-  slashCommandsInFlight.set(conversation_id, promise);
+  slashCommandsInFlight.set(flightKey, promise);
   return promise;
 }
 
 export const useAcpMessage = (
   conversation_id: string,
-  options?: { skipWarmup?: boolean; prepareRuntime?: () => Promise<void> }
+  options?: { skipWarmup?: boolean; prepareRuntime?: () => Promise<void>; team_id?: string }
 ): UseAcpMessageReturn => {
+  const teamPermission = useTeamPermission();
+  const team_id = options?.team_id ?? teamPermission?.team_id;
   const mergeLiveMessage = useMergeLiveMessage();
   const [running, setRunning] = useState(false);
   const [hasHydratedRunningState, setHasHydratedRunningState] = useState(false);
@@ -612,7 +622,11 @@ export const useAcpMessage = (
     aiProcessingRef.current = false;
     setTurnStartedAtMs(null);
 
-    void getConversationOrNull(conversation_id)
+    const fetchConversation = team_id
+      ? getTeamConversationOrNull(team_id, conversation_id)
+      : getConversationOrNull(conversation_id);
+
+    void fetchConversation
       .then((res) => {
         if (cancelled) {
           return;
@@ -675,7 +689,7 @@ export const useAcpMessage = (
     return () => {
       cancelled = true;
     };
-  }, [conversation_id]);
+  }, [conversation_id, team_id]);
 
   // Fetch slash commands via HTTP after runtime ensure completes.
   // WebSocket push of available_commands arrives during warmup when no
@@ -684,11 +698,12 @@ export const useAcpMessage = (
   useEffect(() => {
     if (options?.skipWarmup && !options.prepareRuntime) return;
     let cancelled = false;
-    const runtimeReady = options?.prepareRuntime?.() ?? ensureConversationRuntime(conversation_id);
+    const runtimeReady =
+      options?.prepareRuntime?.() ?? (team_id ? Promise.resolve() : ensureConversationRuntime(conversation_id));
     void runtimeReady
       .then(() => {
         if (cancelled) return;
-        return fetchAcpSlashCommands(conversation_id);
+        return fetchAcpSlashCommands(conversation_id, team_id);
       })
       .then((commands) => {
         if (cancelled) return;
@@ -699,8 +714,12 @@ export const useAcpMessage = (
     // Hydrate the context-usage indicator from the backend snapshot. Live
     // acp_context_usage stream events may land first, so never overwrite a
     // value that is already set.
+    const fetchUsage = team_id
+      ? ipcBridge.team.getUsage.invoke({ team_id, conversation_id })
+      : ipcBridge.conversation.getUsage.invoke({ conversation_id });
+
     void runtimeReady
-      .then(() => ipcBridge.conversation.getUsage.invoke({ conversation_id }))
+      .then(() => fetchUsage)
       .then((usage) => {
         if (cancelled || !usage || typeof usage.used !== 'number' || usage.used <= 0) return;
         setTokenUsage((prev) => prev ?? tokenUsageFromAcpUsage(usage));
@@ -712,7 +731,7 @@ export const useAcpMessage = (
     return () => {
       cancelled = true;
     };
-  }, [conversation_id, options?.prepareRuntime, options?.skipWarmup]);
+  }, [conversation_id, options?.prepareRuntime, options?.skipWarmup, team_id]);
 
   const resetState = useCallback(() => {
     turnFinishedRef.current = true;
@@ -729,15 +748,16 @@ export const useAcpMessage = (
   }, [markTurnEnded]);
 
   const fetchSlashCommands = useCallback(() => {
-    const runtimeReady = options?.prepareRuntime?.() ?? ensureConversationRuntime(conversation_id);
+    const runtimeReady =
+      options?.prepareRuntime?.() ?? (team_id ? Promise.resolve() : ensureConversationRuntime(conversation_id));
     void runtimeReady
-      .then(() => fetchAcpSlashCommands(conversation_id))
+      .then(() => fetchAcpSlashCommands(conversation_id, team_id))
       .then((commands) => {
         if (!commands.length) return;
         setSlashCommands(commands);
       })
       .catch(() => {});
-  }, [conversation_id, options?.prepareRuntime]);
+  }, [conversation_id, options?.prepareRuntime, team_id]);
 
   return {
     thought,

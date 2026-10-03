@@ -5,6 +5,10 @@ import { createTeamConfigOptionsPort, type TeamConfigOptionsPort } from './teamC
 type TeamPermissionContextValue = {
   /** Whether we are in team mode */
   isTeamMode: true;
+  /** Team ID */
+  team_id: string;
+  /** Whether the current user is the team owner */
+  isOwner: boolean;
   /** Whether the current active agent is the team leader */
   isLeaderAgent: boolean;
   /** Conversation ID of the leader agent */
@@ -24,6 +28,7 @@ const TeamPermissionContext = createContext<TeamPermissionContextValue | null>(n
 export const TeamPermissionProvider: React.FC<{
   children: React.ReactNode;
   team_id: string;
+  isOwner?: boolean;
   isLeaderAgent: boolean;
   leaderConversationId: string;
   allConversationIds: string[];
@@ -31,6 +36,7 @@ export const TeamPermissionProvider: React.FC<{
 }> = ({
   children,
   team_id,
+  isOwner = true,
   isLeaderAgent,
   leaderConversationId,
   allConversationIds,
@@ -82,6 +88,8 @@ export const TeamPermissionProvider: React.FC<{
   const value = useMemo<TeamPermissionContextValue>(
     () => ({
       isTeamMode: true,
+      team_id,
+      isOwner,
       isLeaderAgent,
       leaderConversationId,
       allConversationIds,
@@ -89,7 +97,16 @@ export const TeamPermissionProvider: React.FC<{
       warmupSession,
       configOptionsPort,
     }),
-    [isLeaderAgent, leaderConversationId, allConversationIds, propagateMode, warmupSession, configOptionsPort]
+    [
+      team_id,
+      isOwner,
+      isLeaderAgent,
+      leaderConversationId,
+      allConversationIds,
+      propagateMode,
+      warmupSession,
+      configOptionsPort,
+    ]
   );
 
   return <TeamPermissionContext.Provider value={value}>{children}</TeamPermissionContext.Provider>;

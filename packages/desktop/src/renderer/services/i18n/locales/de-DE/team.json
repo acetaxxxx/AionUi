@@ -213,6 +213,8 @@
     "removeConfirmTitle": "Mitwirkenden entfernen",
     "removeConfirmContent": "Möchten Sie {{name}} wirklich aus diesem Team entfernen? Der Zugriff auf Team-Konversationen und den Arbeitsbereich geht sofort verloren.",
     "ownerOnlyNotice": "Nur der Teambesitzer kann Mitwirkende hinzufügen oder entfernen.",
+    "confirmationOwnerOnly": "Nur der Teambesitzer kann Berechtigungsanfragen genehmigen.",
+    "workerInaccessibleNotice": "Dieser Assistent stimmt sich mit dem Teamleiter ab. Mitwirkende interagieren direkt in der Teamleiter-Konversation.",
     "emptyMembers": "Noch keine Mitwirkenden.",
     "emptyEligible": "Keine berechtigten Konten zum Hinzufügen verfügbar.",
     "rateLimited": "Zu viele Anfragen. Bitte warten Sie einen Moment, bevor Sie es erneut versuchen.",

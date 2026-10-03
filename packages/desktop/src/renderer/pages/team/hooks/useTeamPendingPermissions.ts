@@ -53,7 +53,9 @@ export function useTeamPendingPermissions(team_id: string, conversation_ids: str
       const results = await Promise.allSettled(
         conversation_ids.map(async (cid) => {
           try {
-            const data = await ipcBridge.conversation.confirmation.list.invoke({ conversation_id: cid });
+            const data = team_id
+              ? await ipcBridge.team.getConfirmations.invoke({ team_id, conversation_id: cid })
+              : await ipcBridge.conversation.confirmation.list.invoke({ conversation_id: cid });
             return { cid, count: data.length };
           } catch {
             return { cid, count: 0 };

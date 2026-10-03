@@ -23,6 +23,7 @@ import {
   loadConversationMessagePage,
   loadLatestConversationMessages,
 } from '@/renderer/utils/chat/messagePagination';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 
 const [useMessageList, MessageListProvider, useUpdateMessageList] = createContext([] as TMessage[]);
 const [useMessageListLoading, MessageListLoadingProvider, useUpdateMessageListLoading] = createContext(false);
@@ -853,7 +854,9 @@ export const useReplaceWithAnchorWindow = () => {
   );
 };
 
-export const useLoadPreviousMessagePage = (conversationId?: string) => {
+export const useLoadPreviousMessagePage = (conversationId?: string, options?: { teamId?: string }) => {
+  const teamPermission = useTeamPermission();
+  const teamId = options?.teamId ?? teamPermission?.team_id;
   const pagination = useMessagePaginationState();
   const setPagination = useUpdateMessagePaginationState();
   const prependHistoryPage = usePrependHistoryPage();
@@ -869,6 +872,7 @@ export const useLoadPreviousMessagePage = (conversationId?: string) => {
         limit: DEFAULT_MESSAGE_PAGE_LIMIT,
         before: pagination.oldestCursor,
         contentMode: 'compact',
+        teamId,
       });
       const messages = page.items.map(normalizeDbMessage);
       prependHistoryPage(messages);
@@ -893,10 +897,13 @@ export const useLoadPreviousMessagePage = (conversationId?: string) => {
     pagination.oldestCursor,
     prependHistoryPage,
     setPagination,
+    teamId,
   ]);
 };
 
-export const useLoadAnchorMessageWindow = (conversationId?: string) => {
+export const useLoadAnchorMessageWindow = (conversationId?: string, options?: { teamId?: string }) => {
+  const teamPermission = useTeamPermission();
+  const teamId = options?.teamId ?? teamPermission?.team_id;
   const setPagination = useUpdateMessagePaginationState();
   const replaceWithAnchorWindow = useReplaceWithAnchorWindow();
 
@@ -909,6 +916,7 @@ export const useLoadAnchorMessageWindow = (conversationId?: string) => {
         const page = await loadConversationAnchorWindow(conversationId, messageId, {
           limit: DEFAULT_MESSAGE_PAGE_LIMIT,
           contentMode: 'compact',
+          teamId,
         });
         replaceWithAnchorWindow(conversationId, page.items.map(normalizeDbMessage));
         setPagination({
@@ -926,11 +934,13 @@ export const useLoadAnchorMessageWindow = (conversationId?: string) => {
         return false;
       }
     },
-    [conversationId, replaceWithAnchorWindow, setPagination]
+    [conversationId, replaceWithAnchorWindow, setPagination, teamId]
   );
 };
 
-export const useMessageLstCache = (key: string) => {
+export const useMessageLstCache = (key: string, options?: { teamId?: string }) => {
+  const teamPermission = useTeamPermission();
+  const teamId = options?.teamId ?? teamPermission?.team_id;
   const update = useUpdateMessageList();
   const list = useMessageList();
   const setLoading = useUpdateMessageListLoading();
@@ -947,6 +957,7 @@ export const useMessageLstCache = (key: string) => {
     const result = await loadLatestConversationMessages(key, {
       limit: DEFAULT_MESSAGE_PAGE_LIMIT,
       contentMode: 'compact',
+      teamId,
     });
     const messages = result?.items?.map(normalizeDbMessage);
     if (messages && Array.isArray(messages)) {
@@ -962,7 +973,7 @@ export const useMessageLstCache = (key: string) => {
       return messages;
     }
     return [];
-  }, [key, setPagination, update]);
+  }, [key, setPagination, teamId, update]);
 
   useEffect(() => {
     if (!key) return;

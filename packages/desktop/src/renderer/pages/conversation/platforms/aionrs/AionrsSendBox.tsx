@@ -142,11 +142,14 @@ const AionrsSendBox: React.FC<{
   const { checkAndUpdateTitle } = useAutoTitle();
   const { current_model } = modelSelection;
   const teamPermission = useTeamPermission();
+  const effectiveTeamId = teamPermission?.team_id || conversationContext?.team_id;
+  const isOwner = teamPermission ? teamPermission.isOwner : true;
   const propagateMode = teamPermission?.propagateMode;
 
   const { thought, running, turnStartedAtMs, setActiveMsgId, setWaitingResponse, resetState } = useAionrsMessage(
     conversation_id,
     {
+      team_id: effectiveTeamId,
       onConfigChanged: (capabilities) => {
         const modes = (capabilities as { modes?: string[] })?.modes;
         if (modes && modes.length > 0) {
@@ -183,7 +186,7 @@ const AionrsSendBox: React.FC<{
     prepareRuntime: prepareRuntimeConfig,
     prepareSetRuntime: teamPermission?.warmupSession,
     configOptionsPort: teamPermission?.configOptionsPort,
-    enabled: Boolean(conversation_id),
+    enabled: Boolean(conversation_id) && isOwner,
   });
   const runtimeMode = runtimeConfig.mode;
   const runtimeThoughtLevel = runtimeConfig.thoughtLevel;
@@ -552,59 +555,64 @@ const AionrsSendBox: React.FC<{
       modeOptions.find((opt) => opt.active)?.label ?? t('agentMode.default', { defaultValue: 'Default' });
     const currentModelLabel = modelSelection.current_model?.use_model || t('conversation.welcome.selectModel');
 
-    const entries: MobileActionSheetEntry[] = [
-      {
-        key: 'model',
-        icon: <Brain theme='outline' size='16' />,
-        label: t('common.model', { defaultValue: 'Model' }),
-        meta: currentModelLabel,
-        submenu: {
-          title: t('common.model', { defaultValue: 'Model' }),
-          options: modelOptions,
-          onSelect: handleSheetModelSelect,
-          emptyText: t('conversation.welcome.selectModel'),
-        },
-      },
-      {
-        key: 'permission',
-        icon: <Shield theme='outline' size='16' />,
-        label: t('agentMode.permission', { defaultValue: 'Permission' }),
-        meta: currentModeLabel,
-        submenu: {
-          title: t('agentMode.permission', { defaultValue: 'Permission' }),
-          options: modeOptions,
-          onSelect: (key) => void handleSheetModeChange(key),
-        },
-      },
-      ...attachEntries,
-    ];
+    const entries: MobileActionSheetEntry[] = [];
 
-    if (runtimeThoughtLevel) {
-      entries.splice(1, 0, {
-        key: 'thought-level',
-        icon: <Brain theme='outline' size='16' />,
-        label: t('agent.thoughtLevel.label'),
-        meta:
-          runtimeThoughtLevel.options.find((item) => item.value === runtimeThoughtLevel.currentValue)?.label ||
-          runtimeThoughtLevel.currentValue ||
-          '',
-        submenu: {
-          title: t('agent.thoughtLevel.label'),
-          options: runtimeThoughtLevel.options.map((item) => ({
-            key: item.value,
-            label: item.label,
-            description: item.description ?? undefined,
-            active: runtimeThoughtLevel.currentValue === item.value,
-          })),
-          onSelect: (value) => {
-            void runtimeConfig
-              .setConfigOption(runtimeThoughtLevel.id, value)
-              .then(() => Message.success(t('agent.thoughtLevel.switchSuccess')))
-              .catch((error) => Message.error(t(configErrorMessageKey(error))));
+    if (isOwner) {
+      entries.push(
+        {
+          key: 'model',
+          icon: <Brain theme='outline' size='16' />,
+          label: t('common.model', { defaultValue: 'Model' }),
+          meta: currentModelLabel,
+          submenu: {
+            title: t('common.model', { defaultValue: 'Model' }),
+            options: modelOptions,
+            onSelect: handleSheetModelSelect,
+            emptyText: t('conversation.welcome.selectModel'),
           },
         },
-      });
+        {
+          key: 'permission',
+          icon: <Shield theme='outline' size='16' />,
+          label: t('agentMode.permission', { defaultValue: 'Permission' }),
+          meta: currentModeLabel,
+          submenu: {
+            title: t('agentMode.permission', { defaultValue: 'Permission' }),
+            options: modeOptions,
+            onSelect: (key) => void handleSheetModeChange(key),
+          },
+        }
+      );
+
+      if (runtimeThoughtLevel) {
+        entries.splice(1, 0, {
+          key: 'thought-level',
+          icon: <Brain theme='outline' size='16' />,
+          label: t('agent.thoughtLevel.label'),
+          meta:
+            runtimeThoughtLevel.options.find((item) => item.value === runtimeThoughtLevel.currentValue)?.label ||
+            runtimeThoughtLevel.currentValue ||
+            '',
+          submenu: {
+            title: t('agent.thoughtLevel.label'),
+            options: runtimeThoughtLevel.options.map((item) => ({
+              key: item.value,
+              label: item.label,
+              description: item.description ?? undefined,
+              active: runtimeThoughtLevel.currentValue === item.value,
+            })),
+            onSelect: (value) => {
+              void runtimeConfig
+                .setConfigOption(runtimeThoughtLevel.id, value)
+                .then(() => Message.success(t('agent.thoughtLevel.switchSuccess')))
+                .catch((error) => Message.error(t(configErrorMessageKey(error))));
+            },
+          },
+        });
+      }
     }
+
+    entries.push(...attachEntries);
 
     if (loadedSkills.length > 0) {
       const skillOptions: MobileActionSheetOption[] = loadedSkills.map((name) => ({
@@ -660,6 +668,7 @@ const AionrsSendBox: React.FC<{
     handleSheetModeChange,
     handleSheetModelSelect,
     isMobile,
+    isOwner,
     loadedMcpStatuses,
     loadedSkills,
     modelSelection,
@@ -806,21 +815,23 @@ const AionrsSendBox: React.FC<{
         }
         rightTools={
           <div className='flex items-center gap-8px min-w-0'>
-            <AgentModeSelector
-              backend='aionrs'
-              conversation_id={conversation_id}
-              compact
-              initialMode={session_mode}
-              dynamicModes={dynamicModes}
-              compactLeadingIcon={<Shield theme='outline' size='14' fill={iconColors.secondary} />}
-              modeLabelFormatter={(mode) => t(`agentMode.${mode.value}`, { defaultValue: mode.label })}
-              compactLabelPrefix={t('agentMode.permission')}
-              hideCompactLabelPrefixOnMobile
-              onModeChanged={propagateMode}
-              beforeRuntimeSync={prepareRuntimeConfig}
-              beforeRuntimeSet={teamPermission?.warmupSession}
-              configOptionsPort={teamPermission?.configOptionsPort}
-            />
+            {isOwner && (
+              <AgentModeSelector
+                backend='aionrs'
+                conversation_id={conversation_id}
+                compact
+                initialMode={session_mode}
+                dynamicModes={dynamicModes}
+                compactLeadingIcon={<Shield theme='outline' size='14' fill={iconColors.secondary} />}
+                modeLabelFormatter={(mode) => t(`agentMode.${mode.value}`, { defaultValue: mode.label })}
+                compactLabelPrefix={t('agentMode.permission')}
+                hideCompactLabelPrefixOnMobile
+                onModeChanged={propagateMode}
+                beforeRuntimeSync={prepareRuntimeConfig}
+                beforeRuntimeSet={teamPermission?.warmupSession}
+                configOptionsPort={teamPermission?.configOptionsPort}
+              />
+            )}
           </div>
         }
         prefix={

@@ -11,15 +11,21 @@ import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conve
 import { resetConversationTurnClockForTests } from '@/renderer/pages/conversation/utils/conversationTurnClock';
 import type { IResponseMessage } from '@/common/adapter/ipcBridge';
 
-const { addOrUpdateMessageMock, conversationUpdateInvokeMock, responseStreamOnMock, responseStreamHandlerRef } =
-  vi.hoisted(() => ({
-    addOrUpdateMessageMock: vi.fn(),
-    conversationUpdateInvokeMock: vi.fn(),
-    responseStreamOnMock: vi.fn(),
-    responseStreamHandlerRef: {
-      current: undefined as ((message: IResponseMessage) => void) | undefined,
-    },
-  }));
+const {
+  addOrUpdateMessageMock,
+  conversationUpdateInvokeMock,
+  responseStreamOnMock,
+  responseStreamHandlerRef,
+  getTeamConversationOrNullMock,
+} = vi.hoisted(() => ({
+  addOrUpdateMessageMock: vi.fn(),
+  conversationUpdateInvokeMock: vi.fn(),
+  responseStreamOnMock: vi.fn(),
+  responseStreamHandlerRef: {
+    current: undefined as ((message: IResponseMessage) => void) | undefined,
+  },
+  getTeamConversationOrNullMock: vi.fn(),
+}));
 
 vi.mock('@/renderer/pages/conversation/Messages/hooks', () => ({
   useAddOrUpdateMessage: () => addOrUpdateMessageMock,
@@ -28,6 +34,7 @@ vi.mock('@/renderer/pages/conversation/Messages/hooks', () => ({
 
 vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
   getConversationOrNull: vi.fn(),
+  getTeamConversationOrNull: (...args: unknown[]) => getTeamConversationOrNullMock(...args),
 }));
 
 vi.mock('@/common', () => ({
@@ -197,5 +204,63 @@ describe('useAionrsMessage turn clock', () => {
     });
     expect(result.current.turnStartedAtMs).toBe(300_000);
     nowSpy.mockRestore();
+  });
+
+  describe('team conversation hydration and updates', () => {
+    it('uses getTeamConversationOrNull when team_id is provided and skips generic conversation update on finish', async () => {
+      getTeamConversationOrNullMock.mockResolvedValue({
+        id: 'conv-team-1',
+        type: 'aionrs',
+        runtime: { is_processing: false },
+        extra: { last_token_usage: { total_tokens: 42 } },
+      });
+
+      const { result } = renderHook(() => useAionrsMessage('conv-team-1', { team_id: 'team-123' }));
+
+      await waitFor(() => {
+        expect(result.current.hasHydratedRunningState).toBe(true);
+      });
+
+      expect(getTeamConversationOrNullMock).toHaveBeenCalledWith('team-123', 'conv-team-1');
+      expect(vi.mocked(getConversationOrNull)).not.toHaveBeenCalled();
+
+      act(() => {
+        responseStreamHandlerRef.current?.({
+          type: 'finish',
+          turn_id: 'turn-1',
+          data: { input_tokens: 10, output_tokens: 20 },
+          conversation_id: 'conv-team-1',
+        } as unknown as IResponseMessage);
+      });
+
+      expect(conversationUpdateInvokeMock).not.toHaveBeenCalled();
+    });
+
+    it('calls conversation update on finish when not in team mode', async () => {
+      vi.mocked(getConversationOrNull).mockResolvedValue(null);
+
+      const { result } = renderHook(() => useAionrsMessage('conv-solo'));
+
+      await waitFor(() => {
+        expect(result.current.hasHydratedRunningState).toBe(true);
+      });
+
+      act(() => {
+        responseStreamHandlerRef.current?.({
+          type: 'finish',
+          turn_id: 'turn-2',
+          data: { input_tokens: 15, output_tokens: 25 },
+          conversation_id: 'conv-solo',
+        } as unknown as IResponseMessage);
+      });
+
+      expect(conversationUpdateInvokeMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'conv-solo',
+          updates: { extra: { last_token_usage: { total_tokens: 40 } } },
+          merge_extra: true,
+        })
+      );
+    });
   });
 });

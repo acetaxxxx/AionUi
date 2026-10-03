@@ -6,6 +6,8 @@
 
 import type { IMessageAcpPermission } from '@/common/chat/chatLib';
 import { conversation } from '@/common/adapter/ipcBridge';
+import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import {
   classifyAcpPermission,
   normalizePermissionOperationKind,
@@ -19,6 +21,12 @@ type MessageAcpPermissionProps = {
 };
 
 const MessageAcpPermission: React.FC<MessageAcpPermissionProps> = React.memo(({ message }) => {
+  const teamPermission = useTeamPermission();
+  const conversationContext = useConversationContextSafe();
+  const isTeam = Boolean(teamPermission || conversationContext?.team_id);
+  const isOwner = teamPermission ? teamPermission.isOwner : true;
+  const isCollaborator = isTeam && !isOwner;
+
   const content = message.content || ({} as IMessageAcpPermission['content']);
   const { tool_call } = content;
   const options = Array.isArray(content.options) ? content.options : [];
@@ -43,6 +51,9 @@ const MessageAcpPermission: React.FC<MessageAcpPermissionProps> = React.memo(({ 
 
   const handleConfirm = useCallback(
     async (selectedValue: string) => {
+      if (isCollaborator) {
+        return;
+      }
       await conversation.confirmMessage.invoke({
         confirm_key: selectedValue,
         msg_id: message.id,
@@ -50,7 +61,7 @@ const MessageAcpPermission: React.FC<MessageAcpPermissionProps> = React.memo(({ 
         call_id: toolCallId || message.id,
       });
     },
-    [message.conversation_id, message.id, toolCallId]
+    [isCollaborator, message.conversation_id, message.id, toolCallId]
   );
 
   if (!tool_call) {
@@ -92,6 +103,7 @@ const MessageAcpPermission: React.FC<MessageAcpPermissionProps> = React.memo(({ 
       detailLabelKey={command ? undefined : 'messages.requestDetails'}
       options={panelOptions}
       onConfirm={handleConfirm}
+      ownerApprovalRequired={isCollaborator}
     />
   );
 });

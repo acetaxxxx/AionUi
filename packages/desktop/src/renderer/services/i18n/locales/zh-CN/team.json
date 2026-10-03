@@ -213,6 +213,8 @@
     "removeConfirmTitle": "移除协作者",
     "removeConfirmContent": "确定要将 {{name}} 从此团队移除吗？对方将立即失去访问团队对话与工作空间的权限。",
     "ownerOnlyNotice": "只有团队所有者可以添加或移除协作者。",
+    "confirmationOwnerOnly": "只有团队所有者可以批准权限请求。",
+    "workerInaccessibleNotice": "该助手与团队组长协同工作。协作者请直接在团队组长对话中交互。",
     "emptyMembers": "暂无协作者。",
     "emptyEligible": "暂无可添加的合格账号。",
     "rateLimited": "请求过于频繁，请稍候再试。",

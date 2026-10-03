@@ -213,6 +213,8 @@
     "removeConfirmTitle": "Remove Collaborator",
     "removeConfirmContent": "Are you sure you want to remove {{name}} from this team? They will immediately lose access to team conversations and workspace.",
     "ownerOnlyNotice": "Only the Team Owner can add or remove collaborators.",
+    "confirmationOwnerOnly": "Only the Team Owner can approve permission requests.",
+    "workerInaccessibleNotice": "This assistant coordinates with the Team Lead. Collaborators interact directly with the Team Lead conversation.",
     "emptyMembers": "No collaborators yet.",
     "emptyEligible": "No eligible accounts available to add.",
     "rateLimited": "Too many requests. Please wait a moment before trying again.",

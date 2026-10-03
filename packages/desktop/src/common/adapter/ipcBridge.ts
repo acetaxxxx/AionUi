@@ -1872,6 +1872,10 @@ export interface IAnswerAskParams {
   decline?: boolean;
 }
 
+export interface ITeamAnswerAskParams extends IAnswerAskParams {
+  team_id: string;
+}
+
 export interface IConfirmMessageParams {
   confirm_key: string;
   msg_id: string;
@@ -2382,6 +2386,56 @@ export const team = {
   ),
   stop: httpDelete<void, { team_id: string }>((p) => `/api/teams/${p.team_id}/session`),
   ensureSession: httpPost<void, { team_id: string }>((p) => `/api/teams/${p.team_id}/session`),
+  getConversation: withResponseMap(
+    httpGet<TChatConversation, { team_id: string; conversation_id: string }>(
+      (p) => `/api/teams/${p.team_id}/conversations/${encodeURIComponent(p.conversation_id)}`,
+      { silentStatuses: [404] }
+    ),
+    fromApiConversation
+  ),
+  getConversationMessages: httpGet<
+    MessageCursorPage<import('@/common/chat/chatLib').TMessage>,
+    GetConversationMessagesParams & { team_id: string }
+  >((p) => {
+    const params = new URLSearchParams();
+    if (p.limit !== undefined) params.set('limit', String(p.limit));
+    if (p.before) params.set('before', p.before);
+    if (p.after) params.set('after', p.after);
+    if (p.anchor_message_id) params.set('anchor_message_id', p.anchor_message_id);
+    if (p.content_mode) params.set('content_mode', p.content_mode);
+    const qs = params.toString();
+    return `/api/teams/${p.team_id}/conversations/${encodeURIComponent(p.conversation_id)}/messages${qs ? `?${qs}` : ''}`;
+  }),
+  getLatestConversationMessageOfType: httpGet<
+    import('@/common/chat/chatLib').TMessage | null,
+    { team_id: string; conversation_id: string; type: string }
+  >(
+    (p) =>
+      `/api/teams/${p.team_id}/conversations/${encodeURIComponent(p.conversation_id)}/messages/latest?type=${encodeURIComponent(p.type)}`
+  ),
+  getConfirmations: httpGet<IConfirmation<unknown>[], { team_id: string; conversation_id: string }>(
+    (p) => `/api/teams/${p.team_id}/conversations/${encodeURIComponent(p.conversation_id)}/confirmations`
+  ),
+  answerAsk: httpPost<void, ITeamAnswerAskParams>(
+    (p) =>
+      `/api/teams/${p.team_id}/conversations/${encodeURIComponent(p.conversation_id)}/asks/${encodeURIComponent(p.request_id)}/answer`,
+    (p) => (p.decline ? { decline: true } : { answers: p.answers ?? [] })
+  ),
+  listArtifacts: httpGet<IConversationArtifact[], { team_id: string; conversation_id: string }>(
+    (p) => `/api/teams/${p.team_id}/conversations/${encodeURIComponent(p.conversation_id)}/artifacts`
+  ),
+  getSlashCommands: httpGet<AcpSlashCommandApiItem[], { team_id: string; conversation_id: string }>(
+    (p) => `/api/teams/${p.team_id}/conversations/${encodeURIComponent(p.conversation_id)}/slash-commands`
+  ),
+  getUsage: httpGet<
+    {
+      used: number;
+      size: number;
+      cost?: { amount: number; currency: string };
+      _meta?: Record<string, unknown>;
+    } | null,
+    { team_id: string; conversation_id: string }
+  >((p) => `/api/teams/${p.team_id}/conversations/${encodeURIComponent(p.conversation_id)}/usage`),
   getConfigOptions: httpGet<GetConfigOptionsResponse, { team_id: string; conversation_id: string }>(
     (p) => `/api/teams/${p.team_id}/conversations/${encodeURIComponent(p.conversation_id)}/config-options`
   ),

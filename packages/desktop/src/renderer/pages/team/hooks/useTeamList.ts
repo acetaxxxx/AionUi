@@ -4,7 +4,7 @@ import { useAuth } from '@renderer/hooks/context/AuthContext';
 import type { TTeam } from '@/common/types/team/teamTypes';
 import { useCallback, useEffect } from 'react';
 import useSWR from 'swr';
-import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
+import { getTeamConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 import { removeTeamWithCronCleanup } from '../utils/removeTeamAssistantWithCronCleanup';
 import { pruneOrphanTeamStorage } from '../utils/teamStorage';
 
@@ -55,7 +55,7 @@ export function useTeamList() {
       if (team) {
         await removeTeamWithCronCleanup({
           team,
-          getConversation: getConversationOrNull,
+          getConversation: (conversation_id) => getTeamConversationOrNull(team.id, conversation_id),
           removeCronJob: (job_id) => ipcBridge.cron.removeJob.invoke({ job_id }),
           removeTeam: (params) => ipcBridge.team.remove.invoke(params),
         });

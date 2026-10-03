@@ -6,6 +6,7 @@
 
 import { ipcBridge } from '@/common';
 import type { IConversationArtifact, IConversationArtifactStatus } from '@/common/adapter/ipcBridge';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 type ConversationArtifactContextValue = {
@@ -46,10 +47,11 @@ export const useUpdateConversationArtifactStatus = (): ((
   status: IConversationArtifactStatus
 ) => void) => useContext(ConversationArtifactContext).updateArtifactStatus;
 
-export const ConversationArtifactProvider: React.FC<React.PropsWithChildren<{ conversation_id: string }>> = ({
-  conversation_id,
-  children,
-}) => {
+export const ConversationArtifactProvider: React.FC<
+  React.PropsWithChildren<{ conversation_id: string; team_id?: string }>
+> = ({ conversation_id, team_id, children }) => {
+  const teamPermission = useTeamPermission();
+  const resolvedTeamId = team_id ?? teamPermission?.team_id;
   const [artifacts, setArtifacts] = useState<IConversationArtifact[]>([]);
 
   const upsertArtifact = useCallback((artifact: IConversationArtifact) => {
@@ -68,8 +70,11 @@ export const ConversationArtifactProvider: React.FC<React.PropsWithChildren<{ co
     let alive = true;
     setArtifacts([]);
 
-    void ipcBridge.conversation.listArtifacts
-      .invoke({ conversation_id })
+    const fetchArtifacts = resolvedTeamId
+      ? ipcBridge.team.listArtifacts.invoke({ team_id: resolvedTeamId, conversation_id })
+      : ipcBridge.conversation.listArtifacts.invoke({ conversation_id });
+
+    void fetchArtifacts
       .then((items) => {
         if (!alive) return;
         setArtifacts(upsertArtifacts([], items));
@@ -81,7 +86,7 @@ export const ConversationArtifactProvider: React.FC<React.PropsWithChildren<{ co
     return () => {
       alive = false;
     };
-  }, [conversation_id]);
+  }, [conversation_id, resolvedTeamId]);
 
   useEffect(() => {
     if (!conversation_id) return;

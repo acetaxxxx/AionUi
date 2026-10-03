@@ -50,6 +50,11 @@ vi.mock('@/renderer/hooks/context/LayoutContext', () => ({
   useLayoutContext: () => ({ isMobile: false }),
 }));
 
+vi.mock('@renderer/components/base/AionModal', () => ({
+  __esModule: true,
+  default: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+}));
+
 vi.mock('@/common', () => ({
   ipcBridge: {
     team: {
@@ -105,6 +110,8 @@ vi.mock('@/common', () => ({
 
 vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
   getConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
+  getTeamConversationOrNull: (_teamId: string, conversationId: string) => getConversationOrNullMock(conversationId),
+  teamConversationCacheKey: (teamId: string, conversationId: string) => ['team-conversation', teamId, conversationId],
 }));
 
 vi.mock('@/renderer/pages/conversation/components/ChatLayout', () => ({
@@ -194,6 +201,26 @@ describe('TeamPage cron job manager', () => {
     );
   });
 
+  it('does not mount CronJobManager for a Shared Team collaborator', async () => {
+    getConversationOrNullMock.mockImplementation(async (conversationId: string) =>
+      conversation({
+        id: conversationId,
+        name: conversationId,
+        extra: { team_id: 'team-1', cron_job_id: 'cron-member-1' },
+      })
+    );
+
+    render(
+      <MemoryRouter>
+        <TeamPage team={team('collaborator')} />
+      </MemoryRouter>
+    );
+
+    await screen.findByTestId('team-chat-view-leader-conv');
+    expect(screen.queryByTestId('team-cron-job-manager-member-conv')).not.toBeInTheDocument();
+    expect(cronJobManagerMock).not.toHaveBeenCalled();
+  });
+
   // 移除成员的 cron 清理顺序（先删 cron job 再删成员）由 removeTeamAssistantWithCronCleanup.test.ts 直接覆盖；
   // 胶囊上的移除交互由 team-member-ops.e2e.ts 覆盖。移除入口已从抬头移到顶部胶囊。
 
@@ -248,13 +275,15 @@ function conversation(overrides?: Partial<TChatConversation>): TChatConversation
   } as TChatConversation;
 }
 
-function team(): TTeam {
+function team(role: TTeam['role'] = 'owner'): TTeam {
   return {
     id: 'team-1',
     user_id: 'user-1',
     name: 'Cron Team',
     workspace: '/tmp/team',
     workspace_mode: 'shared',
+    sharing_mode: 'shared',
+    role,
     leader_assistant_id: 'leader-assistant',
     created_at: 1,
     updated_at: 1,

@@ -8,7 +8,13 @@ import React from 'react';
 import useSWR from 'swr';
 import { usePresetAssistantInfo } from '@renderer/hooks/agent/usePresetAssistantInfo';
 import ThemedLogo from '@/renderer/components/agent/ThemedLogo';
-import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
+import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
+import {
+  getConversationOrNull,
+  getTeamConversationOrNull,
+  teamConversationCacheKey,
+} from '@/renderer/pages/conversation/utils/conversationCache';
 import { Robot } from '@icon-park/react';
 
 type Props = {
@@ -17,6 +23,8 @@ type Props = {
   senderConversationId?: string;
   /** Precomputed backend logo URL (fallback when no preset avatar is found). */
   backendLogo: string | null;
+  /** Team ID if known */
+  team_id?: string;
 };
 
 /**
@@ -24,11 +32,23 @@ type Props = {
  * assistant icon (emoji or svg) over the generic backend logo so preset-backed
  * teammates keep their persona when messaging others.
  */
-const TeammateMessageAvatar: React.FC<Props> = ({ senderName, senderConversationId, backendLogo }) => {
+const TeammateMessageAvatar: React.FC<Props> = ({ senderName, senderConversationId, backendLogo, team_id }) => {
+  const teamPermission = useTeamPermission();
+  const conversationContext = useConversationContextSafe();
+  const effectiveTeamId = team_id ?? teamPermission?.team_id ?? conversationContext?.team_id;
+
   // Share the SWR key with AgentChatSlot / TeamAgentIdentity so this hits cache
   // instead of firing another fetch for the same conversation.
-  const { data: conversation } = useSWR(senderConversationId ? ['team-conversation', senderConversationId] : null, () =>
-    getConversationOrNull(senderConversationId!)
+  const { data: conversation } = useSWR(
+    senderConversationId
+      ? effectiveTeamId
+        ? teamConversationCacheKey(effectiveTeamId, senderConversationId)
+        : ['team-conversation', senderConversationId]
+      : null,
+    () =>
+      effectiveTeamId
+        ? getTeamConversationOrNull(effectiveTeamId, senderConversationId!)
+        : getConversationOrNull(senderConversationId!)
   );
   const { info: presetInfo } = usePresetAssistantInfo(conversation ?? undefined);
 

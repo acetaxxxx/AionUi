@@ -33,6 +33,13 @@ vi.mock('@/common', () => ({
 
 vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
   getConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
+  getTeamConversationOrNull: (team_id: string, conversation_id: string) =>
+    getConversationOrNullMock(team_id, conversation_id),
+  teamConversationCacheKey: (team_id: string, conversation_id: string) => [
+    'team-conversation',
+    team_id,
+    conversation_id,
+  ],
 }));
 
 import { ipcBridge } from '@/common';
@@ -47,7 +54,7 @@ describe('useTeamList cron cleanup', () => {
   });
 
   it('removes leader and member cron jobs before removing a team', async () => {
-    getConversationOrNullMock.mockImplementation(async (conversationId: string) => {
+    getConversationOrNullMock.mockImplementation(async (_teamId: string, conversationId: string) => {
       if (conversationId === 'leader-conv')
         return conversation({ id: conversationId, extra: { cron_job_id: 'cron-leader' } });
       if (conversationId === 'member-conv')

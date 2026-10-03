@@ -213,6 +213,8 @@
     "removeConfirmTitle": "Retirer le collaborateur",
     "removeConfirmContent": "Voulez-vous vraiment retirer {{name}} de cette équipe ? Cette personne perdra immédiatement l'accès aux conversations et à l'espace de travail de l'équipe.",
     "ownerOnlyNotice": "Seul le propriétaire de l'équipe peut ajouter ou retirer des collaborateurs.",
+    "confirmationOwnerOnly": "Seul le propriétaire de l'équipe peut approuver les demandes d'autorisation.",
+    "workerInaccessibleNotice": "Cet assistant se coordonne avec le chef d'équipe. Les collaborateurs interagissent directement avec la conversation du chef d'équipe.",
     "emptyMembers": "Aucun collaborateur pour l'instant.",
     "emptyEligible": "Aucun compte éligible disponible à ajouter.",
     "rateLimited": "Trop de requêtes. Veuillez patienter un instant avant de réessayer.",

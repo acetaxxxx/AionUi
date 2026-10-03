@@ -213,6 +213,8 @@
     "removeConfirmTitle": "İşbirlikçiyi Kaldır",
     "removeConfirmContent": "{{name}} adlı kullanıcıyı bu takımdan kaldırmak istediğinizden emin misiniz? Takım sohbetlerine ve çalışma alanına erişimini derhal kaybedecektir.",
     "ownerOnlyNotice": "Yalnızca Takım Sahibi işbirlikçi ekleyebilir veya kaldırabilir.",
+    "confirmationOwnerOnly": "Yalnızca Takım Sahibi izin isteklerini onaylayabilir.",
+    "workerInaccessibleNotice": "Bu asistan Takım Lideri ile koordineli çalışır. İşbirlikçiler doğrudan Takım Lideri sohbeti üzerinden etkileşim kurar.",
     "emptyMembers": "Henüz işbirlikçi yok.",
     "emptyEligible": "Eklenebilecek uygun hesap bulunamadı.",
     "rateLimited": "Çok fazla istek. Lütfen tekrar denemeden önce bir süre bekleyin.",

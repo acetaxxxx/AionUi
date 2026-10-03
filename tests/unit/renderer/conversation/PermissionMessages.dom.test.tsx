@@ -11,9 +11,10 @@ import type { IMessageAcpPermission, IMessagePermission } from '@/common/chat/ch
 import MessageAcpPermission from '@/renderer/pages/conversation/Messages/acp/MessageAcpPermission';
 import MessagePermission from '@/renderer/pages/conversation/Messages/components/MessagePermission';
 
-const { genericInvoke, acpInvoke } = vi.hoisted(() => ({
+const { genericInvoke, acpInvoke, useTeamPermissionMock } = vi.hoisted(() => ({
   genericInvoke: vi.fn(),
   acpInvoke: vi.fn(),
+  useTeamPermissionMock: vi.fn(),
 }));
 
 vi.mock('@/common', () => ({
@@ -34,6 +35,10 @@ vi.mock('@/common/adapter/ipcBridge', () => ({
       invoke: acpInvoke,
     },
   },
+}));
+
+vi.mock('@/renderer/pages/team/hooks/TeamPermissionContext', () => ({
+  useTeamPermission: () => useTeamPermissionMock(),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -87,6 +92,7 @@ const makeAcpMessage = (): IMessageAcpPermission => ({
 describe('permission message adapters', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useTeamPermissionMock.mockReturnValue(null);
     genericInvoke.mockResolvedValue(undefined);
     acpInvoke.mockResolvedValue(undefined);
   });
@@ -350,5 +356,49 @@ describe('permission message adapters', () => {
 
     expect(screen.getByText('messages.option 1')).toBeInTheDocument();
     expect(screen.getByTestId('message-acp-permission-option-option_0')).toBeInTheDocument();
+  });
+
+  describe('team collaborator permissions', () => {
+    it('shows owner-approval state and hides action buttons for collaborators on generic permission', () => {
+      useTeamPermissionMock.mockReturnValue({
+        isTeamMode: true,
+        team_id: 'team-1',
+        isOwner: false,
+        isLeaderAgent: true,
+        leaderConversationId: 'conv-1',
+        allConversationIds: ['conv-1'],
+        propagateMode: vi.fn(),
+        warmupSession: vi.fn(),
+      });
+
+      const message = makeGenericMessage();
+      render(<MessagePermission message={message} />);
+
+      expect(screen.getByTestId('message-permission-owner-approval')).toBeInTheDocument();
+      expect(screen.queryByTestId('message-permission-options')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('message-permission-option-proceed_once')).not.toBeInTheDocument();
+      expect(genericInvoke).not.toHaveBeenCalled();
+    });
+
+    it('shows owner-approval state and hides action buttons for collaborators on ACP permission', () => {
+      useTeamPermissionMock.mockReturnValue({
+        isTeamMode: true,
+        team_id: 'team-1',
+        isOwner: false,
+        isLeaderAgent: true,
+        leaderConversationId: 'conv-1',
+        allConversationIds: ['conv-1'],
+        propagateMode: vi.fn(),
+        warmupSession: vi.fn(),
+      });
+
+      const message = makeAcpMessage();
+      render(<MessageAcpPermission message={message} />);
+
+      expect(screen.getByTestId('message-acp-permission-owner-approval')).toBeInTheDocument();
+      expect(screen.queryByTestId('message-acp-permission-options')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('message-acp-permission-option-allow-once-id')).not.toBeInTheDocument();
+      expect(acpInvoke).not.toHaveBeenCalled();
+    });
   });
 });

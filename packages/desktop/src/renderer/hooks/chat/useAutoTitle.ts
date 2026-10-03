@@ -4,13 +4,21 @@ import { ipcBridge } from '@/common';
 import { deriveAutoTitleFromMessages } from '@/renderer/utils/chat/autoTitle';
 import { DEFAULT_MESSAGE_PAGE_LIMIT, loadLatestConversationMessages } from '@/renderer/utils/chat/messagePagination';
 import { emitter } from '@/renderer/utils/emitter';
+import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 
 export const useAutoTitle = () => {
   const { t } = useTranslation();
+  const teamPermission = useTeamPermission();
+  const conversationContext = useConversationContextSafe();
+  const isTeam = Boolean(teamPermission || conversationContext?.team_id);
 
   const syncTitleFromHistory = useCallback(
     async (conversation_id: string, fallbackContent?: string) => {
+      if (isTeam) {
+        return;
+      }
       const defaultTitle = t('conversation.welcome.newConversation');
       try {
         const conversation = await getConversationOrNull(conversation_id);
@@ -42,7 +50,7 @@ export const useAutoTitle = () => {
         console.error('Failed to auto-update conversation title:', error);
       }
     },
-    [t]
+    [isTeam, t]
   );
 
   const checkAndUpdateTitle = useCallback(

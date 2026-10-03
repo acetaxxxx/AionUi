@@ -207,6 +207,12 @@
   background: var(--color-success-light-1);
 }
 
+.notice {
+  border-color: var(--color-border-2);
+  color: var(--color-text-2);
+  background: var(--color-fill-1);
+}
+
 @container (max-width: 420px) {
   .titleRow {
     flex-wrap: wrap;

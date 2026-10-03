@@ -23,6 +23,12 @@ vi.mock('@/renderer/hooks/agent/usePresetAssistantInfo', () => ({
 
 vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
   getConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
+  getTeamConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
+  teamConversationCacheKey: (team_id: string, conversation_id: string) => [
+    'team-conversation',
+    team_id,
+    conversation_id,
+  ],
 }));
 
 vi.mock('@renderer/utils/model/agentLogo', () => ({
@@ -124,5 +130,20 @@ describe('TeamChatEmptyState', () => {
     expect(screen.getByTestId('team-chat-empty-state-subtitle')).toHaveTextContent(
       "Hi, I'm a team member. I take direction from the Leader and you."
     );
+  });
+
+  it('uses team-scoped cache key when team_id is provided', () => {
+    useSWRMock.mockReturnValue({
+      data: {
+        id: 'conv-1',
+        type: 'acp',
+        name: 'Team - Leader',
+      },
+    });
+    usePresetAssistantInfoMock.mockReturnValue({ info: null });
+
+    render(<TeamChatEmptyState conversation_id='conv-1' team_id='team-1' isLeader />);
+
+    expect(useSWRMock).toHaveBeenCalledWith(['team-conversation', 'team-1', 'conv-1'], expect.any(Function));
   });
 });

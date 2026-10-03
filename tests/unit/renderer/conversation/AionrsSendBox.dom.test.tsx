@@ -12,6 +12,7 @@ const {
   sendMessageInvokeMock,
   translateMock,
   useTeamPermissionMock,
+  useAcpConfigOptionsMock,
   setSendBoxHandlerMock,
   markSendFailedMock,
   markSendStartedMock,
@@ -22,11 +23,20 @@ const {
   draftMutateMock,
   draftContentRef,
   runtimeViewIsProcessingRef,
+  useAionrsMessageMock,
 } = vi.hoisted(() => ({
   ensureConversationRuntimeMock: vi.fn().mockResolvedValue({ recovered: false, config_options: [], runtime: null }),
   sendMessageInvokeMock: vi.fn().mockResolvedValue(undefined),
   translateMock: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
   useTeamPermissionMock: vi.fn(),
+  useAcpConfigOptionsMock: vi.fn(() => ({
+    setStatus: { state: 'idle' },
+    mode: null,
+    model: null,
+    thoughtLevel: null,
+    reload: vi.fn(),
+    setConfigOption: vi.fn(),
+  })),
   setSendBoxHandlerMock: vi.fn(),
   markSendFailedMock: vi.fn(),
   markSendStartedMock: vi.fn(),
@@ -37,6 +47,13 @@ const {
   draftMutateMock: vi.fn(),
   draftContentRef: { current: '' },
   runtimeViewIsProcessingRef: { current: false },
+  useAionrsMessageMock: vi.fn(() => ({
+    thought: { subject: '', description: '' },
+    running: false,
+    setActiveMsgId: vi.fn(),
+    setWaitingResponse: vi.fn(),
+    resetState: vi.fn(),
+  })),
 }));
 
 vi.mock('@/common', () => ({
@@ -122,7 +139,9 @@ vi.mock('@/renderer/components/chat/SendBox', () => ({
   },
 }));
 
-vi.mock('@/renderer/components/agent/AgentModeSelector', () => ({ default: () => null }));
+vi.mock('@/renderer/components/agent/AgentModeSelector', () => ({
+  default: () => <div data-testid='mock-aionrs-mode-selector' />,
+}));
 vi.mock('@/renderer/components/chat/CommandQueuePanel', () => ({ default: () => null }));
 vi.mock('@/renderer/components/chat/MobileActionSheet', () => ({
   default: () => null,
@@ -136,14 +155,7 @@ vi.mock('@/renderer/components/media/HorizontalFileList', () => ({
 }));
 vi.mock('@/renderer/hooks/agent/useAcpConfigOptions', () => ({
   classifyConfigSetError: () => 'unknown',
-  useAcpConfigOptions: () => ({
-    setStatus: { state: 'idle' },
-    mode: null,
-    model: null,
-    thoughtLevel: null,
-    reload: vi.fn(),
-    setConfigOption: vi.fn(),
-  }),
+  useAcpConfigOptions: (args: unknown) => useAcpConfigOptionsMock(args),
 }));
 vi.mock('@/renderer/hooks/context/ConversationContext', () => ({
   useConversationContextSafe: () => ({
@@ -285,13 +297,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: translateMock }),
 }));
 vi.mock('@/renderer/pages/conversation/platforms/aionrs/useAionrsMessage', () => ({
-  useAionrsMessage: () => ({
-    thought: { subject: '', description: '' },
-    running: false,
-    setActiveMsgId: vi.fn(),
-    setWaitingResponse: vi.fn(),
-    resetState: vi.fn(),
-  }),
+  useAionrsMessage: (...args: unknown[]) => useAionrsMessageMock(...args),
 }));
 
 const modelSelection = {
@@ -548,6 +554,48 @@ describe('AionrsSendBox', () => {
       };
       expect(props.onAddToDraft).toBeDefined();
       expect(props.addToDraftDisabled).toBe(true);
+    });
+  });
+
+  describe('team collaborator permissions', () => {
+    it('disables config options and hides mode selector for collaborators while warming up session', async () => {
+      const warmupSessionMock = vi.fn().mockResolvedValue(undefined);
+      useTeamPermissionMock.mockReturnValue({
+        isTeamMode: true,
+        team_id: 'team-1',
+        isOwner: false,
+        isLeaderAgent: true,
+        leaderConversationId: 'conv-1',
+        allConversationIds: ['conv-1'],
+        propagateMode: vi.fn(),
+        warmupSession: warmupSessionMock,
+      });
+
+      render(<AionrsSendBox conversation_id='conv-1' modelSelection={modelSelection} />);
+
+      expect(useAcpConfigOptionsMock).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
+      expect(screen.queryByTestId('mock-aionrs-mode-selector')).not.toBeInTheDocument();
+      expect(ensureConversationRuntimeMock).not.toHaveBeenCalled();
+      await waitFor(() => expect(warmupSessionMock).toHaveBeenCalled());
+      expect(useAionrsMessageMock).toHaveBeenCalledWith('conv-1', expect.objectContaining({ team_id: 'team-1' }));
+    });
+
+    it('enables config options and shows mode selector for owners', async () => {
+      useTeamPermissionMock.mockReturnValue({
+        isTeamMode: true,
+        team_id: 'team-1',
+        isOwner: true,
+        isLeaderAgent: true,
+        leaderConversationId: 'conv-1',
+        allConversationIds: ['conv-1'],
+        propagateMode: vi.fn(),
+        warmupSession: vi.fn().mockResolvedValue(undefined),
+      });
+
+      render(<AionrsSendBox conversation_id='conv-1' modelSelection={modelSelection} />);
+
+      expect(useAcpConfigOptionsMock).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }));
+      expect(screen.getByTestId('mock-aionrs-mode-selector')).toBeInTheDocument();
     });
   });
 });

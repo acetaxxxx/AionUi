@@ -8,11 +8,14 @@ import { act, render, screen } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-const { usePresetAssistantInfoMock, useSWRMock, getConversationOrNullMock } = vi.hoisted(() => ({
-  usePresetAssistantInfoMock: vi.fn(),
-  useSWRMock: vi.fn(),
-  getConversationOrNullMock: vi.fn(),
-}));
+const { usePresetAssistantInfoMock, useSWRMock, getConversationOrNullMock, getTeamConversationOrNullMock } = vi.hoisted(
+  () => ({
+    usePresetAssistantInfoMock: vi.fn(),
+    useSWRMock: vi.fn(),
+    getConversationOrNullMock: vi.fn(),
+    getTeamConversationOrNullMock: vi.fn(),
+  })
+);
 
 vi.mock('swr', () => ({
   __esModule: true,
@@ -25,6 +28,12 @@ vi.mock('@renderer/hooks/agent/usePresetAssistantInfo', () => ({
 
 vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
   getConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
+  getTeamConversationOrNull: (...args: unknown[]) => getTeamConversationOrNullMock(...args),
+  teamConversationCacheKey: (team_id: string, conversation_id: string) => [
+    'team-conversation',
+    team_id,
+    conversation_id,
+  ],
 }));
 
 vi.mock('@icon-park/react', () => ({
@@ -76,5 +85,29 @@ describe('TeammateMessageAvatar', () => {
 
     render(<TeammateMessageAvatar senderName='Writer' senderConversationId='conv-2' />);
     expect(screen.getByText('✍️')).toBeInTheDocument();
+  });
+
+  it('uses teamConversationCacheKey and getTeamConversationOrNull when team_id is provided', () => {
+    useSWRMock.mockImplementation((_key: unknown, fetcher: () => unknown) => {
+      fetcher?.();
+      return { data: { id: 'conv-team' } };
+    });
+    usePresetAssistantInfoMock.mockReturnValue({
+      info: { name: 'Collaborator', logo: '🤝', isEmoji: true, backend: 'aionrs' },
+    });
+    getTeamConversationOrNullMock.mockResolvedValue({ id: 'conv-team' });
+
+    render(
+      <TeammateMessageAvatar
+        senderName='Collaborator'
+        senderConversationId='conv-team'
+        backendLogo={null}
+        team_id='team-abc'
+      />
+    );
+
+    expect(useSWRMock).toHaveBeenCalledWith(['team-conversation', 'team-abc', 'conv-team'], expect.any(Function));
+    expect(getTeamConversationOrNullMock).toHaveBeenCalledWith('team-abc', 'conv-team');
+    expect(screen.getByText('🤝')).toBeInTheDocument();
   });
 });

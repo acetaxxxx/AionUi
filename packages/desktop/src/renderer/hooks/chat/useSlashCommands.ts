@@ -3,6 +3,7 @@ import { isSlashCommandListEnabled } from '@/common/chat/slash/availability';
 import type { SlashCommandItem } from '@/common/chat/slash/types';
 import { ipcBridge } from '@/common';
 import { ensureConversationRuntime } from '@/renderer/pages/conversation/utils/ensureConversationRuntime';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import { useEffect, useRef, useState } from 'react';
 
 interface CacheEntry {
@@ -15,17 +16,21 @@ const MAX_CACHE_SIZE = 50;
 
 const slashCommandCache = new Map<string, CacheEntry>();
 
-function getCachedCommands(conversation_id: string): SlashCommandItem[] | null {
-  const entry = slashCommandCache.get(conversation_id);
+function cacheKey(conversation_id: string, team_id?: string): string {
+  return team_id ? `${team_id}:${conversation_id}` : conversation_id;
+}
+
+function getCachedCommands(cacheId: string): SlashCommandItem[] | null {
+  const entry = slashCommandCache.get(cacheId);
   if (!entry) return null;
   if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
-    slashCommandCache.delete(conversation_id);
+    slashCommandCache.delete(cacheId);
     return null;
   }
   return entry.commands;
 }
 
-function setCachedCommands(conversation_id: string, commands: SlashCommandItem[]): void {
+function setCachedCommands(cacheId: string, commands: SlashCommandItem[]): void {
   // LRU eviction if cache is full
   if (slashCommandCache.size >= MAX_CACHE_SIZE) {
     const oldestKey = slashCommandCache.keys().next().value;
@@ -33,7 +38,7 @@ function setCachedCommands(conversation_id: string, commands: SlashCommandItem[]
       slashCommandCache.delete(oldestKey);
     }
   }
-  slashCommandCache.set(conversation_id, { commands, timestamp: Date.now() });
+  slashCommandCache.set(cacheId, { commands, timestamp: Date.now() });
 }
 
 interface UseSlashCommandsOptions {
@@ -44,9 +49,13 @@ interface UseSlashCommandsOptions {
   agentStatus?: string | null;
   /** Optional runtime preparation hook for team-owned conversations. */
   prepareRuntime?: () => Promise<void>;
+  team_id?: string;
 }
 
 export function useSlashCommands(conversation_id: string, options: UseSlashCommandsOptions = {}) {
+  const teamPermission = useTeamPermission();
+  const team_id = options.team_id ?? teamPermission?.team_id;
+  const key = cacheKey(conversation_id, team_id);
   const { conversation_type, codexStatus, agentStatus, prepareRuntime } = options;
   const canUseCachedCommands = isSlashCommandListEnabled({ conversation_type, codexStatus });
   const requestIdRef = useRef(0);
@@ -54,7 +63,7 @@ export function useSlashCommands(conversation_id: string, options: UseSlashComma
     if (!canUseCachedCommands) {
       return [];
     }
-    return getCachedCommands(conversation_id) || [];
+    return getCachedCommands(key) || [];
   });
 
   useEffect(() => {
@@ -76,15 +85,19 @@ export function useSlashCommands(conversation_id: string, options: UseSlashComma
       return;
     }
 
-    const cached = getCachedCommands(conversation_id);
+    const cached = getCachedCommands(key);
     if (cached) {
       setCommands(cached);
     }
 
     const runtimeReady = prepareRuntime ? prepareRuntime() : ensureConversationRuntime(conversation_id);
 
+    const fetchCommands = team_id
+      ? ipcBridge.team.getSlashCommands.invoke({ team_id, conversation_id })
+      : ipcBridge.conversation.getSlashCommands.invoke({ conversation_id });
+
     void runtimeReady
-      .then(() => ipcBridge.conversation.getSlashCommands.invoke({ conversation_id: conversation_id }))
+      .then(() => fetchCommands)
       .then((result) => {
         if (isCancelled || requestId !== requestIdRef.current) {
           return;
@@ -94,7 +107,7 @@ export function useSlashCommands(conversation_id: string, options: UseSlashComma
           return;
         }
         const mapped: SlashCommandItem[] = mapAcpCommandsToSlashCommands(result);
-        setCachedCommands(conversation_id, mapped);
+        setCachedCommands(key, mapped);
         setCommands(mapped);
       })
       .catch((error) => {
@@ -108,7 +121,16 @@ export function useSlashCommands(conversation_id: string, options: UseSlashComma
     return () => {
       isCancelled = true;
     };
-  }, [conversation_id, canUseCachedCommands, codexStatus, conversation_type, agentStatus, prepareRuntime]);
+  }, [
+    conversation_id,
+    key,
+    team_id,
+    canUseCachedCommands,
+    codexStatus,
+    conversation_type,
+    agentStatus,
+    prepareRuntime,
+  ]);
 
   return commands;
 }

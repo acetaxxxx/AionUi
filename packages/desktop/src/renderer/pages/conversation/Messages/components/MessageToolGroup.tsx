@@ -8,7 +8,7 @@ import { ipcBridge } from '@/common';
 import type { IMessageToolGroup } from '@/common/chat/chatLib';
 import { iconColors } from '@/renderer/styles/colors';
 import { Alert, Button, Image, Message, Radio, Tag, Tooltip } from '@arco-design/web-react';
-import { Copy, Download, LoadingOne } from '@icon-park/react';
+import { Attention, Copy, Download, LoadingOne } from '@icon-park/react';
 import React, { useCallback, useContext, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ButlerDiagnoseButton from '@/renderer/components/base/ButlerDiagnoseButton';
@@ -21,6 +21,8 @@ import CollapsibleContent from '@renderer/components/chat/CollapsibleContent';
 import LocalImageView from '@renderer/components/media/LocalImageView';
 import MarkdownView from '@renderer/components/Markdown';
 import { ToolConfirmationOutcome } from '@renderer/utils/common';
+import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import { ImagePreviewContext } from '../MessageList';
 import { COLLAPSE_CONFIG, TEXT_CONFIG } from '../constants';
 import type { ImageGenerationResult, WriteFileResult } from '../types';
@@ -183,6 +185,12 @@ const ConfirmationDetails: React.FC<{
     }
   }, [confirmationDetails]);
 
+  const teamPermission = useTeamPermission();
+  const conversationContext = useConversationContextSafe();
+  const isTeam = Boolean(teamPermission || conversationContext?.team_id);
+  const isOwner = teamPermission ? teamPermission.isOwner : true;
+  const isCollaborator = isTeam && !isOwner;
+
   const { question = '', options = [] } = useConfirmationButtons(confirmationDetails, t);
 
   const [selected, setSelected] = useState<ToolConfirmationOutcome | null>(null);
@@ -200,25 +208,38 @@ const ConfirmationDetails: React.FC<{
       ) : (
         node
       )}
-      {content.status === 'Confirming' && (
-        <>
-          <div className='mt-10px text-t-primary'>{question}</div>
-          <Radio.Group direction='vertical' size='mini' value={selected} onChange={setSelected}>
-            {options.map((item) => {
-              return (
-                <Radio key={item.value} value={item.value}>
-                  {item.label}
-                </Radio>
-              );
-            })}
-          </Radio.Group>
-          <div className='flex justify-start ps-20px'>
-            <Button type='primary' size='mini' disabled={!selected} onClick={() => onConfirm(selected)}>
-              {t('messages.confirm')}
-            </Button>
+      {content.status === 'Confirming' &&
+        (isCollaborator ? (
+          <div
+            className='mt-10px flex items-center gap-8px p-8px rd-6px text-12px text-[var(--color-text-2)] bg-[var(--color-fill-1)] border border-[var(--color-border-2)]'
+            data-testid='message-tool-owner-approval'
+          >
+            <Attention theme='outline' size='14' />
+            <span>
+              {t('team.collaborators.confirmationOwnerOnly', {
+                defaultValue: 'Only the Team Owner can approve permission requests.',
+              })}
+            </span>
           </div>
-        </>
-      )}
+        ) : (
+          <>
+            <div className='mt-10px text-t-primary'>{question}</div>
+            <Radio.Group direction='vertical' size='mini' value={selected} onChange={setSelected}>
+              {options.map((item) => {
+                return (
+                  <Radio key={item.value} value={item.value}>
+                    {item.label}
+                  </Radio>
+                );
+              })}
+            </Radio.Group>
+            <div className='flex justify-start ps-20px'>
+              <Button type='primary' size='mini' disabled={!selected} onClick={() => onConfirm(selected)}>
+                {t('messages.confirm')}
+              </Button>
+            </div>
+          </>
+        ))}
     </div>
   );
 };
@@ -480,6 +501,12 @@ const MessageToolGroup: React.FC<IMessageToolGroupProps> = ({ message }) => {
     );
   }, [message.content]);
 
+  const teamPermission = useTeamPermission();
+  const conversationContext = useConversationContextSafe();
+  const isTeam = Boolean(teamPermission || conversationContext?.team_id);
+  const isOwner = teamPermission ? teamPermission.isOwner : true;
+  const isCollaborator = isTeam && !isOwner;
+
   return (
     <div>
       {message.content.map((content, index) => {
@@ -492,6 +519,7 @@ const MessageToolGroup: React.FC<IMessageToolGroupProps> = ({ message }) => {
               key={call_id}
               content={content}
               onConfirm={(outcome) => {
+                if (isCollaborator) return;
                 ipcBridge.conversation.confirmMessage
                   .invoke({
                     confirm_key: outcome,

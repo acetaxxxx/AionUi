@@ -213,6 +213,8 @@
     "removeConfirmTitle": "Eliminar colaborador",
     "removeConfirmContent": "¿Seguro que deseas eliminar a {{name}} de este equipo? Perderá inmediatamente el acceso a las conversaciones y al espacio de trabajo del equipo.",
     "ownerOnlyNotice": "Solo el propietario del equipo puede añadir o eliminar colaboradores.",
+    "confirmationOwnerOnly": "Solo el propietario del equipo puede aprobar solicitudes de permisos.",
+    "workerInaccessibleNotice": "Este asistente se coordina con el líder del equipo. Los colaboradores interactúan directamente con la conversación del líder del equipo.",
     "emptyMembers": "Aún no hay colaboradores.",
     "emptyEligible": "No hay cuentas aptas disponibles para añadir.",
     "rateLimited": "Demasiadas solicitudes. Por favor, espere un momento antes de intentarlo de nuevo.",

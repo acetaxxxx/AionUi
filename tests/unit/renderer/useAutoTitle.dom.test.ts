@@ -15,10 +15,23 @@ import {
 } from '@/renderer/utils/chat/messagePagination';
 import { emitter } from '@/renderer/utils/emitter';
 
+const { useTeamPermissionMock, useConversationContextSafeMock } = vi.hoisted(() => ({
+  useTeamPermissionMock: vi.fn(),
+  useConversationContextSafeMock: vi.fn(),
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
+}));
+
+vi.mock('@/renderer/pages/team/hooks/TeamPermissionContext', () => ({
+  useTeamPermission: () => useTeamPermissionMock(),
+}));
+
+vi.mock('@/renderer/hooks/context/ConversationContext', () => ({
+  useConversationContextSafe: () => useConversationContextSafeMock(),
 }));
 
 vi.mock('@/common', () => ({
@@ -56,6 +69,8 @@ const emit = vi.mocked(emitter.emit);
 describe('useAutoTitle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useTeamPermissionMock.mockReturnValue(null);
+    useConversationContextSafeMock.mockReturnValue(null);
     getConversation.mockResolvedValue({
       id: 'conversation-1',
       name: 'conversation.welcome.newConversation',
@@ -90,5 +105,29 @@ describe('useAutoTitle', () => {
       updates: { name: 'Fallback title', name_source: 'auto' },
     });
     expect(emit).toHaveBeenCalledWith('chat.history.refresh');
+  });
+
+  it('exits early without fetching or updating title when in team mode', async () => {
+    useTeamPermissionMock.mockReturnValue({
+      isTeamMode: true,
+      team_id: 'team-1',
+      isOwner: false,
+      isLeaderAgent: true,
+      leaderConversationId: 'conv-1',
+      allConversationIds: ['conv-1'],
+      propagateMode: vi.fn(),
+      warmupSession: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useAutoTitle());
+
+    await act(async () => {
+      await result.current.syncTitleFromHistory('conversation-1', 'Fallback title');
+    });
+
+    expect(getConversation).not.toHaveBeenCalled();
+    expect(loadLatestMessages).not.toHaveBeenCalled();
+    expect(updateConversation).not.toHaveBeenCalled();
+    expect(emit).not.toHaveBeenCalled();
   });
 });
