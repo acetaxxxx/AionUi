@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { conversation } from '@/common/adapter/ipcBridge';
+import { conversation, team } from '@/common/adapter/ipcBridge';
 import type { IAskQuestion, IMessageAsk } from '@/common/chat/chatLib';
 import { Button, Card, Checkbox, Input, Radio } from '@arco-design/web-react';
 import { CheckOne } from '@icon-park/react';
@@ -46,7 +46,9 @@ const emptyDraft = (): Draft => ({ labels: [], other: '', otherSelected: false }
 const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message }) => {
   const { t } = useTranslation();
   const teamPermission = useTeamPermission();
-  const ownerApprovalRequired = Boolean(teamPermission && !teamPermission.isOwner);
+  const isTeamCollaborator = Boolean(teamPermission && !teamPermission.isOwner);
+  const canAnswerAsTeamLead = Boolean(isTeamCollaborator && teamPermission?.isLeaderAgent);
+  const ownerApprovalRequired = isTeamCollaborator && !canAnswerAsTeamLead;
   const content = message.content || ({} as IMessageAsk['content']);
   const questions = useMemo<IAskQuestion[]>(
     () => (Array.isArray(content.questions) ? content.questions : []),
@@ -76,19 +78,37 @@ const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message })
       if (d.otherSelected && d.other.trim()) labels.push(d.other.trim());
       return { question: q.question, labels };
     });
-    await conversation.answerAsk.invoke({ conversation_id: message.conversation_id, request_id: requestId, answers });
+    const params = { conversation_id: message.conversation_id, request_id: requestId, answers };
+    if (isTeamCollaborator && teamPermission) {
+      await team.answerAsk.invoke({ team_id: teamPermission.team_id, ...params });
+    } else {
+      await conversation.answerAsk.invoke(params);
+    }
     setSubmitted('answered');
-  }, [drafts, questions, message.conversation_id, ownerApprovalRequired, requestId]);
+  }, [
+    drafts,
+    questions,
+    message.conversation_id,
+    ownerApprovalRequired,
+    requestId,
+    isTeamCollaborator,
+    teamPermission,
+  ]);
 
   const handleDecline = useCallback(async () => {
     if (ownerApprovalRequired) return;
-    await conversation.answerAsk.invoke({
+    const params = {
       conversation_id: message.conversation_id,
       request_id: requestId,
       decline: true,
-    });
+    };
+    if (isTeamCollaborator && teamPermission) {
+      await team.answerAsk.invoke({ team_id: teamPermission.team_id, ...params });
+    } else {
+      await conversation.answerAsk.invoke(params);
+    }
     setSubmitted('declined');
-  }, [message.conversation_id, ownerApprovalRequired, requestId]);
+  }, [message.conversation_id, ownerApprovalRequired, requestId, isTeamCollaborator, teamPermission]);
 
   if (!questions.length) return null;
 

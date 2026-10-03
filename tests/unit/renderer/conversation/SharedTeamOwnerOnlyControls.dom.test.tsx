@@ -12,9 +12,19 @@ import MessageAcpTerminalOutput from '@/renderer/pages/conversation/Messages/acp
 import MessageQuestion from '@/renderer/pages/conversation/Messages/MessageQuestion';
 import SkillSuggestCard from '@/renderer/pages/conversation/Messages/components/SkillSuggestCard';
 
-const { answerAsk, dismissArtifact, hasSkill, killTerminal, saveSkill, teamPermission, updateArtifactStatus } =
+const {
+  answerAsk,
+  teamAnswerAsk,
+  dismissArtifact,
+  hasSkill,
+  killTerminal,
+  saveSkill,
+  teamPermission,
+  updateArtifactStatus,
+} =
   vi.hoisted(() => ({
     answerAsk: vi.fn(),
+    teamAnswerAsk: vi.fn(),
     dismissArtifact: vi.fn(),
     hasSkill: vi.fn(),
     killTerminal: vi.fn(),
@@ -39,6 +49,9 @@ vi.mock('@/common', () => ({
 vi.mock('@/common/adapter/ipcBridge', () => ({
   conversation: {
     answerAsk: { invoke: answerAsk },
+  },
+  team: {
+    answerAsk: { invoke: teamAnswerAsk },
   },
 }));
 
@@ -179,6 +192,7 @@ describe('Shared Team collaborator owner-only controls', () => {
     vi.clearAllMocks();
     teamPermission.mockReturnValue({ isOwner: false });
     answerAsk.mockResolvedValue(undefined);
+    teamAnswerAsk.mockResolvedValue(undefined);
     dismissArtifact.mockResolvedValue(undefined);
     hasSkill.mockResolvedValue(false);
     killTerminal.mockResolvedValue(undefined);
@@ -244,6 +258,39 @@ describe('Shared Team collaborator owner-only controls', () => {
     expect(screen.queryByTestId('message-question-submit')).not.toBeInTheDocument();
     expect(screen.queryByTestId('message-question-decline')).not.toBeInTheDocument();
     expect(answerAsk).not.toHaveBeenCalled();
+    expect(teamAnswerAsk).not.toHaveBeenCalled();
+  });
+
+  it('routes Shared Team Lead collaborator AskUser submit and decline through the Team endpoint', async () => {
+    teamPermission.mockReturnValue({ isOwner: false, isLeaderAgent: true, team_id: 'team-1' });
+    const { unmount } = render(<MessageQuestion message={askMessage} />);
+
+    expect(screen.queryByTestId('message-question-owner-only')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('message-question-option-0-Tabs'));
+    fireEvent.click(screen.getByTestId('message-question-submit'));
+    await waitFor(() =>
+      expect(teamAnswerAsk).toHaveBeenCalledWith({
+        team_id: 'team-1',
+        conversation_id: 'team-conversation',
+        request_id: 'request-1',
+        answers: [{ question: 'Which style?', labels: ['Tabs'] }],
+      })
+    );
+    expect(answerAsk).not.toHaveBeenCalled();
+    unmount();
+
+    teamAnswerAsk.mockClear();
+    render(<MessageQuestion message={askMessage} />);
+    fireEvent.click(screen.getByTestId('message-question-decline'));
+    await waitFor(() =>
+      expect(teamAnswerAsk).toHaveBeenCalledWith({
+        team_id: 'team-1',
+        conversation_id: 'team-conversation',
+        request_id: 'request-1',
+        decline: true,
+      })
+    );
+    expect(answerAsk).not.toHaveBeenCalled();
   });
 
   it('preserves owner AskUserQuestion submit and decline behavior', async () => {
@@ -258,6 +305,7 @@ describe('Shared Team collaborator owner-only controls', () => {
         answers: [{ question: 'Which style?', labels: ['Tabs'] }],
       })
     );
+    expect(teamAnswerAsk).not.toHaveBeenCalled();
     unmount();
 
     answerAsk.mockClear();
@@ -270,6 +318,7 @@ describe('Shared Team collaborator owner-only controls', () => {
         decline: true,
       })
     );
+    expect(teamAnswerAsk).not.toHaveBeenCalled();
   });
 
   it('keeps standalone AskUserQuestion controls available outside Team context', () => {
@@ -279,5 +328,7 @@ describe('Shared Team collaborator owner-only controls', () => {
     expect(screen.queryByTestId('message-question-owner-only')).not.toBeInTheDocument();
     expect(screen.getByTestId('message-question-submit')).toBeInTheDocument();
     expect(screen.getByTestId('message-question-decline')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('message-question-decline'));
+    expect(teamAnswerAsk).not.toHaveBeenCalled();
   });
 });

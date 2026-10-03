@@ -1872,6 +1872,10 @@ export interface IAnswerAskParams {
   decline?: boolean;
 }
 
+export interface ITeamAnswerAskParams extends IAnswerAskParams {
+  team_id: string;
+}
+
 export interface IConfirmMessageParams {
   confirm_key: string;
   msg_id: string;
@@ -2411,6 +2415,11 @@ export const team = {
   ),
   getConfirmations: httpGet<IConfirmation<unknown>[], { team_id: string; conversation_id: string }>(
     (p) => `/api/teams/${p.team_id}/conversations/${encodeURIComponent(p.conversation_id)}/confirmations`
+  ),
+  answerAsk: httpPost<void, ITeamAnswerAskParams>(
+    (p) =>
+      `/api/teams/${p.team_id}/conversations/${encodeURIComponent(p.conversation_id)}/asks/${encodeURIComponent(p.request_id)}/answer`,
+    (p) => (p.decline ? { decline: true } : { answers: p.answers ?? [] })
   ),
   listArtifacts: httpGet<IConversationArtifact[], { team_id: string; conversation_id: string }>(
     (p) => `/api/teams/${p.team_id}/conversations/${encodeURIComponent(p.conversation_id)}/artifacts`

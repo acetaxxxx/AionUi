@@ -94,6 +94,41 @@ describe('ipcBridge team adapter', () => {
     });
   });
 
+  it('answers Shared Team AskUser requests through the Team-scoped endpoint', async () => {
+    const { team } = await import('@/common/adapter/ipcBridge');
+
+    await team.answerAsk.invoke({
+      team_id: 'team-1',
+      conversation_id: 'conv/1',
+      request_id: 'request/1',
+      answers: [{ question: 'Which style?', labels: ['Tabs'] }],
+    });
+
+    expect(httpBridgeMocks.calls).toContainEqual({
+      method: 'POST',
+      path: '/api/teams/team-1/conversations/conv%2F1/asks/request%2F1/answer',
+      body: { answers: [{ question: 'Which style?', labels: ['Tabs'] }] },
+    });
+  });
+
+  it('declines Shared Team AskUser requests without sending an answers payload', async () => {
+    const { team } = await import('@/common/adapter/ipcBridge');
+
+    await team.answerAsk.invoke({
+      team_id: 'team-1',
+      conversation_id: 'conv-1',
+      request_id: 'request-1',
+      decline: true,
+      answers: [{ question: 'ignored', labels: ['ignored'] }],
+    });
+
+    expect(httpBridgeMocks.calls).toContainEqual({
+      method: 'POST',
+      path: '/api/teams/team-1/conversations/conv-1/asks/request-1/answer',
+      body: { decline: true },
+    });
+  });
+
   it('updateAgentModel persists the observed model through the team agent route', async () => {
     const { team } = await import('@/common/adapter/ipcBridge');
 
