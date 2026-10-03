@@ -41,13 +41,15 @@ const SkillSuggestCard: React.FC<SkillSuggestCardProps> = ({
 
   // Check if skill already exists on mount (persists across navigation)
   useEffect(() => {
+    if (isCollaborator) return;
+
     ipcBridge.cron.hasSkill
       .invoke({ job_id: cron_job_id })
       .then((exists) => {
         if (exists) setSaved(true);
       })
       .catch(() => {});
-  }, [cron_job_id]);
+  }, [cron_job_id, isCollaborator]);
 
   if (dismissed || saved) return null;
 
@@ -94,9 +96,17 @@ const SkillSuggestCard: React.FC<SkillSuggestCardProps> = ({
       )}
 
       <div className='flex gap-8px'>
-        <Button type='primary' size='small' loading={saving} onClick={handleSave}>
-          {t('cron.skill.save')}
-        </Button>
+        {!isCollaborator && (
+          <Button
+            type='primary'
+            size='small'
+            loading={saving}
+            data-testid='skill-suggest-save'
+            onClick={handleSave}
+          >
+            {t('cron.skill.save')}
+          </Button>
+        )}
         {!isCollaborator && (
           <Button
             size='small'

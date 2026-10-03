@@ -218,6 +218,23 @@ describe('Shared Team collaborator owner-only controls', () => {
     );
   });
 
+  it('keeps skill saving and cron skill lookup owner-only', async () => {
+    const { rerender } = render(<SkillSuggestCard {...skillSuggestion} />);
+
+    expect(screen.queryByTestId('skill-suggest-save')).not.toBeInTheDocument();
+    expect(hasSkill).not.toHaveBeenCalled();
+    expect(saveSkill).not.toHaveBeenCalled();
+
+    teamPermission.mockReturnValue({ isOwner: true });
+    rerender(<SkillSuggestCard {...skillSuggestion} />);
+
+    fireEvent.click(await screen.findByTestId('skill-suggest-save'));
+    await waitFor(() => {
+      expect(hasSkill).toHaveBeenCalledWith({ job_id: 'job-1' });
+      expect(saveSkill).toHaveBeenCalledWith({ job_id: 'job-1', content: '# Skill' });
+    });
+  });
+
   it('hides AskUserQuestion controls from collaborators', () => {
     render(<MessageQuestion message={askMessage} />);
 
