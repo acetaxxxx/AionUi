@@ -208,8 +208,8 @@ const ConfirmationDetails: React.FC<{
       ) : (
         node
       )}
-      {content.status === 'Confirming' && (
-        isCollaborator ? (
+      {content.status === 'Confirming' &&
+        (isCollaborator ? (
           <div
             className='mt-10px flex items-center gap-8px p-8px rd-6px text-12px text-[var(--color-text-2)] bg-[var(--color-fill-1)] border border-[var(--color-border-2)]'
             data-testid='message-tool-owner-approval'
@@ -239,8 +239,7 @@ const ConfirmationDetails: React.FC<{
               </Button>
             </div>
           </>
-        )
-      )}
+        ))}
     </div>
   );
 };

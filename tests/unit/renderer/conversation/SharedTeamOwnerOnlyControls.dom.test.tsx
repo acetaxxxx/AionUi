@@ -223,7 +223,7 @@ describe('Shared Team collaborator owner-only controls', () => {
     );
   });
 
-  it('shows AskUserQuestion without answer controls to collaborators and never invokes the generic answer route', () => {
+  it('hides AskUserQuestion controls from collaborators', () => {
     render(<MessageQuestion message={askMessage} />);
 
     expect(screen.getByTestId('message-question-owner-only')).toHaveTextContent(
