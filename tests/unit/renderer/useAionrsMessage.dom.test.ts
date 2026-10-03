@@ -45,7 +45,7 @@ vi.mock('@/common', () => ({
           responseStreamHandlerRef.current = handler;
           return vi.fn();
         }),
-      },
+      }
       update: {
         invoke: conversationUpdateInvokeMock,
       },
