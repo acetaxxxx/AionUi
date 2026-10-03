@@ -21,17 +21,16 @@ const {
   saveSkill,
   teamPermission,
   updateArtifactStatus,
-} =
-  vi.hoisted(() => ({
-    answerAsk: vi.fn(),
-    teamAnswerAsk: vi.fn(),
-    dismissArtifact: vi.fn(),
-    hasSkill: vi.fn(),
-    killTerminal: vi.fn(),
-    saveSkill: vi.fn(),
-    teamPermission: vi.fn(),
-    updateArtifactStatus: vi.fn(),
-  }));
+} = vi.hoisted(() => ({
+  answerAsk: vi.fn(),
+  teamAnswerAsk: vi.fn(),
+  dismissArtifact: vi.fn(),
+  hasSkill: vi.fn(),
+  killTerminal: vi.fn(),
+  saveSkill: vi.fn(),
+  teamPermission: vi.fn(),
+  updateArtifactStatus: vi.fn(),
+}));
 
 vi.mock('@/common', () => ({
   ipcBridge: {
