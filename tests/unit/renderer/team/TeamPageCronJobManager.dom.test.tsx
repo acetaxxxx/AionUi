@@ -105,13 +105,8 @@ vi.mock('@/common', () => ({
 
 vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
   getConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
-  getTeamConversationOrNull: (_teamId: string, conversationId: string) =>
-    getConversationOrNullMock(conversationId),
-  teamConversationCacheKey: (teamId: string, conversationId: string) => [
-    'team-conversation',
-    teamId,
-    conversationId,
-  ],
+  getTeamConversationOrNull: (_teamId: string, conversationId: string) => getConversationOrNullMock(conversationId),
+  teamConversationCacheKey: (teamId: string, conversationId: string) => ['team-conversation', teamId, conversationId],
 }));
 
 vi.mock('@/renderer/pages/conversation/components/ChatLayout', () => ({

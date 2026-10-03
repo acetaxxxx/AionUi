@@ -123,8 +123,7 @@ vi.mock('@/common', () => ({
 
 vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
   getConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
-  getTeamConversationOrNull: (_teamId: string, conversationId: string) =>
-    getConversationOrNullMock(conversationId),
+  getTeamConversationOrNull: (_teamId: string, conversationId: string) => getConversationOrNullMock(conversationId),
   teamConversationCacheKey: (team_id: string, conversation_id: string) => [
     'team-conversation',
     team_id,
