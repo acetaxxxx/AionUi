@@ -144,9 +144,6 @@ describe('TeamChatEmptyState', () => {
 
     render(<TeamChatEmptyState conversation_id='conv-1' team_id='team-1' isLeader />);
 
-    expect(useSWRMock).toHaveBeenCalledWith(
-      ['team-conversation', 'team-1', 'conv-1'],
-      expect.any(Function)
-    );
+    expect(useSWRMock).toHaveBeenCalledWith(['team-conversation', 'team-1', 'conv-1'], expect.any(Function));
   });
 });

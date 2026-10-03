@@ -139,17 +139,13 @@ vi.mock('@/renderer/pages/conversation/components/ChatLayout', () => ({
 
 vi.mock('@/renderer/components/agent/AcpModelSelector', () => ({
   __esModule: true,
-  default: (props: { conversation_id: string }) => (
-    <div data-testid={`acp-model-selector-${props.conversation_id}`} />
-  ),
+  default: (props: { conversation_id: string }) => <div data-testid={`acp-model-selector-${props.conversation_id}`} />,
 }));
 
 vi.mock('@/renderer/components/agent/AcpRuntimeRestartButton', () => ({
   __esModule: true,
   useAcpRuntimeRestart: () => ({ restart: vi.fn(), restarting: false }),
-  default: (props: { conversation_id: string }) => (
-    <div data-testid={`runtime-restart-${props.conversation_id}`} />
-  ),
+  default: (props: { conversation_id: string }) => <div data-testid={`runtime-restart-${props.conversation_id}`} />,
 }));
 
 vi.mock('@/renderer/pages/team/components/TeamAgentActions', () => ({
@@ -191,12 +187,7 @@ const aionrsChatMock = vi.fn(
     conversation_id: string;
     team_id?: string;
     teamSendMessage?: (payload: { input: string; files: [] }) => Promise<void>;
-  }) => (
-    <div
-      data-testid={`aionrs-chat-${props.conversation_id}`}
-      data-team-id={props.team_id}
-    />
-  )
+  }) => <div data-testid={`aionrs-chat-${props.conversation_id}`} data-team-id={props.team_id} />
 );
 
 vi.mock('@/renderer/pages/conversation/platforms/acp/AcpChat', () => ({
@@ -317,10 +308,7 @@ describe('TeamPage collaborator view', () => {
 
     // 3. The Lead chat receives the Team ID and exposes the composer.
     expect(await screen.findByTestId('acp-chat-conv-lead')).toBeInTheDocument();
-    expect(screen.getByTestId('acp-chat-conv-lead')).toHaveAttribute(
-      'data-team-id',
-      'team-collab-1'
-    );
+    expect(screen.getByTestId('acp-chat-conv-lead')).toHaveAttribute('data-team-id', 'team-collab-1');
     expect(screen.getByTestId('acp-send-btn-conv-lead')).toBeInTheDocument();
 
     // 4. Executing send invokes ipcBridge.team.sendMessage with team_id
@@ -346,8 +334,8 @@ describe('TeamPage collaborator view', () => {
   });
 
   it('owner mounts both lead and worker conversations via team-scoped adapter and renders owner controls', async () => {
-    getTeamConversationMock.mockImplementation(
-      async ({ conversation_id }: { conversation_id: string }) => makeConversation(conversation_id)
+    getTeamConversationMock.mockImplementation(async ({ conversation_id }: { conversation_id: string }) =>
+      makeConversation(conversation_id)
     );
 
     render(

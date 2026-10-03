@@ -8,17 +8,14 @@ import { act, render, screen } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-const {
-  usePresetAssistantInfoMock,
-  useSWRMock,
-  getConversationOrNullMock,
-  getTeamConversationOrNullMock,
-} = vi.hoisted(() => ({
-  usePresetAssistantInfoMock: vi.fn(),
-  useSWRMock: vi.fn(),
-  getConversationOrNullMock: vi.fn(),
-  getTeamConversationOrNullMock: vi.fn(),
-}));
+const { usePresetAssistantInfoMock, useSWRMock, getConversationOrNullMock, getTeamConversationOrNullMock } = vi.hoisted(
+  () => ({
+    usePresetAssistantInfoMock: vi.fn(),
+    useSWRMock: vi.fn(),
+    getConversationOrNullMock: vi.fn(),
+    getTeamConversationOrNullMock: vi.fn(),
+  })
+);
 
 vi.mock('swr', () => ({
   __esModule: true,
@@ -109,10 +106,7 @@ describe('TeammateMessageAvatar', () => {
       />
     );
 
-    expect(useSWRMock).toHaveBeenCalledWith(
-      ['team-conversation', 'team-abc', 'conv-team'],
-      expect.any(Function)
-    );
+    expect(useSWRMock).toHaveBeenCalledWith(['team-conversation', 'team-abc', 'conv-team'], expect.any(Function));
     expect(getTeamConversationOrNullMock).toHaveBeenCalledWith('team-abc', 'conv-team');
     expect(screen.getByText('🤝')).toBeInTheDocument();
   });

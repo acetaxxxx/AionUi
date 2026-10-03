@@ -9,17 +9,11 @@ import { isBackendHttpError } from '@/common/adapter/httpBridge';
 import type { TChatConversation } from '@/common/config/storage';
 import { mutate } from 'swr';
 
-export function teamConversationCacheKey(
-  team_id: string,
-  conversation_id: string
-): [string, string, string] {
+export function teamConversationCacheKey(team_id: string, conversation_id: string): [string, string, string] {
   return ['team-conversation', team_id, conversation_id];
 }
 
-export async function getTeamConversationOrNull(
-  team_id: string,
-  conversation_id: string
-): Promise<TChatConversation | null> {
+export async function getTeamConversationOrNull(team_id: string, conversation_id: string): Promise<TChatConversation | null> {
   try {
     return await ipcBridge.team.getConversation.invoke({ team_id, conversation_id });
   } catch (error) {
@@ -47,18 +41,11 @@ export async function getConversationOrNull(
   }
 }
 
-export async function refreshTeamConversationCache(
-  team_id: string,
-  conversation_id: string
-): Promise<void> {
+export async function refreshTeamConversationCache(team_id: string, conversation_id: string): Promise<void> {
   const conversation = await getTeamConversationOrNull(team_id, conversation_id);
   if (!conversation) return;
 
-  await mutate<TChatConversation>(
-    teamConversationCacheKey(team_id, conversation_id),
-    conversation,
-    false
-  );
+  await mutate<TChatConversation>(teamConversationCacheKey(team_id, conversation_id), conversation, false);
 }
 
 export async function refreshConversationCache(conversation_id: string): Promise<void> {

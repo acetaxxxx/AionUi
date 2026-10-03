@@ -12,23 +12,16 @@ import MessageAcpTerminalOutput from '@/renderer/pages/conversation/Messages/acp
 import MessageQuestion from '@/renderer/pages/conversation/Messages/MessageQuestion';
 import SkillSuggestCard from '@/renderer/pages/conversation/Messages/components/SkillSuggestCard';
 
-const {
-  answerAsk,
-  dismissArtifact,
-  hasSkill,
-  killTerminal,
-  saveSkill,
-  teamPermission,
-  updateArtifactStatus,
-} = vi.hoisted(() => ({
-  answerAsk: vi.fn(),
-  dismissArtifact: vi.fn(),
-  hasSkill: vi.fn(),
-  killTerminal: vi.fn(),
-  saveSkill: vi.fn(),
-  teamPermission: vi.fn(),
-  updateArtifactStatus: vi.fn(),
-}));
+const { answerAsk, dismissArtifact, hasSkill, killTerminal, saveSkill, teamPermission, updateArtifactStatus } =
+  vi.hoisted(() => ({
+    answerAsk: vi.fn(),
+    dismissArtifact: vi.fn(),
+    hasSkill: vi.fn(),
+    killTerminal: vi.fn(),
+    saveSkill: vi.fn(),
+    teamPermission: vi.fn(),
+    updateArtifactStatus: vi.fn(),
+  }));
 
 vi.mock('@/common', () => ({
   ipcBridge: {
@@ -200,10 +193,12 @@ describe('Shared Team collaborator owner-only controls', () => {
     teamPermission.mockReturnValue({ isOwner: true });
     rerender(<MessageAcpTerminalOutput message={terminalMessage} />);
     fireEvent.click(screen.getByTestId('terminal-card-stop'));
-    await waitFor(() => expect(killTerminal).toHaveBeenCalledWith({
-      conversation_id: 'team-conversation',
-      terminal_id: 'terminal-1',
-    }));
+    await waitFor(() =>
+      expect(killTerminal).toHaveBeenCalledWith({
+        conversation_id: 'team-conversation',
+        terminal_id: 'terminal-1',
+      })
+    );
   });
 
   it('hides artifact dismissal from collaborators and retains owner dismissal', async () => {

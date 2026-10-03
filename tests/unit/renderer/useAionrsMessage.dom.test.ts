@@ -207,37 +207,34 @@ describe('useAionrsMessage turn clock', () => {
   });
 
   describe('team conversation hydration and updates', () => {
-    it(
-      'uses getTeamConversationOrNull when team_id is provided and skips generic conversation update on finish',
-      async () => {
-        getTeamConversationOrNullMock.mockResolvedValue({
-          id: 'conv-team-1',
-          type: 'aionrs',
-          runtime: { is_processing: false },
-          extra: { last_token_usage: { total_tokens: 42 } },
-        });
+    it('uses getTeamConversationOrNull when team_id is provided and skips generic conversation update on finish', async () => {
+      getTeamConversationOrNullMock.mockResolvedValue({
+        id: 'conv-team-1',
+        type: 'aionrs',
+        runtime: { is_processing: false },
+        extra: { last_token_usage: { total_tokens: 42 } },
+      });
 
-        const { result } = renderHook(() => useAionrsMessage('conv-team-1', { team_id: 'team-123' }));
+      const { result } = renderHook(() => useAionrsMessage('conv-team-1', { team_id: 'team-123' }));
 
-        await waitFor(() => {
-          expect(result.current.hasHydratedRunningState).toBe(true);
-        });
+      await waitFor(() => {
+        expect(result.current.hasHydratedRunningState).toBe(true);
+      });
 
-        expect(getTeamConversationOrNullMock).toHaveBeenCalledWith('team-123', 'conv-team-1');
-        expect(vi.mocked(getConversationOrNull)).not.toHaveBeenCalled();
+      expect(getTeamConversationOrNullMock).toHaveBeenCalledWith('team-123', 'conv-team-1');
+      expect(vi.mocked(getConversationOrNull)).not.toHaveBeenCalled();
 
-        act(() => {
-          responseStreamHandlerRef.current?.({
-            type: 'finish',
-            turn_id: 'turn-1',
-            data: { input_tokens: 10, output_tokens: 20 },
-            conversation_id: 'conv-team-1',
-          } as unknown as IResponseMessage);
-        });
+      act(() => {
+        responseStreamHandlerRef.current?.({
+          type: 'finish',
+          turn_id: 'turn-1',
+          data: { input_tokens: 10, output_tokens: 20 },
+          conversation_id: 'conv-team-1',
+        } as unknown as IResponseMessage);
+      });
 
-        expect(conversationUpdateInvokeMock).not.toHaveBeenCalled();
-      }
-    );
+      expect(conversationUpdateInvokeMock).not.toHaveBeenCalled();
+    });
 
     it('calls conversation update on finish when not in team mode', async () => {
       vi.mocked(getConversationOrNull).mockResolvedValue(null);
