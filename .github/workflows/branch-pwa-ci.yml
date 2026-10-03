@@ -65,11 +65,6 @@ jobs:
       - name: Run postinstall
         run: bun run postinstall || true
 
-      - name: Temporary formatter diff diagnostic
-        run: |
-          bunx oxfmt --write packages/desktop/src/renderer/pages/conversation/Messages/components/SkillSuggestCard.tsx packages/desktop/src/renderer/pages/team/TeamPage.tsx
-          git diff -- packages/desktop/src/renderer/pages/conversation/Messages/components/SkillSuggestCard.tsx packages/desktop/src/renderer/pages/team/TeamPage.tsx
-
       - name: Run Lint (oxlint)
         run: bun run lint
 

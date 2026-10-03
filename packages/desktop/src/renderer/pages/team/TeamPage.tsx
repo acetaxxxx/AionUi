@@ -466,9 +466,7 @@ const AssistantChatSlot: React.FC<{
           nameStyle={{ color }}
         />
         <div className='flex items-center gap-8px shrink-0'>
-          {conversation && isOwnerSlot && (
-            <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />
-          )}
+          {conversation && isOwnerSlot && <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />}
           {!isMobile && assistant.conversation_id && !isAionrs && isAcpLike && isOwnerSlot && (
             <div className='min-w-0 max-w-140px [&_button]:max-w-full [&_button_span]:truncate'>
               <AcpModelSelector

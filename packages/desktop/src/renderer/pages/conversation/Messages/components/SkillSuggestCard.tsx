@@ -97,13 +97,7 @@ const SkillSuggestCard: React.FC<SkillSuggestCardProps> = ({
 
       <div className='flex gap-8px'>
         {!isCollaborator && (
-          <Button
-            type='primary'
-            size='small'
-            loading={saving}
-            data-testid='skill-suggest-save'
-            onClick={handleSave}
-          >
+          <Button type='primary' size='small' loading={saving} data-testid='skill-suggest-save' onClick={handleSave}>
             {t('cron.skill.save')}
           </Button>
         )}
