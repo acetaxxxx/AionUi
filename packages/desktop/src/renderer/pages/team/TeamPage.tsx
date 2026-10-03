@@ -39,7 +39,6 @@ import { TeamPermissionProvider, useTeamPermission } from './hooks/TeamPermissio
 import { useTeamSession } from './hooks/useTeamSession';
 import { useTeamRunView, type TeamRunViewState } from './hooks/useTeamRunView';
 import {
-  getConversationOrNull,
   getTeamConversationOrNull,
   teamConversationCacheKey,
 } from '@/renderer/pages/conversation/utils/conversationCache';

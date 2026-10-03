@@ -9,6 +9,8 @@ import type { TConversationRuntimeSummary } from '@/common/config/storage';
 import {
   reconcileGeneratingFromRuntime,
   reconcileWaitingConfirmationFromRuntime,
+} from '@/renderer/pages/conversation/GroupedHistory/hooks/useConversationListSync';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import {
   getConversationOrNull,
   getTeamConversationOrNull,
