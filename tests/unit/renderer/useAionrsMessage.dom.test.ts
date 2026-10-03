@@ -45,7 +45,7 @@ vi.mock('@/common', () => ({
           responseStreamHandlerRef.current = handler;
           return vi.fn();
         }),
-      }
+      },
       update: {
         invoke: conversationUpdateInvokeMock,
       },
@@ -236,7 +236,7 @@ describe('useAionrsMessage turn clock', () => {
         });
 
         expect(conversationUpdateInvokeMock).not.toHaveBeenCalled();
-      },
+      }
     );
 
     it('calls conversation update on finish when not in team mode', async () => {
