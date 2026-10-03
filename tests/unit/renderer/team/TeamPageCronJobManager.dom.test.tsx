@@ -257,6 +257,8 @@ function team(): TTeam {
     name: 'Cron Team',
     workspace: '/tmp/team',
     workspace_mode: 'shared',
+    sharing_mode: 'shared',
+    role: 'owner',
     leader_assistant_id: 'leader-assistant',
     created_at: 1,
     updated_at: 1,
