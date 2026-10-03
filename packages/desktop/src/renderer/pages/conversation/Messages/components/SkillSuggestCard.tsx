@@ -9,6 +9,7 @@ import { iconColors } from '@/renderer/styles/colors';
 import { useUpdateConversationArtifactStatus } from '@renderer/pages/conversation/Messages/artifacts';
 import { Button, Message } from '@arco-design/web-react';
 import { Down, Lightning, Up } from '@icon-park/react';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import MarkdownView from '@renderer/components/Markdown';
@@ -30,6 +31,8 @@ const SkillSuggestCard: React.FC<SkillSuggestCardProps> = ({
   cron_job_id,
 }) => {
   const { t } = useTranslation();
+  const teamPermission = useTeamPermission();
+  const isCollaborator = Boolean(teamPermission && !teamPermission.isOwner);
   const updateArtifactStatus = useUpdateConversationArtifactStatus();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -94,25 +97,28 @@ const SkillSuggestCard: React.FC<SkillSuggestCardProps> = ({
         <Button type='primary' size='small' loading={saving} onClick={handleSave}>
           {t('cron.skill.save')}
         </Button>
-        <Button
-          size='small'
-          onClick={async () => {
-            try {
-              await ipcBridge.conversation.updateArtifact.invoke({
-                conversation_id,
-                artifact_id,
-                status: 'dismissed',
-              });
-              updateArtifactStatus(artifact_id, 'dismissed');
-              setDismissed(true);
-            } catch (error) {
-              Message.error(t('cron.skill.saveFailed'));
-              console.error('[SkillSuggestCard] Failed to dismiss artifact:', error);
-            }
-          }}
-        >
-          {t('cron.skill.dismiss')}
-        </Button>
+        {!isCollaborator && (
+          <Button
+            size='small'
+            data-testid='skill-suggest-dismiss'
+            onClick={async () => {
+              try {
+                await ipcBridge.conversation.updateArtifact.invoke({
+                  conversation_id,
+                  artifact_id,
+                  status: 'dismissed',
+                });
+                updateArtifactStatus(artifact_id, 'dismissed');
+                setDismissed(true);
+              } catch (error) {
+                Message.error(t('cron.skill.saveFailed'));
+                console.error('[SkillSuggestCard] Failed to dismiss artifact:', error);
+              }
+            }}
+          >
+            {t('cron.skill.dismiss')}
+          </Button>
+        )}
       </div>
     </div>
   );

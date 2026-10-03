@@ -213,6 +213,8 @@
     "removeConfirmTitle": "移除協作者",
     "removeConfirmContent": "確定要將 {{name}} 從此團隊移除嗎？對方將立即失去存取團隊對話與工作空間的權限。",
     "ownerOnlyNotice": "只有團隊擁有者可以新增或移除協作者。",
+    "confirmationOwnerOnly": "只有團隊擁有者可以批准權限請求。",
+    "workerInaccessibleNotice": "該助手與團隊組長協同工作。協作者請直接在團隊組長對話中互動。",
     "emptyMembers": "尚無協作者。",
     "emptyEligible": "無可新增的合格帳號。",
     "rateLimited": "請求過於頻繁，請稍後再試。",

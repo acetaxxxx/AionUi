@@ -10,6 +10,7 @@ import { Button, Card, Checkbox, Input, Radio } from '@arco-design/web-react';
 import { CheckOne } from '@icon-park/react';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 // The permission panel's stylesheet supplies the shared card chrome; own.* adds
 // the question-specific pieces (option rows with secondary description lines),
 // built on the same tokens so the two cards read as siblings (user feedback,
@@ -44,6 +45,8 @@ const emptyDraft = (): Draft => ({ labels: [], other: '', otherSelected: false }
  */
 const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message }) => {
   const { t } = useTranslation();
+  const teamPermission = useTeamPermission();
+  const ownerApprovalRequired = Boolean(teamPermission && !teamPermission.isOwner);
   const content = message.content || ({} as IMessageAsk['content']);
   const questions = useMemo<IAskQuestion[]>(
     () => (Array.isArray(content.questions) ? content.questions : []),
@@ -62,6 +65,7 @@ const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message })
   const requestId = content.request_id || message.id;
 
   const handleSubmit = useCallback(async () => {
+    if (ownerApprovalRequired) return;
     // claude keys its answers map by the question TEXT; a multi-select answer
     // is an array of labels (claude joins with ", "). Other-text rides as a
     // plain label — claude accepts arbitrary answer strings. Sent over the
@@ -74,16 +78,17 @@ const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message })
     });
     await conversation.answerAsk.invoke({ conversation_id: message.conversation_id, request_id: requestId, answers });
     setSubmitted('answered');
-  }, [drafts, questions, message.conversation_id, requestId]);
+  }, [drafts, questions, message.conversation_id, ownerApprovalRequired, requestId]);
 
   const handleDecline = useCallback(async () => {
+    if (ownerApprovalRequired) return;
     await conversation.answerAsk.invoke({
       conversation_id: message.conversation_id,
       request_id: requestId,
       decline: true,
     });
     setSubmitted('declined');
-  }, [message.conversation_id, requestId]);
+  }, [message.conversation_id, ownerApprovalRequired, requestId]);
 
   if (!questions.length) return null;
 
@@ -167,7 +172,11 @@ const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message })
             </div>
           );
         })}
-        {submitted === null ? (
+        {ownerApprovalRequired ? (
+          <div className={styles.feedback} role='note' data-testid='message-question-owner-only'>
+            {t('team.collaborators.confirmationOwnerOnly')}
+          </div>
+        ) : submitted === null ? (
           // Plain Arco buttons on purpose: styles.optionButton resets the button
           // chrome to a transparent full-width list row (for permission option
           // lists), which turned the primary submit into white-on-white.

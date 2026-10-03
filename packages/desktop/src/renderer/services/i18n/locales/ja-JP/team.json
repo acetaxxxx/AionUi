@@ -213,6 +213,8 @@
     "removeConfirmTitle": "共同作業者を削除",
     "removeConfirmContent": "本当に {{name}} をこのチームから削除しますか？チームの会話やワークスペースへのアクセス権は直ちに失われます。",
     "ownerOnlyNotice": "共同作業者の追加または削除は、チーム所有者のみが行えます。",
+    "confirmationOwnerOnly": "権限リクエストの承認は、チーム所有者のみが行えます。",
+    "workerInaccessibleNotice": "このアシスタントはチームリーダーと連携します。共同作業者はチームリーダーの会話で直接やり取りしてください。",
     "emptyMembers": "共同作業者はまだいません。",
     "emptyEligible": "追加可能なアカウントがありません。",
     "rateLimited": "リクエストが多すぎます。しばらく待ってからもう一度お試しください。",

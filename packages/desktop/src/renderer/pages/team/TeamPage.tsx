@@ -547,7 +547,7 @@ const AssistantChatSlot: React.FC<{
               <Robot theme='outline' size={24} />
             </div>
             <div className='text-14px font-500 text-[var(--color-text-1)]'>
-              {assistant.assistant_name || t('team.collaborators.roleTeammate', { defaultValue: 'Teammate' })}
+              {assistant.assistant_name || t('team.create.teammate')}
             </div>
             <div className='text-12px text-[var(--color-text-3)] max-w-280px leading-relaxed'>
               {t('team.collaborators.workerInaccessibleNotice', {

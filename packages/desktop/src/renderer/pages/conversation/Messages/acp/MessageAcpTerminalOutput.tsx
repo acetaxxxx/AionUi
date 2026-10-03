@@ -7,6 +7,7 @@
 import { ipcBridge } from '@/common';
 import type { IMessageAcpTerminalOutput } from '@/common/chat/chatLib';
 import { Button, Card, Tag } from '@arco-design/web-react';
+import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,6 +19,8 @@ import { useTranslation } from 'react-i18next';
  */
 const MessageAcpTerminalOutput: React.FC<{ message: IMessageAcpTerminalOutput }> = ({ message }) => {
   const { t } = useTranslation();
+  const teamPermission = useTeamPermission();
+  const canStop = !teamPermission || teamPermission.isOwner;
   const { content, conversation_id } = message;
   const outputRef = useRef<HTMLPreElement>(null);
   const [killing, setKilling] = useState(false);
@@ -76,7 +79,7 @@ const MessageAcpTerminalOutput: React.FC<{ message: IMessageAcpTerminalOutput }>
           $ {content.command}
         </code>
         {statusTag}
-        {running && (
+        {running && canStop && (
           <Button size='mini' status='danger' loading={killing} onClick={handleStop} data-testid='terminal-card-stop'>
             {t('conversation.terminal.stop', { defaultValue: 'Stop' })}
           </Button>
