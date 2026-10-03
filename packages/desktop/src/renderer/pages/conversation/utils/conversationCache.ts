@@ -13,7 +13,10 @@ export function teamConversationCacheKey(team_id: string, conversation_id: strin
   return ['team-conversation', team_id, conversation_id];
 }
 
-export async function getTeamConversationOrNull(team_id: string, conversation_id: string): Promise<TChatConversation | null> {
+export async function getTeamConversationOrNull(
+  team_id: string,
+  conversation_id: string
+): Promise<TChatConversation | null> {
   try {
     return await ipcBridge.team.getConversation.invoke({ team_id, conversation_id });
   } catch (error) {
