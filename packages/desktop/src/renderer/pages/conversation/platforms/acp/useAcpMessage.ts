@@ -17,6 +17,7 @@ import {
   getConversationOrNull,
   getTeamConversationOrNull,
 } from '@/renderer/pages/conversation/utils/conversationCache';
+import { isConversationProcessing } from '@/renderer/pages/conversation/utils/conversationRuntime';
 import { beginConversationTurn, endConversationTurn } from '@/renderer/pages/conversation/utils/conversationTurnClock';
 import { ensureConversationRuntime } from '@/renderer/pages/conversation/utils/ensureConversationRuntime';
 import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';

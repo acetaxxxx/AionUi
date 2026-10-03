@@ -65,6 +65,23 @@ jobs:
       - name: Run postinstall
         run: bun run postinstall || true
 
+      - name: TEMP Oxfmt diagnostic
+        run: |
+          bunx oxfmt --write \
+            packages/desktop/src/renderer/pages/conversation/utils/conversationCache.ts \
+            tests/unit/renderer/TeammateMessageAvatar.dom.test.tsx \
+            tests/unit/renderer/conversation/SharedTeamOwnerOnlyControls.dom.test.tsx \
+            tests/unit/renderer/team/TeamChatEmptyState.dom.test.tsx \
+            tests/unit/renderer/team/TeamPageCollaborator.dom.test.tsx \
+            tests/unit/renderer/useAionrsMessage.dom.test.ts
+          git diff -- \
+            packages/desktop/src/renderer/pages/conversation/utils/conversationCache.ts \
+            tests/unit/renderer/TeammateMessageAvatar.dom.test.tsx \
+            tests/unit/renderer/conversation/SharedTeamOwnerOnlyControls.dom.test.tsx \
+            tests/unit/renderer/team/TeamChatEmptyState.dom.test.tsx \
+            tests/unit/renderer/team/TeamPageCollaborator.dom.test.tsx \
+            tests/unit/renderer/useAionrsMessage.dom.test.ts
+
       - name: Run Lint (oxlint)
         run: bun run lint
 
