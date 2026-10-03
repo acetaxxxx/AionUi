@@ -19,6 +19,11 @@ const {
   teamEventHandlers,
   makeTeamEventChannel,
   layoutState,
+  getFilesByDirMock,
+  readTeamWorkspaceContentMock,
+  readContentMock,
+  openPreviewMock,
+  clearPreviewMock,
 } = vi.hoisted(() => {
   const handlers: Record<string, Array<(event: unknown) => void>> = {};
   const makeChannel = (name: string) => ({
@@ -52,6 +57,11 @@ const {
     teamEventHandlers: handlers,
     makeTeamEventChannel: makeChannel,
     layoutState: { isMobile: false },
+    getFilesByDirMock: vi.fn(),
+    readTeamWorkspaceContentMock: vi.fn(),
+    readContentMock: vi.fn(),
+    openPreviewMock: vi.fn(),
+    clearPreviewMock: vi.fn(),
   };
 });
 
@@ -91,6 +101,11 @@ vi.mock('@/renderer/components/base/AionModal', () => ({
 
 vi.mock('@/common', () => ({
   ipcBridge: {
+    fs: {
+      getFilesByDir: { invoke: (...args: unknown[]) => getFilesByDirMock(...args) },
+      readTeamWorkspaceContent: { invoke: (...args: unknown[]) => readTeamWorkspaceContentMock(...args) },
+      readContent: { invoke: (...args: unknown[]) => readContentMock(...args) },
+    },
     team: {
       get: { invoke: vi.fn() },
       getConversation: { invoke: (...args: unknown[]) => getTeamConversationMock(...args) },
@@ -146,9 +161,14 @@ vi.mock('@/common', () => ({
 
 vi.mock('@/renderer/pages/conversation/components/ChatLayout', () => ({
   __esModule: true,
-  default: ({ children, tabsSlot }: { children: React.ReactNode; tabsSlot?: React.ReactNode }) => (
+  default: ({ children, tabsSlot, sider }: {
+    children: React.ReactNode;
+    tabsSlot?: React.ReactNode;
+    sider?: React.ReactNode;
+  }) => (
     <div>
       <div data-testid='team-tabs-slot'>{tabsSlot}</div>
+      <aside data-testid='team-workspace-sider'>{sider}</aside>
       <div data-testid='team-chat-layout'>{children}</div>
     </div>
   ),
@@ -229,7 +249,12 @@ vi.mock('@/renderer/pages/cron', () => ({
 }));
 
 vi.mock('@/renderer/pages/conversation/Preview/context/PreviewContext', () => ({
-  usePreviewContext: () => ({ closePreview: () => {}, closePreviewIfScopeChanged: () => {} }),
+  usePreviewContext: () => ({
+    openPreview: openPreviewMock,
+    clearPreviewForScope: clearPreviewMock,
+    closePreview: () => {},
+    closePreviewIfScopeChanged: () => {},
+  }),
 }));
 
 import TeamPage from '@/renderer/pages/team/TeamPage';
@@ -288,6 +313,11 @@ describe('TeamPage collaborator view', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     ensureSessionMock.mockResolvedValue(undefined);
+    getFilesByDirMock.mockReset();
+    readTeamWorkspaceContentMock.mockReset();
+    readContentMock.mockReset();
+    openPreviewMock.mockReset();
+    clearPreviewMock.mockReset();
     layoutState.isMobile = false;
     for (const key of Object.keys(teamEventHandlers)) delete teamEventHandlers[key];
     localStorage.clear();
@@ -327,6 +357,7 @@ describe('TeamPage collaborator view', () => {
     expect(await screen.findByTestId('acp-chat-conv-lead')).toBeInTheDocument();
     expect(screen.getByTestId('acp-chat-conv-lead')).toHaveAttribute('data-team-id', 'team-collab-1');
     expect(screen.getByTestId('acp-send-btn-conv-lead')).toBeInTheDocument();
+    expect(screen.queryByTestId('team-chat-slider-conv-lead')).not.toBeInTheDocument();
 
     // 4. Executing send invokes ipcBridge.team.sendMessage with team_id
     await act(async () => {
@@ -348,6 +379,79 @@ describe('TeamPage collaborator view', () => {
     expect(screen.queryByTestId('runtime-restart-conv-lead')).not.toBeInTheDocument();
     expect(screen.queryByTestId('acp-model-selector-conv-worker')).not.toBeInTheDocument();
     expect(screen.queryByTestId('team-agent-actions')).not.toBeInTheDocument();
+  });
+
+  it('collaborator workspace lists nested Team files and opens read-only previews through Team-authorized fs calls', async () => {
+    getTeamConversationMock.mockResolvedValue(makeConversation('conv-lead'));
+    getFilesByDirMock.mockImplementation(async ({ dir }: { dir: string; root: string }) => {
+      if (dir === '/tmp/team') {
+        return [
+          { name: 'src', fullPath: '/tmp/team/src', relativePath: 'src', isDir: true, isFile: false },
+          { name: 'README.md', fullPath: '/tmp/team/README.md', relativePath: 'README.md', isDir: false, isFile: true },
+        ];
+      }
+      if (dir === '/tmp/team/src') {
+        return [
+          { name: 'main.ts', fullPath: '/tmp/team/src/main.ts', relativePath: 'src/main.ts', isDir: false, isFile: true },
+        ];
+      }
+      return [];
+    });
+    readTeamWorkspaceContentMock.mockResolvedValue('# Shared source');
+
+    render(
+      <MemoryRouter>
+        <TeamPage team={makeTeam()} />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByTestId('team-workspace-explorer')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'README.md' })).toBeInTheDocument();
+    expect(getFilesByDirMock).toHaveBeenCalledWith({ dir: '/tmp/team', root: '/tmp/team' });
+
+    await act(async () => {
+      screen.getByRole('button', { name: 'src' }).click();
+    });
+    expect(await screen.findByRole('button', { name: 'main.ts' })).toBeInTheDocument();
+    expect(getFilesByDirMock).toHaveBeenCalledWith({ dir: '/tmp/team/src', root: '/tmp/team' });
+
+    await act(async () => {
+      screen.getByRole('button', { name: 'README.md' }).click();
+    });
+    await waitFor(() => {
+      expect(readTeamWorkspaceContentMock).toHaveBeenCalledWith({
+        file: { kind: 'local', path: '/tmp/team/README.md' },
+        encoding: 'utf8',
+      });
+      expect(openPreviewMock).toHaveBeenCalledWith(
+        '# Shared source',
+        'markdown',
+        expect.objectContaining({ file_name: 'README.md', editable: false })
+      );
+    });
+    expect(readContentMock).not.toHaveBeenCalled();
+  });
+
+  it('clears collaborator files and preview when a Team file read is denied', async () => {
+    getTeamConversationMock.mockResolvedValue(makeConversation('conv-lead'));
+    getFilesByDirMock.mockResolvedValue([
+      { name: 'secret.md', fullPath: '/tmp/team/secret.md', relativePath: 'secret.md', isDir: false, isFile: true },
+    ]);
+    readTeamWorkspaceContentMock.mockRejectedValue(new Error('NOT_FOUND'));
+
+    render(
+      <MemoryRouter>
+        <TeamPage team={makeTeam()} />
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      (await screen.findByRole('button', { name: 'secret.md' })).click();
+    });
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'secret.md' })).not.toBeInTheDocument();
+    expect(clearPreviewMock).toHaveBeenCalled();
   });
 
   it('owner mounts both lead and worker conversations via team-scoped adapter and renders owner controls', async () => {
@@ -379,5 +483,8 @@ describe('TeamPage collaborator view', () => {
     expect(screen.getByTestId('acp-model-selector-conv-lead')).toBeInTheDocument();
     expect(screen.getByTestId('runtime-restart-conv-lead')).toBeInTheDocument();
     expect(screen.getByTestId('acp-model-selector-conv-worker')).toBeInTheDocument();
+    expect(screen.queryByTestId('team-workspace-explorer')).not.toBeInTheDocument();
+    expect(screen.getByTestId('team-chat-slider-conv-lead')).toBeInTheDocument();
+    expect(getFilesByDirMock).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 import { Button, Dropdown, Menu, Message, Modal, Spin, Tag, Tooltip } from '@arco-design/web-react';
 import { FullScreen, Left, MoreOne, OffScreen, Peoples, Right, Robot, SettingOne } from '@icon-park/react';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR, { useSWRConfig } from 'swr';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
@@ -50,6 +50,7 @@ import { setCurrentProject } from '@/renderer/pages/conversation/explorer/curren
 import { setCurrentConversation } from '@/renderer/pages/conversation/explorer/currentConversationStore';
 import { getSnapshotConversationProjectId } from '@/renderer/pages/conversation/GroupedHistory/hooks/useConversationListSync';
 import { isBackendHttpError } from '@/common/adapter/httpBridge';
+import TeamWorkspaceExplorer from './TeamWorkspaceExplorer';
 
 type Props = {
   team: TTeam;
@@ -633,21 +634,24 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
     : undefined;
   const teamProjectId =
     snapshotTeamProjectId !== undefined ? snapshotTeamProjectId : (dispatchConversation?.project_id ?? null);
+  // Collaborators browse only the Team workspace. Never publish a conversation
+  // project id into the global Owner Project Explorer host.
+  const layoutProjectId = isOwner ? teamProjectId : null;
 
   // Publish the team's project so the Layout-level Explorer host renders it —
   // mirrors conversation/index.tsx (project-scoped, persistent across agent-tab
   // switches; the Explorer host does not remount within the same team/project).
-  useEffect(() => {
-    setCurrentProject(teamProjectId);
-  }, [teamProjectId]);
+  useLayoutEffect(() => {
+    setCurrentProject(layoutProjectId);
+  }, [layoutProjectId]);
 
   // Publish the active member column's conversation id so the Explorer's "add to
   // chat" targets the focused column's send box (activeSlotId defaults to the
   // leader; every column is a real agent conversation). Only meaningful once the
   // team is project-bound (host visible).
-  useEffect(() => {
-    setCurrentConversation(teamProjectId ? (activeAssistant?.conversation_id ?? null) : null);
-  }, [teamProjectId, activeAssistant?.conversation_id]);
+  useLayoutEffect(() => {
+    setCurrentConversation(layoutProjectId ? (activeAssistant?.conversation_id ?? null) : null);
+  }, [layoutProjectId, activeAssistant?.conversation_id]);
 
   // Backfill catch-up: the leader conversation lazily backfills its project_id on
   // resume and the backend emits one `conversation.listChanged` when it lands;
@@ -673,7 +677,8 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   // For project teams the file panel is the Layout-level Explorer host (gated on
   // project_id), so ChatLayout's own workspace sider is disabled — mirrors
   // ChatConversation's `workspaceEnabled && !project_id`.
-  const workspaceEnabled = teamWorkspaceView.workspaceEnabled && !teamProjectId;
+  const workspaceEnabled =
+    teamWorkspaceView.workspaceEnabled && (isOwner ? !teamProjectId : Boolean(isSharedTeam && team.workspace));
   // Team is "user-picked" only when team.workspace was explicitly set at team
   // creation. Falling back to a leader assistant's auto-temp workspace counts as
   // temporary, mirroring single-chat behavior.
@@ -685,8 +690,8 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   // project_id is populated).
   const { closePreviewIfScopeChanged } = usePreviewContext();
   useEffect(() => {
-    closePreviewIfScopeChanged(previewScopeKey(teamProjectId, effectiveWorkspace ?? null));
-  }, [teamProjectId, effectiveWorkspace, closePreviewIfScopeChanged]);
+    closePreviewIfScopeChanged(previewScopeKey(layoutProjectId, effectiveWorkspace ?? null));
+  }, [layoutProjectId, effectiveWorkspace, closePreviewIfScopeChanged]);
 
   const siderTitle = useMemo(
     () => (
@@ -698,9 +703,13 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   );
 
   const sider = useMemo(() => {
+    if (!isOwner && isSharedTeam) {
+      if (!team.workspace) return <div />;
+      return <TeamWorkspaceExplorer key={`${team.id}:${team.workspace}`} teamId={team.id} workspace={team.workspace} />;
+    }
     if (!workspaceEnabled || !dispatchConversation) return <div />;
     return <ChatSlider conversation={dispatchConversation} />;
-  }, [workspaceEnabled, dispatchConversation]);
+  }, [dispatchConversation, isOwner, isSharedTeam, team.id, team.workspace, workspaceEnabled]);
 
   const updateScrollArrows = useCallback(() => {
     const container = scrollContainerRef.current;
@@ -848,7 +857,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
           siderTitle={siderTitle}
           sider={sider}
           workspaceEnabled={workspaceEnabled}
-          previewHosted={Boolean(teamProjectId)}
+          previewHosted={Boolean(layoutProjectId)}
           tabsSlot={tabsSlot}
           conversation_id={activeAssistant?.conversation_id}
           agent_name={undefined}
