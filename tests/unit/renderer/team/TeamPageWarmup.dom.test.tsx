@@ -123,12 +123,22 @@ vi.mock('@/common', () => ({
 
 vi.mock('@/renderer/pages/conversation/utils/conversationCache', () => ({
   getConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
-  getTeamConversationOrNull: (...args: unknown[]) => getConversationOrNullMock(...args),
+  getTeamConversationOrNull: (_teamId: string, conversationId: string) =>
+    getConversationOrNullMock(conversationId),
   teamConversationCacheKey: (team_id: string, conversation_id: string) => [
     'team-conversation',
     team_id,
     conversation_id,
   ],
+}));
+
+vi.mock('@renderer/components/base/AionModal', () => ({
+  __esModule: true,
+  default: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@/renderer/hooks/agent/usePresetAssistantInfo', () => ({
+  usePresetAssistantInfo: () => ({ info: null }),
 }));
 
 vi.mock('@/renderer/pages/conversation/components/ChatLayout', () => ({
@@ -202,6 +212,12 @@ import { ipcBridge } from '@/common';
 import TeamPage from '@/renderer/pages/team/TeamPage';
 
 describe('TeamPage teammate warmup wiring', () => {
+  async function selectMemberTab() {
+    const memberTab = await screen.findByTestId('team-tab-member-slot');
+    await userEvent.setup().click(memberTab);
+    await screen.findByTestId('acp-model-selector-member-conv');
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     acpSelectorPropsBySlot.clear();
@@ -230,7 +246,7 @@ describe('TeamPage teammate warmup wiring', () => {
       </MemoryRouter>
     );
 
-    await screen.findByTestId('acp-model-selector-member-conv');
+    await selectMemberTab();
     await waitFor(() => expect(acpSelectorPropsBySlot.get('member-conv')?.status).toBe('dormant'));
     expect(acpSelectorPropsBySlot.get('member-conv')?.trigger).toBeUndefined();
     expect(screen.getByRole('button', { name: 'team.agentActions.label' })).toBeInTheDocument();
@@ -245,7 +261,7 @@ describe('TeamPage teammate warmup wiring', () => {
       </MemoryRouter>
     );
 
-    await screen.findByTestId('acp-model-selector-member-conv');
+    await selectMemberTab();
     await waitFor(() => expect(acpSelectorPropsBySlot.get('member-conv')?.trigger).toBeInstanceOf(Function));
 
     await act(async () => {
@@ -285,6 +301,7 @@ describe('TeamPage teammate warmup wiring', () => {
         <TeamPage team={team()} />
       </MemoryRouter>
     );
+    await selectMemberTab();
 
     await waitFor(() => expect(acpSelectorPropsBySlot.get('member-conv')?.status).toBe('ready'));
     expect(restartPropsBySlot.get('leader-conv')).toMatchObject({ availability: 'ready', disabled: false });
@@ -328,6 +345,7 @@ describe('TeamPage teammate warmup wiring', () => {
         <TeamPage team={team()} />
       </MemoryRouter>
     );
+    await selectMemberTab();
     await waitFor(() => expect(acpSelectorPropsBySlot.get('member-conv')?.status).toBe('ready'));
 
     act(() => {
@@ -385,7 +403,7 @@ describe('TeamPage teammate warmup wiring', () => {
         <TeamPage team={team()} />
       </MemoryRouter>
     );
-    await screen.findByTestId('acp-model-selector-member-conv');
+    await selectMemberTab();
     act(() => {
       for (const handler of teamEventHandlers.agentRuntimeStatusChanged ?? []) {
         handler({ team_id: 'team-1', slot_id: 'member-slot', conversation_id: 'member-conv', status: 'ready' });
@@ -431,7 +449,7 @@ describe('TeamPage teammate warmup wiring', () => {
         <TeamPage team={team()} />
       </MemoryRouter>
     );
-    await screen.findByTestId('acp-model-selector-member-conv');
+    await selectMemberTab();
     act(() => {
       for (const handler of teamEventHandlers.agentRuntimeStatusChanged ?? []) {
         handler({ team_id: 'team-1', slot_id: 'member-slot', conversation_id: 'member-conv', status: 'ready' });
@@ -461,7 +479,7 @@ describe('TeamPage teammate warmup wiring', () => {
         <TeamPage team={unsupportedTeam} />
       </MemoryRouter>
     );
-    await screen.findByTestId('acp-model-selector-member-conv');
+    await selectMemberTab();
     await user.click(screen.getByRole('button', { name: 'team.agentActions.label' }));
 
     const contextResetTitle = await screen.findByText('team.agentActions.contextReset.title');

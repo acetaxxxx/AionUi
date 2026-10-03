@@ -43,6 +43,7 @@ import { ipcBridge } from '@/common';
 describe('TeamChatView', () => {
   beforeEach(() => {
     usePresetAssistantInfoMock.mockReset();
+    usePresetAssistantInfoMock.mockReturnValue({ info: null });
     acpChatMock.mockClear();
     aionrsChatMock.mockClear();
     switchTabMock.mockClear();

@@ -334,23 +334,24 @@ describe('TeamPage collaborator view', () => {
   });
 
   it('owner mounts both lead and worker conversations via team-scoped adapter and renders owner controls', async () => {
+    const ownerTeamId = 'team-owner-1';
     getTeamConversationMock.mockImplementation(async ({ conversation_id }: { conversation_id: string }) =>
       makeConversation(conversation_id)
     );
 
     render(
       <MemoryRouter>
-        <TeamPage team={makeTeam({ role: 'owner' })} />
+        <TeamPage team={makeTeam({ id: ownerTeamId, role: 'owner' })} />
       </MemoryRouter>
     );
 
     await waitFor(() => {
       expect(getTeamConversationMock).toHaveBeenCalledWith({
-        team_id: 'team-collab-1',
+        team_id: ownerTeamId,
         conversation_id: 'conv-lead',
       });
       expect(getTeamConversationMock).toHaveBeenCalledWith({
-        team_id: 'team-collab-1',
+        team_id: ownerTeamId,
         conversation_id: 'conv-worker',
       });
     });
