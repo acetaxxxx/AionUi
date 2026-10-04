@@ -16,7 +16,12 @@ describe('useSendBoxFiles Team attachments', () => {
     const setAtPath = vi.fn();
     const setUploadFile = vi.fn();
     const { result } = renderHook(() =>
-      useSendBoxFiles({ atPath: [], uploadFile: [], setAtPath, setUploadFile })
+      useSendBoxFiles({
+        atPath: [],
+        uploadFile: [],
+        setAtPath,
+        setUploadFile,
+      })
     );
 
     act(() => {
