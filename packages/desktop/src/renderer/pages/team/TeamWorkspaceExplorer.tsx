@@ -29,9 +29,11 @@ const TeamWorkspaceExplorer: React.FC<Props> = ({ teamId, workspace }) => {
   const [error, setError] = useState(false);
   const mountedRef = useRef(false);
   const requestGeneration = useRef(0);
+  const previewGeneration = useRef(0);
 
   const clearAfterAuthorizationError = useCallback(() => {
     requestGeneration.current += 1;
+    previewGeneration.current += 1;
     setEntriesByDirectory({});
     setExpandedDirectories(new Set());
     setLoadingDirectories(new Set());
@@ -70,6 +72,7 @@ const TeamWorkspaceExplorer: React.FC<Props> = ({ teamId, workspace }) => {
     return () => {
       mountedRef.current = false;
       requestGeneration.current += 1;
+      previewGeneration.current += 1;
     };
   }, [clearAfterAuthorizationError, teamId, workspace]);
 
@@ -114,24 +117,36 @@ const TeamWorkspaceExplorer: React.FC<Props> = ({ teamId, workspace }) => {
   const openFile = useCallback(
     async (entry: IDirOrFile) => {
       const { contentType, language } = getFileTypeInfo(entry.name);
+      if (UNSUPPORTED_TEAM_PREVIEWS.has(contentType)) return;
+      const openGeneration = ++previewGeneration.current;
+      const accessGeneration = requestGeneration.current;
       const fileRef = { kind: 'local' as const, path: entry.fullPath };
       try {
-        const content = UNSUPPORTED_TEAM_PREVIEWS.has(contentType)
-          ? ''
-          : await ipcBridge.fs.readTeamWorkspaceContent.invoke({
-              file: fileRef,
-              encoding: contentType === 'image' || contentType === 'pdf' ? 'dataurl' : 'utf8',
-            });
-        if (!mountedRef.current) return;
-        const safeContentType = UNSUPPORTED_TEAM_PREVIEWS.has(contentType) ? 'unsupported' : contentType;
-        openPreview(content, safeContentType, {
+        const content = await ipcBridge.fs.readTeamWorkspaceContent.invoke({
+          file: fileRef,
+          encoding: contentType === 'image' || contentType === 'pdf' ? 'dataurl' : 'utf8',
+        });
+        if (
+          !mountedRef.current ||
+          requestGeneration.current !== accessGeneration ||
+          previewGeneration.current !== openGeneration
+        ) {
+          return;
+        }
+        openPreview(content, contentType, {
           title: entry.name,
           file_name: entry.name,
           language,
           editable: false,
         });
       } catch {
-        if (mountedRef.current) clearAfterAuthorizationError();
+        if (
+          mountedRef.current &&
+          requestGeneration.current === accessGeneration &&
+          previewGeneration.current === openGeneration
+        ) {
+          clearAfterAuthorizationError();
+        }
       }
     },
     [clearAfterAuthorizationError, openPreview]
@@ -145,39 +160,43 @@ const TeamWorkspaceExplorer: React.FC<Props> = ({ teamId, workspace }) => {
 
     return (
       <ul className='m-0 list-none p-0' role={depth === 0 ? 'tree' : 'group'}>
-        {entries.map((entry) => (
-          <li
-            key={entry.fullPath}
-            role='treeitem'
-            aria-expanded={entry.isDir ? expandedDirectories.has(entry.fullPath) : undefined}
-          >
-            {entry.isDir ? (
-              <>
+        {entries.map((entry) => {
+          const canPreview = entry.isDir || !UNSUPPORTED_TEAM_PREVIEWS.has(getFileTypeInfo(entry.name).contentType);
+          return (
+            <li
+              key={entry.fullPath}
+              role='treeitem'
+              aria-expanded={entry.isDir ? expandedDirectories.has(entry.fullPath) : undefined}
+            >
+              {entry.isDir ? (
+                <>
+                  <button
+                    type='button'
+                    aria-label={entry.name}
+                    aria-expanded={expandedDirectories.has(entry.fullPath)}
+                    className='w-full truncate bg-transparent border-0 px-12px py-6px text-left text-13px text-t-primary hover:bg-2'
+                    style={{ paddingInlineStart: `${12 + depth * 12}px` }}
+                    onClick={() => void toggleDirectory(entry)}
+                  >
+                    {loadingDirectories.has(entry.fullPath) ? t('common.loading') : `▸ ${entry.name}`}
+                  </button>
+                  {expandedDirectories.has(entry.fullPath) && renderDirectory(entry.fullPath, depth + 1)}
+                </>
+              ) : (
                 <button
                   type='button'
                   aria-label={entry.name}
-                  aria-expanded={expandedDirectories.has(entry.fullPath)}
+                  disabled={!canPreview}
                   className='w-full truncate bg-transparent border-0 px-12px py-6px text-left text-13px text-t-primary hover:bg-2'
                   style={{ paddingInlineStart: `${12 + depth * 12}px` }}
-                  onClick={() => void toggleDirectory(entry)}
+                  onClick={() => void openFile(entry)}
                 >
-                  {loadingDirectories.has(entry.fullPath) ? t('common.loading') : `▸ ${entry.name}`}
+                  {entry.name}
                 </button>
-                {expandedDirectories.has(entry.fullPath) && renderDirectory(entry.fullPath, depth + 1)}
-              </>
-            ) : (
-              <button
-                type='button'
-                aria-label={entry.name}
-                className='w-full truncate bg-transparent border-0 px-12px py-6px text-left text-13px text-t-primary hover:bg-2'
-                style={{ paddingInlineStart: `${12 + depth * 12}px` }}
-                onClick={() => void openFile(entry)}
-              >
-                {entry.name}
-              </button>
-            )}
-          </li>
-        ))}
+              )}
+            </li>
+          );
+        })}
       </ul>
     );
   };

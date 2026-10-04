@@ -454,6 +454,52 @@ describe('TeamPage collaborator view', () => {
     expect(clearPreviewMock).toHaveBeenCalled();
   });
 
+  it('does not open a late successful preview after another file read is denied', async () => {
+    let resolveSlowRead!: (content: string) => void;
+    const slowRead = new Promise<string>((resolve) => {
+      resolveSlowRead = resolve;
+    });
+    getTeamConversationMock.mockResolvedValue(makeConversation('conv-lead'));
+    getFilesByDirMock.mockResolvedValue([
+      { name: 'slow.md', fullPath: '/tmp/team/slow.md', relativePath: 'slow.md', isDir: false, isFile: true },
+      {
+        name: 'revoked.md',
+        fullPath: '/tmp/team/revoked.md',
+        relativePath: 'revoked.md',
+        isDir: false,
+        isFile: true,
+      },
+      { name: 'slides.pptx', fullPath: '/tmp/team/slides.pptx', relativePath: 'slides.pptx', isDir: false, isFile: true },
+    ]);
+    readTeamWorkspaceContentMock.mockImplementation(({ file }: { file: { path: string } }) =>
+      file.path.endsWith('slow.md') ? slowRead : Promise.reject(new Error('NOT_FOUND'))
+    );
+
+    render(
+      <MemoryRouter>
+        <TeamPage team={makeTeam()} />
+      </MemoryRouter>
+    );
+
+    const slowFile = await screen.findByRole('button', { name: 'slow.md' });
+    const deniedFile = screen.getByRole('button', { name: 'revoked.md' });
+    expect(screen.getByRole('button', { name: 'slides.pptx' })).toBeDisabled();
+
+    await act(async () => {
+      slowFile.click();
+    });
+    await act(async () => {
+      deniedFile.click();
+    });
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    await act(async () => {
+      resolveSlowRead('# stale content');
+      await slowRead;
+    });
+    expect(openPreviewMock).not.toHaveBeenCalled();
+  });
+
   it('owner mounts both lead and worker conversations via team-scoped adapter and renders owner controls', async () => {
     const ownerTeamId = 'team-owner-1';
     getTeamConversationMock.mockImplementation(async ({ conversation_id }: { conversation_id: string }) =>
