@@ -7,10 +7,11 @@
 /** @vitest-environment jsdom */
 
 import { act, renderHook } from '@testing-library/react';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { teamUploadFileRef } from '@/common/types/chatFile';
-import { createSetAtPath, type FileSelectionUpdate, useSendBoxFiles } from '@/renderer/hooks/chat/useSendBoxFiles';
+import { createSetAtPath, useSendBoxFiles } from '@/renderer/hooks/chat/useSendBoxFiles';
+import type { FileSelectionUpdate } from '@/renderer/hooks/chat/useSendBoxFiles';
 import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
 
 describe('useSendBoxFiles Team attachments', () => {
@@ -57,12 +58,9 @@ describe('useSendBoxFiles Team attachments', () => {
   it('retains Team refs when separate upload batches finish before a render through the draft setter', () => {
     const { result } = renderHook(() => {
       const [draft, setDraft] = useState({ atPath: [] as Array<string | FileOrFolderItem> });
-      const mutate = useCallback(
-        (update: (prev: Record<string, unknown> | undefined) => Record<string, unknown>) => {
-          setDraft((prev) => update(prev as Record<string, unknown>) as typeof prev);
-        },
-        []
-      );
+      const mutate = (update: (prev: Record<string, unknown> | undefined) => Record<string, unknown>) => {
+        setDraft((prev) => update(prev as Record<string, unknown>) as typeof prev);
+      };
       const setAtPath = createSetAtPath(mutate, draft);
       const [uploadFile, setUploadFile] = useState<string[]>([]);
       const files = useSendBoxFiles({ atPath: draft.atPath, uploadFile, setAtPath, setUploadFile });
