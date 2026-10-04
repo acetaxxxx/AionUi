@@ -12,6 +12,10 @@ import AcpSendBox from '@/renderer/pages/conversation/platforms/acp/AcpSendBox';
 import type { UseAcpMessageReturn } from '@/renderer/pages/conversation/platforms/acp/useAcpMessage';
 import type { TeamSendBoxRuntime } from '@/renderer/pages/team/components/teamSendRuntime';
 
+type DraftUpdater = (previous: Record<string, unknown> | undefined) => Record<string, unknown>;
+type DraftMutate = (updater: DraftUpdater) => void;
+type FileSelectionUpdate = unknown[] | ((previous: unknown[]) => unknown[]);
+
 const {
   sendMessageInvokeMock,
   addOrUpdateMessageMock,
@@ -229,6 +233,13 @@ vi.mock('@/renderer/hooks/chat/useSendBoxFiles', () => ({
     handleFilesAdded: vi.fn(),
     clearFiles: clearFilesMock,
   }),
+  createSetAtPath: (mutate: DraftMutate, _data: unknown) => (atPath: FileSelectionUpdate) => {
+    mutate((previous) => {
+      const previousAtPath = Array.isArray(previous?.atPath) ? previous.atPath : [];
+      const nextAtPath = typeof atPath === 'function' ? atPath(previousAtPath) : atPath;
+      return { ...previous, atPath: nextAtPath };
+    });
+  },
   createSetUploadFile: () => vi.fn(),
 }));
 vi.mock('@/renderer/hooks/chat/useAutoTitle', () => ({
