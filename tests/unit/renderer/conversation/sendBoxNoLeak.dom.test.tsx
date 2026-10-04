@@ -22,6 +22,10 @@ import { act, render, cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import React from 'react';
 
+type DraftUpdater = (previous: Record<string, unknown> | undefined) => Record<string, unknown>;
+type DraftMutate = (updater: DraftUpdater) => void;
+type FileSelectionUpdate = unknown[] | ((previous: unknown[]) => unknown[]);
+
 const { mutateMock } = vi.hoisted(() => ({ mutateMock: vi.fn() }));
 
 vi.mock('@/common', () => ({
@@ -60,10 +64,7 @@ vi.mock('@/renderer/hooks/chat/useSendBoxDraft', () => ({
 }));
 vi.mock('@/renderer/hooks/chat/useSendBoxFiles', () => ({
   useSendBoxFiles: () => ({ handleFilesAdded: vi.fn(), clearFiles: vi.fn() }),
-  createSetAtPath: (
-    mutate: (updater: (previous: Record<string, unknown> | undefined) => Record<string, unknown>) => void,
-    _data: unknown
-  ) => (atPath: unknown[] | ((previous: unknown[]) => unknown[])) => {
+  createSetAtPath: (mutate: DraftMutate, _data: unknown) => (atPath: FileSelectionUpdate) => {
     mutate((previous) => {
       const previousAtPath = Array.isArray(previous?.atPath) ? previous.atPath : [];
       const nextAtPath = typeof atPath === 'function' ? atPath(previousAtPath) : atPath;
