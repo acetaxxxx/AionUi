@@ -468,8 +468,9 @@ describe('TeamPage collaborator view', () => {
       </MemoryRouter>
     );
 
+    const secretFile = await screen.findByRole('button', { name: 'secret.md' });
     await act(async () => {
-      (await screen.findByRole('button', { name: 'secret.md' })).click();
+      secretFile.click();
     });
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
