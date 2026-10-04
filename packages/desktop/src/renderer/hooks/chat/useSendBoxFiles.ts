@@ -35,10 +35,13 @@ const formatFileRef = (file_name: string): string => {
   return normalized;
 };
 
+type FileSelection = Array<string | FileOrFolderItem>;
+type FileSelectionUpdate = FileSelection | ((previous: FileSelection) => FileSelection);
+
 interface UseSendBoxFilesProps {
-  atPath: Array<string | FileOrFolderItem>;
+  atPath: FileSelection;
   uploadFile: string[];
-  setAtPath: (atPath: Array<string | FileOrFolderItem>) => void;
+  setAtPath: (atPath: FileSelectionUpdate) => void;
   setUploadFile: (uploadFile: string[] | ((prev: string[]) => string[])) => void;
 }
 
@@ -69,7 +72,7 @@ export const useSendBoxFiles = ({ atPath, uploadFile, setAtPath, setUploadFile }
         .map((file) => ({ path: file.name, name: file.name, isFile: true, chatRef: file.chatRef }));
       // 使用函数式更新，基于最新状态而不是闭包中的状态
       if (file_paths.length > 0) setUploadFile((prevUploadFile) => [...prevUploadFile, ...file_paths]);
-      if (teamFiles.length > 0) setAtPath([...atPath, ...teamFiles]);
+      if (teamFiles.length > 0) setAtPath((previousAtPath) => [...previousAtPath, ...teamFiles]);
     },
     [atPath, setAtPath, setUploadFile]
   );
