@@ -123,9 +123,9 @@ describe('FileService Team uploads', () => {
     expect(xhr.url).toBe('http://backend.test/api/fs/upload');
     expect((xhr.sentBody as FormData).get('conversation_id')).toBe('conv-1');
     xhr.respond(200, JSON.stringify({ success: true, data: '/tmp/aionui/diagram.png' }));
-    await expect(pending).resolves.toEqual([
-      expect.objectContaining({ path: '/tmp/aionui/diagram.png', chatRef: undefined }),
-    ]);
+    const [uploaded] = await pending;
+    expect(uploaded.path).toBe('/tmp/aionui/diagram.png');
+    expect(uploaded).not.toHaveProperty('chatRef');
   });
 
   it('does not retry a failed Team upload through the generic filesystem route', async () => {
