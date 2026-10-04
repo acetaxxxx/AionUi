@@ -381,18 +381,30 @@ describe('TeamPage collaborator view', () => {
     expect(screen.queryByTestId('team-agent-actions')).not.toBeInTheDocument();
   });
 
-  it('collaborator workspace lists nested Team files and opens read-only previews through Team-authorized fs calls', async () => {
+  it('collaborator workspace browses nested files and opens read-only Team previews', async () => {
     getTeamConversationMock.mockResolvedValue(makeConversation('conv-lead'));
     getFilesByDirMock.mockImplementation(async ({ dir }: { dir: string; root: string }) => {
       if (dir === '/tmp/team') {
         return [
           { name: 'src', fullPath: '/tmp/team/src', relativePath: 'src', isDir: true, isFile: false },
-          { name: 'README.md', fullPath: '/tmp/team/README.md', relativePath: 'README.md', isDir: false, isFile: true },
+          {
+            name: 'README.md',
+            fullPath: '/tmp/team/README.md',
+            relativePath: 'README.md',
+            isDir: false,
+            isFile: true,
+          },
         ];
       }
       if (dir === '/tmp/team/src') {
         return [
-          { name: 'main.ts', fullPath: '/tmp/team/src/main.ts', relativePath: 'src/main.ts', isDir: false, isFile: true },
+          {
+            name: 'main.ts',
+            fullPath: '/tmp/team/src/main.ts',
+            relativePath: 'src/main.ts',
+            isDir: false,
+            isFile: true,
+          },
         ];
       }
       return [];
@@ -435,7 +447,13 @@ describe('TeamPage collaborator view', () => {
   it('clears collaborator files and preview when a Team file read is denied', async () => {
     getTeamConversationMock.mockResolvedValue(makeConversation('conv-lead'));
     getFilesByDirMock.mockResolvedValue([
-      { name: 'secret.md', fullPath: '/tmp/team/secret.md', relativePath: 'secret.md', isDir: false, isFile: true },
+      {
+        name: 'secret.md',
+        fullPath: '/tmp/team/secret.md',
+        relativePath: 'secret.md',
+        isDir: false,
+        isFile: true,
+      },
     ]);
     readTeamWorkspaceContentMock.mockRejectedValue(new Error('NOT_FOUND'));
 
@@ -469,7 +487,13 @@ describe('TeamPage collaborator view', () => {
         isDir: false,
         isFile: true,
       },
-      { name: 'slides.pptx', fullPath: '/tmp/team/slides.pptx', relativePath: 'slides.pptx', isDir: false, isFile: true },
+      {
+        name: 'slides.pptx',
+        fullPath: '/tmp/team/slides.pptx',
+        relativePath: 'slides.pptx',
+        isDir: false,
+        isFile: true,
+      },
     ]);
     readTeamWorkspaceContentMock.mockImplementation(({ file }: { file: { path: string } }) =>
       file.path.endsWith('slow.md') ? slowRead : Promise.reject(new Error('NOT_FOUND'))

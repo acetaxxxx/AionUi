@@ -938,7 +938,10 @@ export const fs = {
   // intentionally does not retry a 404 through /api/fs/read.
   readTeamWorkspaceContent: {
     provider: () => {},
-    invoke: async (params: { file: Extract<ChatFileRef, { kind: 'local' }>; encoding: ContentEncoding }): Promise<string> => {
+    invoke: async (params: {
+      file: Extract<ChatFileRef, { kind: 'local' }>;
+      encoding: ContentEncoding;
+    }): Promise<string> => {
       const res = await httpRequest<unknown>('POST', '/api/fs/content', params);
       if (typeof res === 'string') return res;
       if (res && typeof res === 'object' && 'content' in res)
