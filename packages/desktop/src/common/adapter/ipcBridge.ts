@@ -933,6 +933,23 @@ export const fs = {
       }
     },
   },
+  // Shared Team workspace browsing must keep authorization on the explicit
+  // /api/fs/content route. Unlike the general readContent adapter, this call
+  // intentionally does not retry a 404 through /api/fs/read.
+  readTeamWorkspaceContent: {
+    provider: () => {},
+    invoke: async (params: {
+      file: Extract<ChatFileRef, { kind: 'local' }>;
+      encoding: ContentEncoding;
+    }): Promise<string> => {
+      const res = await httpRequest<unknown>('POST', '/api/fs/content', params);
+      if (typeof res === 'string') return res;
+      if (res && typeof res === 'object' && 'content' in res)
+        return String((res as { content: unknown }).content ?? '');
+      if (res && typeof res === 'object' && 'data' in res) return String((res as { data: unknown }).data ?? '');
+      return String(res ?? '');
+    },
+  },
   // Write a file addressed by ChatFileRef. Optimistic concurrency: when `ifMatch`
   // (last-known mtime ms) is set it travels as the `If-Match` header, and a stale
   // value yields 409 Conflict (surfaced as BackendHttpError.status). PUT /api/fs/content.
