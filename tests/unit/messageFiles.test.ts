@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { collectChatFileRefs, splitChatFileRefs } from '@/renderer/utils/file/messageFiles';
-import { localFileRef, projectFileRef, uploadFileRef } from '@/common/types/chatFile';
+import { localFileRef, projectFileRef, teamUploadFileRef, uploadFileRef } from '@/common/types/chatFile';
 import { localSelectionItems } from '@/renderer/utils/file/fileSelection';
 import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
 
@@ -29,6 +29,17 @@ describe('collectChatFileRefs', () => {
     expect(collectChatFileRefs([], [projectItem('pe-1', 'src/main.ts')])).toEqual([
       { kind: 'project', pe_id: 'pe-1', relative_path: 'src/main.ts' },
     ]);
+  });
+
+  it('keeps opaque Team upload refs when selected files are sent', () => {
+    const teamImage: FileOrFolderItem = {
+      path: 'photo.png',
+      name: 'photo.png',
+      isFile: true,
+      chatRef: teamUploadFileRef('upload-123'),
+    };
+
+    expect(collectChatFileRefs([], [teamImage])).toEqual([{ kind: 'team_upload', upload_id: 'upload-123' }]);
   });
 
   it('treats atPath items without a chatRef (OS-picker mentions) as upload refs', () => {
@@ -114,6 +125,19 @@ describe('splitChatFileRefs', () => {
         name: 'note.md',
         isFile: true,
         chatRef: { kind: 'local', path: '/backend/abs/dir/note.md' },
+      },
+    ]);
+  });
+
+  it('restores opaque Team uploads without converting IDs to local paths', () => {
+    const { uploadFiles, atPath } = splitChatFileRefs([teamUploadFileRef('upload-123')]);
+    expect(uploadFiles).toEqual([]);
+    expect(atPath).toEqual([
+      {
+        path: 'upload-123',
+        name: 'upload-123',
+        isFile: true,
+        chatRef: { kind: 'team_upload', upload_id: 'upload-123' },
       },
     ]);
   });

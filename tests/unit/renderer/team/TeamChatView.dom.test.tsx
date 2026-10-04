@@ -503,17 +503,60 @@ describe('TeamChatView', () => {
     const props = acpChatMock.mock.calls[0]?.[0] as {
       team_id?: string;
       hideSendBox?: boolean;
-      teamSendMessage?: (payload: { input: string; files: [] }) => Promise<void>;
+      teamSendMessage?: (payload: {
+        input: string;
+        files: Array<{ kind: 'team_upload'; upload_id: string }>;
+      }) => Promise<void>;
     };
     expect(props.team_id).toBe('team-1');
     expect(props.hideSendBox).toBeFalsy();
     expect(props.teamSendMessage).toBeInstanceOf(Function);
 
-    await props.teamSendMessage!({ input: 'hello leader', files: [] });
+    const files = [{ kind: 'team_upload' as const, upload_id: 'upload-123' }];
+    await props.teamSendMessage!({ input: 'hello leader', files });
     expect(sendSpy).toHaveBeenCalledWith({
       team_id: 'team-1',
       input: 'hello leader',
-      files: [],
+      files,
+    });
+  });
+
+  it('routes opaque Team uploads from an invitee through the agent Team endpoint', async () => {
+    const sendSpy = vi.fn(async () => ({ run_id: 'run-2' }));
+    vi.spyOn(ipcBridge.team.sendMessageToAgent, 'invoke').mockImplementation(sendSpy as any);
+
+    render(
+      <TeamChatView
+        team_id='team-1'
+        slot_id='worker-1'
+        isLeader={false}
+        conversation={{
+          id: 'conv-worker',
+          type: 'acp',
+          name: 'Team - Worker',
+          created_at: Date.now(),
+          updated_at: Date.now(),
+          extra: { workspace: '/tmp' },
+        }}
+      />
+    );
+
+    expect(await screen.findByTestId('mock-acp-chat')).toBeInTheDocument();
+    const lastCall = acpChatMock.mock.calls[acpChatMock.mock.calls.length - 1];
+    const props = lastCall?.[0] as {
+      teamSendMessage?: (payload: {
+        input: string;
+        files: Array<{ kind: 'team_upload'; upload_id: string }>;
+      }) => Promise<void>;
+    };
+    const files = [{ kind: 'team_upload' as const, upload_id: 'upload-456' }];
+    await props.teamSendMessage!({ input: 'inspect this image', files });
+
+    expect(sendSpy).toHaveBeenCalledWith({
+      team_id: 'team-1',
+      slot_id: 'worker-1',
+      input: 'inspect this image',
+      files,
     });
   });
 });

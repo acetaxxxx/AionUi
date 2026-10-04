@@ -924,7 +924,7 @@ export const fs = {
         if (res && typeof res === 'object' && 'data' in res) return String((res as { data: unknown }).data ?? '');
         return String(res ?? '');
       } catch (err: unknown) {
-        if ((err as { status?: number })?.status === 404) {
+        if ((err as { status?: number })?.status === 404 && params.file.kind !== 'team_upload') {
           const filePath = chatFileRefPath(params.file);
           const res = await httpRequest<unknown>('POST', '/api/fs/read', { path: filePath });
           if (typeof res === 'string') return res;
@@ -971,7 +971,7 @@ export const fs = {
         const raw = await httpRequest<RawFileMetadata>('POST', '/api/fs/content/metadata', params);
         return fromBackendFileMetadata(raw);
       } catch (err: unknown) {
-        if ((err as { status?: number })?.status === 404) {
+        if ((err as { status?: number })?.status === 404 && params.file.kind !== 'team_upload') {
           const filePath = chatFileRefPath(params.file);
           const raw = await httpRequest<RawFileMetadata>('POST', '/api/fs/metadata', { path: filePath });
           return fromBackendFileMetadata(raw);

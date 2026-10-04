@@ -52,14 +52,19 @@ export const useAttachEntry = ({
       const fileList = e.target.files;
       if (!fileList || fileList.length === 0 || !onLocalFilesAdded) return;
       try {
-        const processed = await FileService.processDroppedFiles(fileList, conversationContext?.conversation_id);
+        const processed = await FileService.processDroppedFiles(
+          fileList,
+          conversationContext?.conversation_id,
+          'sendbox',
+          conversationContext?.team_id
+        );
         if (processed.length > 0) onLocalFilesAdded(processed);
       } catch {
         Message.error(t('common.fileAttach.failed'));
       }
       e.target.value = '';
     },
-    [conversationContext?.conversation_id, onLocalFilesAdded, t]
+    [conversationContext?.conversation_id, conversationContext?.team_id, onLocalFilesAdded, t]
   );
 
   const triggerLocalUpload = useCallback(() => {

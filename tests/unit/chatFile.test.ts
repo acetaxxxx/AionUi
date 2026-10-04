@@ -23,7 +23,7 @@ describe('ChatFileRef builders', () => {
 });
 
 describe('chatFileRefPath', () => {
-  it('returns relative_path for project and path for upload/local', () => {
+  it('returns relative path, filesystem path, or opaque upload identity by ref kind', () => {
     expect(chatFileRefPath(projectFileRef('pe-1', 'src/a.ts'))).toBe('src/a.ts');
     expect(chatFileRefPath(uploadFileRef('/tmp/u.png'))).toBe('/tmp/u.png');
     expect(chatFileRefPath(localFileRef('/backend/l.ts'))).toBe('/backend/l.ts');
@@ -31,7 +31,7 @@ describe('chatFileRefPath', () => {
 });
 
 describe('chatFileRefKey', () => {
-  it('keys project by pe identity and upload/local by kind-tagged path', () => {
+  it('keys project by pe identity and upload/local/team refs by kind-tagged identity', () => {
     expect(chatFileRefKey(projectFileRef('pe-1', 'a.ts'))).toBe('project\0pe-1\0a.ts');
     expect(chatFileRefKey(uploadFileRef('/p/x'))).toBe('upload\0/p/x');
     expect(chatFileRefKey(localFileRef('/p/x'))).toBe('local\0/p/x');

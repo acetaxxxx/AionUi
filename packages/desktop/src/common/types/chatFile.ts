@@ -16,7 +16,8 @@
  *
  * `kind` is discriminated by SOURCE, not by any setting:
  *   - a file picked from the Explorer tree → `project` (`{pe_id, relative_path}`)
- *   - a file uploaded from the client device (blob → managed upload dir) → `upload` (`{path}`)
+ *   - a file uploaded from a client device in a normal conversation → `upload` (`{path}`)
+ *   - a file uploaded within a Shared Team → `team_upload` (`{upload_id}`), an opaque server reference
  *   - a file chosen from the backend machine's own filesystem (native picker
  *     in Electron / server-fs browse in WebUI) → `local` (`{path}`) — already an
  *     absolute path on the backend host, so it is sent as-is (no upload).
@@ -24,6 +25,7 @@
 export type ChatFileRef =
   | { kind: 'project'; pe_id: string; relative_path: string }
   | { kind: 'upload'; path: string }
+  | { kind: 'team_upload'; upload_id: string }
   | { kind: 'local'; path: string };
 
 /**
@@ -43,11 +45,18 @@ export const projectFileRef = (pe_id: string, relative_path: string): ChatFileRe
 /** Build an upload file ref from a device-upload managed path. */
 export const uploadFileRef = (path: string): ChatFileRef => ({ kind: 'upload', path });
 
+/** Build an opaque reference to a file uploaded within a Shared Team scope. */
+export const teamUploadFileRef = (upload_id: string): ChatFileRef => ({ kind: 'team_upload', upload_id });
+
 /** Build a local file ref from a backend-machine absolute path (native/server picker). */
 export const localFileRef = (path: string): ChatFileRef => ({ kind: 'local', path });
 
-/** The on-disk/relative path carried by a ref (relative for project, absolute otherwise). */
-export const chatFileRefPath = (ref: ChatFileRef): string => (ref.kind === 'project' ? ref.relative_path : ref.path);
+/** The path/identity carried by a ref; a Team upload returns an opaque ID, not a filesystem path. */
+export const chatFileRefPath = (ref: ChatFileRef): string => {
+  if (ref.kind === 'project') return ref.relative_path;
+  if (ref.kind === 'team_upload') return ref.upload_id;
+  return ref.path;
+};
 
 /**
  * Stable dedup/identity key for a ref: project refs by pe identity, uploads and
@@ -55,13 +64,18 @@ export const chatFileRefPath = (ref: ChatFileRef): string => (ref.kind === 'proj
  * stay distinct). The `\0` separator can't occur in a path segment.
  */
 export const chatFileRefKey = (ref: ChatFileRef): string =>
-  ref.kind === 'project' ? `project\0${ref.pe_id}\0${ref.relative_path}` : `${ref.kind}\0${ref.path}`;
+  ref.kind === 'project'
+    ? `project\0${ref.pe_id}\0${ref.relative_path}`
+    : ref.kind === 'team_upload'
+      ? `team_upload\0${ref.upload_id}`
+      : `${ref.kind}\0${ref.path}`;
 
 /** Runtime shape guard — validates untrusted (e.g. persisted) data is a ChatFileRef. */
 export const isChatFileRef = (value: unknown): value is ChatFileRef => {
   if (!value || typeof value !== 'object') return false;
   const ref = value as Record<string, unknown>;
   if (ref.kind === 'project') return typeof ref.pe_id === 'string' && typeof ref.relative_path === 'string';
+  if (ref.kind === 'team_upload') return typeof ref.upload_id === 'string';
   if (ref.kind === 'upload' || ref.kind === 'local') return typeof ref.path === 'string';
   return false;
 };
