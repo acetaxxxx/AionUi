@@ -54,6 +54,10 @@ describe('isOpenableFileRef', () => {
     expect(isOpenableFileRef({ kind: 'upload', path: '/uploads/b.txt' })).toBe(true);
   });
 
+  it('rejects Team upload refs until a Team-scoped open route exists', () => {
+    expect(isOpenableFileRef({ kind: 'team_upload', upload_id: 'opaque-1' })).toBe(false);
+  });
+
   it('rejects local and upload refs with an empty path', () => {
     expect(isOpenableFileRef({ kind: 'local', path: '' })).toBe(false);
     expect(isOpenableFileRef({ kind: 'upload', path: '  ' })).toBe(false);
