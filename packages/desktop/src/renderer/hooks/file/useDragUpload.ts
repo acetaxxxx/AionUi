@@ -99,7 +99,7 @@ export const useDragUpload = ({
             validFileList,
             conversation_id,
             'sendbox',
-            team_id
+            team_id,
           );
 
           if (processedFiles.length > 0) {
