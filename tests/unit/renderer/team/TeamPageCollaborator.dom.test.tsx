@@ -318,6 +318,7 @@ describe('TeamPage collaborator view', () => {
     vi.clearAllMocks();
     ensureSessionMock.mockResolvedValue(undefined);
     getFilesByDirMock.mockReset();
+    getFilesByDirMock.mockResolvedValue([]);
     readTeamWorkspaceContentMock.mockReset();
     readContentMock.mockReset();
     openPreviewMock.mockReset();
