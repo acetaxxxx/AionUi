@@ -161,7 +161,11 @@ vi.mock('@/common', () => ({
 
 vi.mock('@/renderer/pages/conversation/components/ChatLayout', () => ({
   __esModule: true,
-  default: ({ children, tabsSlot, sider }: {
+  default: ({
+    children,
+    tabsSlot,
+    sider,
+  }: {
     children: React.ReactNode;
     tabsSlot?: React.ReactNode;
     sider?: React.ReactNode;
