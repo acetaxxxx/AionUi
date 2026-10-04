@@ -10,8 +10,7 @@ import { act, renderHook } from '@testing-library/react';
 import { useCallback, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { teamUploadFileRef } from '@/common/types/chatFile';
-import { createSetAtPath, useSendBoxFiles } from '@/renderer/hooks/chat/useSendBoxFiles';
-import type { FileSelectionUpdate } from '@/renderer/hooks/chat/useSendBoxFiles';
+import { createSetAtPath, type FileSelectionUpdate, useSendBoxFiles } from '@/renderer/hooks/chat/useSendBoxFiles';
 import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
 
 describe('useSendBoxFiles Team attachments', () => {
@@ -102,11 +101,9 @@ describe('useSendBoxFiles Team attachments', () => {
 
   it('starts from an empty selection when the draft has not loaded yet', () => {
     let selection: Array<string | FileOrFolderItem> = [];
-    const mutate = vi.fn(
-      (update: (prev: Record<string, unknown> | undefined) => Record<string, unknown>) => {
-        selection = update(undefined).atPath as Array<string | FileOrFolderItem>;
-      }
-    );
+    const mutate = vi.fn((update: (prev: Record<string, unknown> | undefined) => Record<string, unknown>) => {
+      selection = update(undefined).atPath as Array<string | FileOrFolderItem>;
+    });
     const { result } = renderHook(() => createSetAtPath(mutate, undefined));
 
     act(() => {

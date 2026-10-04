@@ -21,11 +21,7 @@ import { classifyConfigSetError, useAcpConfigOptions } from '@/renderer/hooks/ag
 import { useAcpModelInfo } from '@/renderer/hooks/agent/useAcpModelInfo';
 import { useAutoTitle } from '@/renderer/hooks/chat/useAutoTitle';
 import { getSendBoxDraftHook, type FileOrFolderItem } from '@/renderer/hooks/chat/useSendBoxDraft';
-import {
-  createSetAtPath,
-  createSetUploadFile,
-  useSendBoxFiles,
-} from '@/renderer/hooks/chat/useSendBoxFiles';
+import { createSetAtPath, createSetUploadFile, useSendBoxFiles } from '@/renderer/hooks/chat/useSendBoxFiles';
 import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { useOpenFileSelector } from '@/renderer/hooks/file/useOpenFileSelector';
