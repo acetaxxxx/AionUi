@@ -69,9 +69,7 @@ jobs:
         run: bun run lint
 
       - name: Check Formatting (oxfmt)
-        run: |
-          bunx oxfmt --write packages/desktop/src/renderer/pages/team/TeamPage.tsx
-          git diff -- packages/desktop/src/renderer/pages/team/TeamPage.tsx
+        run: bun run format:check
 
       - name: TypeScript type check
         run: bunx tsc --noEmit

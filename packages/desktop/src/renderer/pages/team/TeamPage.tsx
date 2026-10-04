@@ -990,7 +990,9 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                 <div
                   ref={scrollContainerRef}
                   className={`flex h-full w-full [scrollbar-width:none] ${
-                    isMobile ? 'min-w-0 flex-col overflow-x-hidden overflow-y-auto' : 'overflow-x-auto overflow-y-hidden'
+                    isMobile
+                      ? 'min-w-0 flex-col overflow-x-hidden overflow-y-auto'
+                      : 'overflow-x-auto overflow-y-hidden'
                   }`}
                   data-testid='team-assistant-column-list'
                   data-layout={isMobile ? 'mobile-single-column' : 'parallel-columns'}
