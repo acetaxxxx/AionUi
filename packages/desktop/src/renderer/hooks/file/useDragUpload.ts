@@ -18,12 +18,7 @@ export interface UseDragUploadOptions {
   team_id?: string;
 }
 
-export const useDragUpload = ({
-  supportedExts = [],
-  onFilesAdded,
-  conversation_id,
-  team_id,
-}: UseDragUploadOptions) => {
+export const useDragUpload = ({ supportedExts = [], onFilesAdded, conversation_id, team_id }: UseDragUploadOptions) => {
   const { t } = useTranslation();
   const [isFileDragging, setIsFileDragging] = useState(false);
 
@@ -99,7 +94,7 @@ export const useDragUpload = ({
             validFileList,
             conversation_id,
             'sendbox',
-            team_id,
+            team_id
           );
 
           if (processedFiles.length > 0) {
