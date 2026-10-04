@@ -27,9 +27,11 @@ const httpBridgeMocks = vi.hoisted(() => {
           method,
           path: resolvedPath,
           body:
-            typeof mapBodyOrOptions === 'function' && params !== undefined
-              ? mapBodyOrOptions(params as Params)
-              : undefined,
+            method === 'GET' || method === 'DELETE'
+              ? undefined
+              : typeof mapBodyOrOptions === 'function' && params !== undefined
+                ? mapBodyOrOptions(params as Params)
+                : params,
         });
         return (responses.get(resolvedPath) ?? { active_run: null }) as Data;
       }),
