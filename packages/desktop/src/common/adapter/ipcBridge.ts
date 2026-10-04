@@ -137,6 +137,7 @@ import {
 } from './teamMapper';
 import {
   absoluteToRelativePath,
+  fromBackendDirOrFileList,
   fromBackendSkillFileNodes,
   fromBackendWorkspaceFlatFiles,
   fromBackendWorkspaceList,
@@ -852,7 +853,10 @@ function fromBackendFileMetadata(raw: RawFileMetadata): IFileMetadata {
 }
 
 export const fs = {
-  getFilesByDir: httpPost<Array<IDirOrFile>, { dir: string; root: string }>('/api/fs/dir'),
+  getFilesByDir: withResponseMap(
+    httpPost<unknown, { dir: string; root: string }>('/api/fs/dir'),
+    fromBackendDirOrFileList
+  ),
   // Reveal a project-scoped entry in the OS file manager (Finder/Explorer).
   // The backend resolves the pe-ref to an absolute path (resolve_reference) and
   // calls shell.showItemInFolder — the front end never builds the absolute path

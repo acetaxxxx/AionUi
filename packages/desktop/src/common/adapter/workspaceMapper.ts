@@ -22,6 +22,20 @@ export type RawSkillFileNode = {
 
 export type RawWorkspaceFlatFile = { name: string; full_path: string; relative_path: string };
 
+/** `/api/fs/dir` serializes directory entries with snake_case path and flag fields. */
+export type RawDirOrFile = {
+  name?: string;
+  full_path?: string;
+  fullPath?: string;
+  relative_path?: string;
+  relativePath?: string;
+  is_dir?: boolean;
+  isDir?: boolean;
+  is_file?: boolean;
+  isFile?: boolean;
+  children?: RawDirOrFile[];
+};
+
 // ── Path helpers ───────────────────────────────────────────────────────
 
 function normalizeSlashes(p: string): string {
@@ -63,6 +77,23 @@ export function absoluteToRelativePath(absolutePath: string, workspace: string):
 }
 
 // ── Backend → Frontend ─────────────────────────────────────────────────
+
+/** Normalize `/api/fs/dir` entries into the shared UI contract, recursively. */
+export function fromBackendDirOrFile(item: RawDirOrFile): IDirOrFile {
+  const isDir = item.is_dir ?? item.isDir ?? false;
+  return {
+    name: item.name ?? '',
+    fullPath: item.full_path ?? item.fullPath ?? '',
+    relativePath: item.relative_path ?? item.relativePath ?? '',
+    isDir,
+    isFile: item.is_file ?? item.isFile ?? !isDir,
+    children: Array.isArray(item.children) ? item.children.map(fromBackendDirOrFile) : undefined,
+  };
+}
+
+export function fromBackendDirOrFileList(raw: unknown): IDirOrFile[] {
+  return Array.isArray(raw) ? raw.map((item) => fromBackendDirOrFile(item as RawDirOrFile)) : [];
+}
 
 export function fromBackendFsEntry(item: RawFsEntry, workspace: string, parentRelPath: string): IDirOrFile {
   const ws = stripTrailingSlash(workspace);

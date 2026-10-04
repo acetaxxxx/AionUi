@@ -13,6 +13,7 @@ type HttpCall = {
 
 const httpBridgeMocks = vi.hoisted(() => {
   const calls: HttpCall[] = [];
+  const responses = new Map<string, unknown>();
   const provider =
     (method: HttpCall['method']) =>
     <Data, Params = undefined>(
@@ -30,13 +31,14 @@ const httpBridgeMocks = vi.hoisted(() => {
               ? mapBodyOrOptions(params as Params)
               : undefined,
         });
-        return { active_run: null } as Data;
+        return (responses.get(resolvedPath) ?? { active_run: null }) as Data;
       }),
     });
   const emitter = () => ({ on: vi.fn(() => vi.fn()), emit: vi.fn() });
 
   return {
     calls,
+    responses,
     httpGet: provider('GET'),
     httpPost: provider('POST'),
     httpPut: provider('PUT'),
@@ -80,6 +82,54 @@ vi.mock('@/common/platform/bridge', () => ({
 describe('ipcBridge team adapter', () => {
   beforeEach(() => {
     httpBridgeMocks.calls.length = 0;
+    httpBridgeMocks.responses.clear();
+  });
+
+  it('normalizes snake_case /api/fs/dir responses before returning them to renderer consumers', async () => {
+    httpBridgeMocks.responses.set('/api/fs/dir', [
+      {
+        name: 'src',
+        full_path: '/tmp/team/src',
+        relative_path: 'src',
+        is_dir: true,
+        is_file: false,
+        children: [
+          {
+            name: 'main.ts',
+            full_path: '/tmp/team/src/main.ts',
+            relative_path: 'src/main.ts',
+            is_dir: false,
+            is_file: true,
+          },
+        ],
+      },
+    ]);
+    const { fs } = await import('@/common/adapter/ipcBridge');
+
+    await expect(fs.getFilesByDir.invoke({ dir: '/tmp/team', root: '/tmp/team' })).resolves.toEqual([
+      {
+        name: 'src',
+        fullPath: '/tmp/team/src',
+        relativePath: 'src',
+        isDir: true,
+        isFile: false,
+        children: [
+          {
+            name: 'main.ts',
+            fullPath: '/tmp/team/src/main.ts',
+            relativePath: 'src/main.ts',
+            isDir: false,
+            isFile: true,
+            children: undefined,
+          },
+        ],
+      },
+    ]);
+    expect(httpBridgeMocks.calls).toContainEqual({
+      method: 'POST',
+      path: '/api/fs/dir',
+      body: { dir: '/tmp/team', root: '/tmp/team' },
+    });
   });
 
   it('getRunState calls GET /api/teams/{team_id}/run-state', async () => {
