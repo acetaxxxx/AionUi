@@ -38,6 +38,7 @@ export const isOpenableFileRef = (fileRef?: ChatFileRef): boolean => {
   // Backend contract: relative_path is pe-root-relative with `/` separators, and
   // '' means the root directory.
   if (fileRef.kind === 'project') return fileRef.relative_path.trim() !== '';
+  if (fileRef.kind === 'team_upload') return false;
   return fileRef.path.trim() !== '';
 };
 

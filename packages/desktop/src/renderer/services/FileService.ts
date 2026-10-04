@@ -5,6 +5,8 @@
  */
 
 import { getBaseUrl } from '@/common/adapter/httpBridge';
+import type { ChatFileRef } from '@/common/types/chatFile';
+import { teamUploadFileRef } from '@/common/types/chatFile';
 import { trackUpload, type UploadSource } from '@/renderer/hooks/file/useUploadState';
 
 /** Sentinel error message used when an upload is cancelled by the caller. */
@@ -13,18 +15,20 @@ export const UPLOAD_ABORTED_ERROR = 'Upload aborted';
 export interface UploadFileOptions {
   /** Cancel the upload from the outside. Closing the XHR also frees the backend connection. */
   signal?: AbortSignal;
+  /** Upload into a Team-owned scope instead of the generic conversation upload area. */
+  team_id?: string;
 }
 
 /**
  * Upload a file to the backend via HTTP multipart.
  *
  * Works in both Electron (via `http://127.0.0.1:<backendPort>`) and WebUI
- * (same-origin reverse-proxied). Conversation-bound uploads go to the
- * workspace uploads directory; pre-conversation uploads go to temp storage.
+ * (same-origin reverse-proxied). Ordinary conversations use the generic
+ * filesystem route; Team conversations use the Team-scoped upload route.
  *
  * Field names match the backend contract exactly (snake_case): `file`,
- * `file_name` (optional), `conversation_id` (optional). The response is
- * `ApiResponse<String>` where `data` is the absolute file path on disk.
+ * `file_name` (optional), `conversation_id` (optional, generic route only).
+ * Generic responses contain a managed path; Team responses contain `{ upload_id }`.
  *
  * @param onProgress Optional callback receiving upload percentage (0-100).
  * @param options    Optional bag — currently supports an `AbortSignal` so callers can cancel.
@@ -38,10 +42,10 @@ export async function uploadFileViaHttp(
 ): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
-  if (file_name) {
+  if (file_name && !options?.team_id) {
     formData.append('file_name', file_name);
   }
-  if (conversation_id) {
+  if (!options?.team_id && conversation_id) {
     formData.append('conversation_id', conversation_id);
   }
 
@@ -58,7 +62,10 @@ export async function uploadFileViaHttp(
 
   return new Promise<string>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${getBaseUrl()}/api/fs/upload`);
+    const uploadPath = options?.team_id
+      ? `/api/teams/${encodeURIComponent(options.team_id)}/uploads`
+      : '/api/fs/upload';
+    xhr.open('POST', `${getBaseUrl()}${uploadPath}`);
     xhr.withCredentials = true;
     const csrfToken = getCsrfTokenFromCookie();
     if (csrfToken) {
@@ -113,11 +120,17 @@ export async function uploadFileViaHttp(
         return;
       }
       try {
-        const result = JSON.parse(xhr.responseText) as { success: boolean; data?: string };
-        if (!result.success || typeof result.data !== 'string' || !result.data) {
+        const result = JSON.parse(xhr.responseText) as {
+          success: boolean;
+          data?: string | { upload_id?: string };
+        };
+        const uploadedPath = typeof result.data === 'string' ? result.data : undefined;
+        const uploadId = typeof result.data === 'object' && result.data ? result.data.upload_id : undefined;
+        const uploadedValue = options?.team_id ? uploadId : uploadedPath;
+        if (!result.success || typeof uploadedValue !== 'string' || !uploadedValue) {
           reject(new Error('Upload failed: server returned unsuccessful response'));
         } else {
-          resolve(result.data);
+          resolve(uploadedValue);
         }
       } catch {
         reject(new Error('Upload failed: invalid server response'));
@@ -191,6 +204,8 @@ export interface FileMetadata {
   size: number;
   type: string;
   lastModified: number;
+  /** Present for opaque Team uploads; generic uploads continue to use `path`. */
+  chatRef?: ChatFileRef;
 }
 
 /**
@@ -318,7 +333,7 @@ export function isTextFile(file_name: string): boolean {
 class FileServiceClass {
   /**
    * Process files from drag/drop, paste, or the attach button, uploading each
-   * via HTTP multipart and returning the backend's managed stored path.
+   * via HTTP multipart and returning a managed path or opaque Team upload ref.
    *
    * Every file is uploaded — even Electron OS drags that expose an absolute
    * `path`. The chat send contract sends attachments as `upload` refs, and the
@@ -331,7 +346,8 @@ class FileServiceClass {
   async processDroppedFiles(
     files: FileList,
     conversation_id?: string,
-    source: UploadSource = 'sendbox'
+    source: UploadSource = 'sendbox',
+    team_id?: string
   ): Promise<FileMetadata[]> {
     const processedFiles: FileMetadata[] = [];
 
@@ -352,6 +368,7 @@ class FileServiceClass {
       try {
         file_path = await uploadFileViaHttp(file, conversation_id || '', tracker.onProgress, undefined, {
           signal: controller.signal,
+          team_id,
         });
       } catch (error) {
         // Re-throw size errors so caller can show user-facing toast
@@ -370,10 +387,11 @@ class FileServiceClass {
 
       processedFiles.push({
         name: file.name,
-        path: file_path,
+        path: team_id ? file.name : file_path,
         size: file.size,
         type: file.type,
         lastModified: file.lastModified,
+        ...(team_id ? { chatRef: teamUploadFileRef(file_path) } : {}),
       });
     }
 

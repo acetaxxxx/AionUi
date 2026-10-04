@@ -6,11 +6,12 @@
 
 import type { FileMetadata } from './FileService';
 import { getFileExtension, UPLOAD_ABORTED_ERROR, uploadFileViaHttp } from './FileService';
+import { teamUploadFileRef } from '@/common/types/chatFile';
 import { trackUpload, type UploadSource } from '@/renderer/hooks/file/useUploadState';
 
 /**
- * Upload pasted bytes to the backend via HTTP multipart and return the absolute
- * file path stored on disk. Works the same in Electron and WebUI — the backend
+ * Upload pasted bytes to the backend via HTTP multipart and return either a
+ * managed filesystem path or opaque Team upload ref. Works in Electron and WebUI — the backend
  * is always reached over HTTP (the Electron preload injects `window.__backendPort`
  * so requests land on `http://127.0.0.1:<port>`; WebUI hits same-origin).
  *
@@ -22,8 +23,9 @@ async function createTempFile(
   data: Uint8Array,
   contentType: string,
   conversation_id?: string,
-  source: UploadSource = 'sendbox'
-): Promise<string | null> {
+  source: UploadSource = 'sendbox',
+  team_id?: string
+): Promise<Pick<FileMetadata, 'path' | 'chatRef'> | null> {
   const arrayBuf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
   const blob = new Blob([arrayBuf], { type: contentType });
   const file = new File([blob], file_name, { type: contentType });
@@ -35,9 +37,11 @@ async function createTempFile(
     onAbort: () => controller.abort(),
   });
   try {
-    return await uploadFileViaHttp(file, conversation_id || '', tracker.onProgress, undefined, {
+    const uploadedValue = await uploadFileViaHttp(file, conversation_id || '', tracker.onProgress, undefined, {
       signal: controller.signal,
+      team_id,
     });
+    return team_id ? { path: file_name, chatRef: teamUploadFileRef(uploadedValue) } : { path: uploadedValue };
   } catch (error) {
     if (error instanceof Error && error.message === UPLOAD_ABORTED_ERROR) {
       return null;
@@ -163,7 +167,8 @@ class PasteServiceClass {
     onTextPaste?: (text: string) => void,
     conversation_id?: string,
     source: UploadSource = 'sendbox',
-    imageCounter?: ImageCounter
+    imageCounter?: ImageCounter,
+    team_id?: string
   ): Promise<boolean> {
     // 立即事件冒泡,避免全局监听器重复处理
     event.stopPropagation();
@@ -221,13 +226,20 @@ class PasteServiceClass {
               }
               usedFileNames.add(file_name);
 
-              // 上传到后端并拿回绝对路径（Electron / WebUI 都走 HTTP multipart）
-              const tempPath = await createTempFile(file_name, uint8Array, file.type, conversation_id, source);
+              // Upload pasted bytes and keep the Team reference opaque when scoped.
+              const uploadedFile = await createTempFile(
+                file_name,
+                uint8Array,
+                file.type,
+                conversation_id,
+                source,
+                team_id
+              );
 
-              if (tempPath) {
+              if (uploadedFile) {
                 fileList.push({
                   name: file_name,
-                  path: tempPath,
+                  ...uploadedFile,
                   size: file.size,
                   type: file.type,
                   lastModified: Date.now(),
@@ -251,8 +263,8 @@ class PasteServiceClass {
           if (allowAll || supportedExts.includes(fileExt)) {
             // Upload rather than pass the raw device path: the chat send contract
             // sends attachments as `upload` refs and the backend rejects any path
-            // outside its managed upload directory. Upload the blob to get a
-            // managed path (createTempFile → /api/fs/upload, temp_dir/aionui/...).
+            // outside its managed upload directory. Upload the bytes instead of
+            // sending a device path; Team conversations use their scoped upload route.
             try {
               const arrayBuffer = await file.arrayBuffer();
               const uint8Array = new Uint8Array(arrayBuffer);
@@ -269,17 +281,18 @@ class PasteServiceClass {
               }
               usedFileNames.add(file_name);
 
-              const tempPath = await createTempFile(
+              const uploadedFile = await createTempFile(
                 file_name,
                 uint8Array,
                 file.type || 'application/octet-stream',
                 conversation_id,
-                source
+                source,
+                team_id
               );
-              if (tempPath) {
+              if (uploadedFile) {
                 fileList.push({
                   name: file_name,
-                  path: tempPath,
+                  ...uploadedFile,
                   size: file.size,
                   type: file.type,
                   lastModified: Date.now(),
@@ -319,17 +332,18 @@ class PasteServiceClass {
               }
               usedFileNames.add(file_name);
 
-              const tempPath = await createTempFile(
+              const uploadedFile = await createTempFile(
                 file_name,
                 uint8Array,
                 file.type || 'application/octet-stream',
                 conversation_id,
-                source
+                source,
+                team_id
               );
-              if (tempPath) {
+              if (uploadedFile) {
                 fileList.push({
                   name: file_name,
-                  path: tempPath,
+                  ...uploadedFile,
                   size: file.size,
                   type: file.type,
                   lastModified: Date.now(),

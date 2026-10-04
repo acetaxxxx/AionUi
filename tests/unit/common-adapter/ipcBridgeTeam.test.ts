@@ -87,6 +87,19 @@ describe('ipcBridge team adapter', () => {
     httpBridgeMocks.responses.clear();
   });
 
+  it('sends Team uploads as opaque refs without rewriting them to paths', async () => {
+    const { team } = await import('@/common/adapter/ipcBridge');
+    const files = [{ kind: 'team_upload', upload_id: 'upload-123' }] as const;
+
+    await team.sendMessage.invoke({ team_id: 'team-42', input: 'What is in this picture?', files: [...files] });
+
+    expect(httpBridgeMocks.calls).toContainEqual({
+      method: 'POST',
+      path: '/api/teams/team-42/messages',
+      body: { content: 'What is in this picture?', files: [...files] },
+    });
+  });
+
   it('normalizes snake_case /api/fs/dir responses before returning them to renderer consumers', async () => {
     httpBridgeMocks.responses.set('/api/fs/dir', [
       {

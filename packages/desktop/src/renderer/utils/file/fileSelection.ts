@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { localFileRef } from '@/common/types/chatFile';
+import { chatFileRefKey, localFileRef } from '@/common/types/chatFile';
 import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
 
 export type FileSelectionItem = string | FileOrFolderItem;
@@ -45,15 +45,16 @@ export const stripWindowsVerbatimPrefix = (path: string): string => {
 /**
  * Dedup key for a selection item. Project Explorer items are keyed by their pe
  * identity (`chatRef`) so the same `relative_path` under different pes stays
- * distinct and never collides with an upload sharing that path string; uploads
- * and `@` mentions key by their absolute path.
+ * distinct and never collides with an upload sharing that path string. Team
+ * uploads also use their opaque ref identity; other uploads and `@` mentions
+ * key by their path.
  */
 const getItemPath = (item: FileSelectionItem): string | undefined => {
   if (typeof item === 'string') {
     return item;
   }
-  if (item.chatRef?.kind === 'project') {
-    return `project\0${item.chatRef.pe_id}\0${item.chatRef.relative_path}`;
+  if (item.chatRef && (item.chatRef.kind === 'project' || item.chatRef.kind === 'team_upload')) {
+    return chatFileRefKey(item.chatRef);
   }
   return item.path;
 };

@@ -1,4 +1,4 @@
-import { type ChatFileRef, chatFileRefKey, uploadFileRef } from '@/common/types/chatFile';
+import { type ChatFileRef, chatFileRefKey, chatFileRefPath, uploadFileRef } from '@/common/types/chatFile';
 import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
 
 /**
@@ -38,9 +38,9 @@ export const collectChatFileRefs = (uploadFile: string[], atPath: Array<string |
 /**
  * Split refs back into the two send-box selection lanes — the inverse of
  * {@link collectChatFileRefs}, used when a queued command is edited back into
- * the box. `upload` refs return as paths (the `uploadFile` lane); `project` and
- * `local` refs rebuild a selection item carrying their `chatRef` (the `atPath`
- * lane) so a re-send collects the same ref again.
+ * the box. `upload` refs return as paths (the `uploadFile` lane); project,
+ * local, and Team upload refs rebuild selection items carrying their `chatRef`
+ * (the `atPath` lane) so a re-send collects the same ref again.
  */
 export const splitChatFileRefs = (refs: ChatFileRef[]): { uploadFiles: string[]; atPath: FileOrFolderItem[] } => {
   const uploadFiles: string[] = [];
@@ -49,7 +49,7 @@ export const splitChatFileRefs = (refs: ChatFileRef[]): { uploadFiles: string[];
     if (ref.kind === 'upload') {
       uploadFiles.push(ref.path);
     } else {
-      const path = ref.kind === 'project' ? ref.relative_path : ref.path;
+      const path = chatFileRefPath(ref);
       atPath.push({
         path,
         name: path.split(/[\\/]/).pop() || path,

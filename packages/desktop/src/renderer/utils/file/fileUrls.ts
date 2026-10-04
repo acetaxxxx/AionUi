@@ -13,6 +13,8 @@ export const buildFileStreamUrl = (ref: ChatFileRef): string => {
   if (ref.kind === 'project') {
     params.set('pe_id', ref.pe_id);
     params.set('relative_path', ref.relative_path);
+  } else if (ref.kind === 'team_upload') {
+    throw new Error('Team upload previews require a Team-scoped content endpoint');
   } else {
     params.set('path', ref.path);
   }

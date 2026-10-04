@@ -63,11 +63,15 @@ export const useSendBoxFiles = ({ atPath, uploadFile, setAtPath, setUploadFile }
   // 处理拖拽或粘贴的文件
   const handleFilesAdded = useCallback(
     (files: FileMetadata[]) => {
-      const file_paths = files.map((file) => file.path);
+      const file_paths = files.filter((file) => !file.chatRef).map((file) => file.path);
+      const teamFiles = files
+        .filter((file) => file.chatRef)
+        .map((file) => ({ path: file.name, name: file.name, isFile: true, chatRef: file.chatRef }));
       // 使用函数式更新，基于最新状态而不是闭包中的状态
-      setUploadFile((prevUploadFile) => [...prevUploadFile, ...file_paths]);
+      if (file_paths.length > 0) setUploadFile((prevUploadFile) => [...prevUploadFile, ...file_paths]);
+      if (teamFiles.length > 0) setAtPath([...atPath, ...teamFiles]);
     },
-    [setUploadFile]
+    [atPath, setAtPath, setUploadFile]
   );
 
   // 处理消息中的文件引用（@文件名 格式）
