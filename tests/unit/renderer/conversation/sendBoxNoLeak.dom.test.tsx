@@ -60,7 +60,17 @@ vi.mock('@/renderer/hooks/chat/useSendBoxDraft', () => ({
 }));
 vi.mock('@/renderer/hooks/chat/useSendBoxFiles', () => ({
   useSendBoxFiles: () => ({ handleFilesAdded: vi.fn(), clearFiles: vi.fn() }),
-  createSetAtPath: () => vi.fn(),
+  createSetAtPath: (
+    mutate: (updater: (previous: Record<string, unknown> | undefined) => Record<string, unknown>) => void,
+    _data: unknown
+  ) =>
+    (atPath: unknown[] | ((previous: unknown[]) => unknown[])) => {
+      mutate((previous) => {
+        const previousAtPath = Array.isArray(previous?.atPath) ? previous.atPath : [];
+        const nextAtPath = typeof atPath === 'function' ? atPath(previousAtPath) : atPath;
+        return { ...previous, atPath: nextAtPath };
+      });
+    },
   createSetUploadFile: () => vi.fn(),
 }));
 vi.mock('@/renderer/hooks/chat/useAutoTitle', () => ({ useAutoTitle: () => ({ checkAndUpdateTitle: vi.fn() }) }));
