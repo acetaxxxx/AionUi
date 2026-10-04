@@ -95,7 +95,12 @@ export const useDragUpload = ({
             length: validFiles.length,
             item: (index: number) => validFiles[index] || null,
           }) as unknown as FileList;
-          const processedFiles = await FileService.processDroppedFiles(validFileList, conversation_id, 'sendbox', team_id);
+          const processedFiles = await FileService.processDroppedFiles(
+            validFileList,
+            conversation_id,
+            'sendbox',
+            team_id
+          );
 
           if (processedFiles.length > 0) {
             onFilesAdded(processedFiles);
