@@ -575,6 +575,8 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   onRetryWarmup,
 }) => {
   const { t } = useTranslation();
+  const layout = useLayoutContext();
+  const isMobile = layout?.isMobile ?? false;
   useActiveLease({ type: 'team', id: team.id });
   const { assistants, activeSlotId, switchTab, colorOf, colorOfConversation } = useTeamTabs();
   const [, messageContext] = Message.useMessage({ maxCount: 1 });
@@ -864,9 +866,22 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
           workspacePath={effectiveWorkspace}
           isTemporaryWorkspace={isTeamWorkspaceTemporary}
           workspacePreferenceKey={team.id}
+          mobileHeaderExtraInline
           onRenameTitle={onRenameTeam}
           headerExtra={
-            <div className='flex items-center gap-8px'>
+            <div className='flex w-max items-center gap-8px' data-testid='team-header-actions'>
+              {isMobile && layout?.setSiderCollapsed && (
+                <Button
+                  type='secondary'
+                  size='small'
+                  aria-label={t('common.navigation', { defaultValue: 'Menu' })}
+                  onClick={() => layout.setSiderCollapsed(false)}
+                  className='!h-30px !shrink-0 !px-10px'
+                  data-testid='team-mobile-sidebar-toggle'
+                >
+                  {t('common.navigation', { defaultValue: 'Menu' })}
+                </Button>
+              )}
               {isSharedTeam && (
                 <>
                   <Tag
@@ -923,7 +938,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
             {viewMode === 'board' ? (
               // 看板视图：只读展现全队 mailbox 与 task-board。
               <div className='flex-1 h-full min-w-0'>
-                <TeamActivityView team={team} />
+                <TeamActivityView team={team} isMobile={isMobile} />
               </div>
             ) : isSingleView ? (
               // 单聊视图：全屏显示当前选中成员（activeSlotId），找不到时回退到 Leader。
@@ -974,13 +989,24 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                 )}
                 <div
                   ref={scrollContainerRef}
-                  className='flex h-full w-full overflow-x-auto overflow-y-hidden [scrollbar-width:none]'
-                  style={{ scrollSnapType: 'x proximity' }}
+                  className={`flex h-full w-full [scrollbar-width:none] ${
+                    isMobile ? 'min-w-0 flex-col overflow-x-hidden overflow-y-auto' : 'overflow-x-auto overflow-y-hidden'
+                  }`}
+                  data-testid='team-assistant-column-list'
+                  data-layout={isMobile ? 'mobile-single-column' : 'parallel-columns'}
+                  style={{ scrollSnapType: isMobile ? 'y proximity' : 'x proximity' }}
                 >
                   {assistants.map((assistant, index) => {
                     const isSingle = assistants.length <= 2;
                     const isLeaderSlot = assistant.slot_id === leadAssistant?.slot_id;
                     const isLastColumn = index === assistants.length - 1;
+                    const columnLayoutClass = isMobile ? 'w-full shrink-0' : 'h-full';
+                    const columnDividerClass = isMobile
+                      ? 'border-b border-solid border-[color:var(--border-base)]'
+                      : 'border-e border-solid border-[color:var(--border-base)]';
+                    let minColumnWidth: string | number = '400px';
+                    if (isMobile) minColumnWidth = 0;
+                    else if (isSingle) minColumnWidth = '240px';
                     return (
                       <div
                         key={assistant.slot_id}
@@ -990,16 +1016,15 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                         data-slot-id={assistant.slot_id}
                         data-role={isLeaderSlot ? 'leader' : 'member'}
                         // 列间灰色隔离线：除最后一列外，右侧加一条分隔线，避免多列浅底粘连看不清边界。
-                        className={`relative h-full ${isLastColumn ? '' : 'border-e border-solid border-[color:var(--border-base)]'}`}
+                        className={`relative ${columnLayoutClass} ${!isLastColumn ? columnDividerClass : ''}`}
                         style={{
-                          // Always flex-grow to fill available space; each slot starts at 400px
-                          // basis so the layout is stable, but spare room is distributed evenly
-                          // instead of leaving empty gaps to the right. When the team is wider
-                          // than the viewport we preserve the 400px floor (prevents shrinking
-                          // into unreadable cards) so horizontal scroll kicks in naturally.
-                          flex: '1 1 400px',
-                          minWidth: isSingle ? '240px' : '400px',
+                          // Mobile keeps one viewport-height pane per row; desktop preserves the
+                          // existing parallel 400px-minimum columns and horizontal scrolling.
+                          flex: isMobile ? '0 0 min(72vh, 640px)' : '1 1 400px',
+                          minWidth: minColumnWidth,
+                          width: isMobile ? '100%' : undefined,
                           scrollSnapAlign: 'start',
+                          boxSizing: 'border-box',
                         }}
                       >
                         <AssistantChatSlot

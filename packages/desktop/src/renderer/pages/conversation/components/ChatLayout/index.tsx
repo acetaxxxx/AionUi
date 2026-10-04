@@ -63,6 +63,8 @@ const ChatLayout: React.FC<{
   onRenameTitle?: (new_name: string) => Promise<boolean>;
   /** Optional override for the leading icon shown before the title (e.g. team Peoples icon) */
   headerLeading?: React.ReactNode;
+  /** Render mobile actions in their own responsive row instead of the fixed titlebar slot. */
+  mobileHeaderExtraInline?: boolean;
 }> = (props) => {
   const { conversation_id, workspacePath, isTemporaryWorkspace } = props;
   const { backend, presetAssistant, agent_name, workspaceEnabled = true, workspacePreferenceKey } = props;
@@ -235,8 +237,19 @@ const ChatLayout: React.FC<{
   const headerBlock = (
     <>
       {layout?.isMobile
-        ? mobileActionsSlot && props.headerExtra && createPortal(props.headerExtra, mobileActionsSlot)
+        ? !props.mobileHeaderExtraInline &&
+          mobileActionsSlot &&
+          props.headerExtra &&
+          createPortal(props.headerExtra, mobileActionsSlot)
         : desktopHeader}
+      {layout?.isMobile && props.mobileHeaderExtraInline && props.headerExtra && (
+        <div
+          className='w-full min-w-0 overflow-x-auto border-b border-solid border-[color:var(--border-base)]'
+          data-testid='mobile-header-extra-inline'
+        >
+          <div className='flex w-max min-w-full items-center gap-8px px-8px py-6px'>{props.headerExtra}</div>
+        </div>
+      )}
       {props.tabsSlot}
     </>
   );
