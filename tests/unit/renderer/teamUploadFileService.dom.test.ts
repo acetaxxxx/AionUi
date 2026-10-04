@@ -25,6 +25,7 @@ type XhrListener = () => void;
 class FakeXMLHttpRequest {
   static instances: FakeXMLHttpRequest[] = [];
 
+  upload = { addEventListener: vi.fn() };
   method = '';
   url = '';
   status = 0;
@@ -34,6 +35,10 @@ class FakeXMLHttpRequest {
   sentBody: unknown;
   headers = new Map<string, string>();
   private listeners: Record<string, XhrListener> = {};
+
+  constructor() {
+    FakeXMLHttpRequest.instances.push(this);
+  }
 
   open(method: string, url: string): void {
     this.method = method;
@@ -50,7 +55,6 @@ class FakeXMLHttpRequest {
 
   send(body: unknown): void {
     this.sentBody = body;
-    FakeXMLHttpRequest.instances.push(this);
   }
 
   respond(status: number, responseText: string): void {
