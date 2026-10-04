@@ -244,10 +244,10 @@ const ChatLayout: React.FC<{
         : desktopHeader}
       {layout?.isMobile && props.mobileHeaderExtraInline && props.headerExtra && (
         <div
-          className='w-full min-w-0 overflow-x-auto border-b border-solid border-[color:var(--border-base)]'
+          className='w-full min-w-0 border-b border-solid border-[color:var(--border-base)]'
           data-testid='mobile-header-extra-inline'
         >
-          <div className='flex w-max min-w-full items-center gap-8px px-8px py-6px'>{props.headerExtra}</div>
+          <div className='flex w-full min-w-0 flex-wrap items-center gap-8px px-8px py-6px'>{props.headerExtra}</div>
         </div>
       )}
       {props.tabsSlot}

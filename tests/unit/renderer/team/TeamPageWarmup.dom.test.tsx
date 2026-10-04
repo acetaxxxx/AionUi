@@ -513,6 +513,7 @@ describe('TeamPage teammate warmup wiring', () => {
     expect(screen.getByTestId('runtime-restart-leader-conv')).toBeInTheDocument();
     expect(screen.queryByTestId('acp-model-selector-member-conv')).not.toBeInTheDocument();
     expect(screen.getByTestId('mobile-header-extra-inline')).toBeInTheDocument();
+    expect(screen.getByTestId('team-header-actions')).toHaveClass('w-full', 'flex-wrap');
     expect(screen.getByTestId('team-tab-add-member')).toBeInTheDocument();
     expect(screen.getByTestId('team-view-toggle-board')).toBeInTheDocument();
     expect(screen.getByTestId('team-assistant-column-list')).toHaveAttribute('data-layout', 'mobile-single-column');

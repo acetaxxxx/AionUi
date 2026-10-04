@@ -869,7 +869,14 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
           mobileHeaderExtraInline
           onRenameTitle={onRenameTeam}
           headerExtra={
-            <div className='flex w-max items-center gap-8px' data-testid='team-header-actions'>
+            <div
+              className={
+                isMobile
+                  ? 'flex w-full min-w-0 flex-wrap items-center gap-8px'
+                  : 'flex items-center gap-8px'
+              }
+              data-testid='team-header-actions'
+            >
               {isMobile && layout?.setSiderCollapsed && (
                 <Button
                   type='secondary'
