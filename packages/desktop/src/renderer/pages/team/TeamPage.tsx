@@ -577,7 +577,6 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   const { t } = useTranslation();
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
-  const mobileHeaderActionsClassName = isMobile ? 'w-full min-w-0 flex-wrap' : '';
   useActiveLease({ type: 'team', id: team.id });
   const { assistants, activeSlotId, switchTab, colorOf, colorOfConversation } = useTeamTabs();
   const [, messageContext] = Message.useMessage({ maxCount: 1 });
@@ -871,7 +870,11 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
           onRenameTitle={onRenameTeam}
           headerExtra={
             <div
-              className={`flex items-center gap-8px ${mobileHeaderActionsClassName}`}
+              className={
+                isMobile
+                  ? 'flex w-full min-w-0 flex-nowrap items-center justify-between gap-4px'
+                  : 'flex items-center gap-8px'
+              }
               data-testid='team-header-actions'
             >
               {isMobile && layout?.setSiderCollapsed && (
@@ -891,7 +894,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                   <Tag
                     color={team.role === 'owner' ? 'arcoblue' : 'green'}
                     size='small'
-                    className='!text-11px'
+                    className={`!text-11px ${isMobile ? 'hidden' : ''}`}
                     data-testid='team-role-badge'
                   >
                     {team.role === 'owner'
@@ -903,7 +906,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                     size='small'
                     icon={<Peoples theme='outline' size='14' fill='currentColor' />}
                     onClick={() => setCollaboratorsModalVisible(true)}
-                    className='!h-28px !rounded-6px !px-8px !text-12px'
+                    className={`!h-28px !rounded-6px !px-8px !text-12px ${isMobile ? '!shrink-0' : ''}`}
                     data-testid='team-collaborators-button'
                   >
                     {t('team.collaborators.button', { defaultValue: 'People' })}
@@ -914,15 +917,17 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
                       size='small'
                       icon={<SettingOne theme='outline' size='14' fill='currentColor' />}
                       onClick={() => setMcpModalVisible(true)}
-                      className='!h-28px !rounded-6px !px-8px !text-12px'
+                      aria-label={t('team.mcp.button', { defaultValue: 'MCP' })}
+                      title={t('team.mcp.button', { defaultValue: 'MCP' })}
+                      className={`!h-28px !rounded-6px !px-8px !text-12px ${isMobile ? '!w-30px !shrink-0 !px-0' : ''}`}
                       data-testid='team-mcp-allowlist-button'
                     >
-                      {t('team.mcp.button', { defaultValue: 'MCP' })}
+                      {!isMobile && t('team.mcp.button', { defaultValue: 'MCP' })}
                     </Button>
                   )}
                 </>
               )}
-              {assistants.length > 1 && <TeamViewToggle value={viewMode} onChange={setViewMode} />}
+              {assistants.length > 1 && <TeamViewToggle value={viewMode} onChange={setViewMode} compact={isMobile} />}
             </div>
           }
           headerLeading={
