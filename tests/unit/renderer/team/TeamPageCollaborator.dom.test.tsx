@@ -102,7 +102,12 @@ vi.mock('@/renderer/components/base/AionModal', () => ({
 vi.mock('@/common', () => ({
   ipcBridge: {
     fs: {
-      getFilesByDir: { invoke: (...args: unknown[]) => getFilesByDirMock(...args) },
+      getFilesByDir: {
+        invoke: async (...args: unknown[]) => {
+          const { fromBackendDirOrFileList } = await import('@/common/adapter/workspaceMapper');
+          return fromBackendDirOrFileList(await getFilesByDirMock(...args));
+        },
+      },
       readTeamWorkspaceContent: { invoke: (...args: unknown[]) => readTeamWorkspaceContentMock(...args) },
       readContent: { invoke: (...args: unknown[]) => readContentMock(...args) },
     },
@@ -391,13 +396,13 @@ describe('TeamPage collaborator view', () => {
     getFilesByDirMock.mockImplementation(async ({ dir }: { dir: string; root: string }) => {
       if (dir === '/tmp/team') {
         return [
-          { name: 'src', fullPath: '/tmp/team/src', relativePath: 'src', isDir: true, isFile: false },
+          { name: 'src', full_path: '/tmp/team/src', relative_path: 'src', is_dir: true, is_file: false },
           {
             name: 'README.md',
-            fullPath: '/tmp/team/README.md',
-            relativePath: 'README.md',
-            isDir: false,
-            isFile: true,
+            full_path: '/tmp/team/README.md',
+            relative_path: 'README.md',
+            is_dir: false,
+            is_file: true,
           },
         ];
       }
@@ -405,10 +410,10 @@ describe('TeamPage collaborator view', () => {
         return [
           {
             name: 'main.ts',
-            fullPath: '/tmp/team/src/main.ts',
-            relativePath: 'src/main.ts',
-            isDir: false,
-            isFile: true,
+            full_path: '/tmp/team/src/main.ts',
+            relative_path: 'src/main.ts',
+            is_dir: false,
+            is_file: true,
           },
         ];
       }
