@@ -21,7 +21,11 @@ import { classifyConfigSetError, useAcpConfigOptions } from '@/renderer/hooks/ag
 import { useAcpModelInfo } from '@/renderer/hooks/agent/useAcpModelInfo';
 import { useAutoTitle } from '@/renderer/hooks/chat/useAutoTitle';
 import { getSendBoxDraftHook, type FileOrFolderItem } from '@/renderer/hooks/chat/useSendBoxDraft';
-import { createSetUploadFile, useSendBoxFiles } from '@/renderer/hooks/chat/useSendBoxFiles';
+import {
+  createSetAtPath,
+  createSetUploadFile,
+  useSendBoxFiles,
+} from '@/renderer/hooks/chat/useSendBoxFiles';
 import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { useOpenFileSelector } from '@/renderer/hooks/file/useOpenFileSelector';
@@ -79,12 +83,7 @@ const useSendBoxDraft = (conversation_id: string) => {
   const uploadFile = data?.uploadFile ?? EMPTY_UPLOAD_FILES;
   const content = data?.content ?? '';
 
-  const setAtPath = useCallback(
-    (nextAtPath: Array<string | FileOrFolderItem>) => {
-      mutate((prev) => ({ ...prev, atPath: nextAtPath }));
-    },
-    [data, mutate]
-  );
+  const setAtPath = createSetAtPath(mutate, data);
 
   const setUploadFile = createSetUploadFile(mutate, data);
 

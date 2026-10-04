@@ -36,7 +36,26 @@ const formatFileRef = (file_name: string): string => {
 };
 
 type FileSelection = Array<string | FileOrFolderItem>;
-type FileSelectionUpdate = FileSelection | ((previous: FileSelection) => FileSelection);
+export type FileSelectionUpdate = FileSelection | ((previous: FileSelection) => FileSelection);
+
+/**
+ * Create a draft setter that resolves functional updates against the latest SWR draft.
+ */
+export const createSetAtPath = (
+  mutate: (fn: (prev: Record<string, unknown> | undefined) => Record<string, unknown>) => void,
+  data: unknown
+) => {
+  return useCallback(
+    (atPath: FileSelectionUpdate) => {
+      mutate((prev) => {
+        const previousAtPath = Array.isArray(prev?.atPath) ? (prev.atPath as FileSelection) : [];
+        const newAtPath = typeof atPath === 'function' ? atPath(previousAtPath) : atPath;
+        return { ...prev, atPath: newAtPath };
+      });
+    },
+    [data, mutate]
+  );
+};
 
 interface UseSendBoxFilesProps {
   atPath: FileSelection;
