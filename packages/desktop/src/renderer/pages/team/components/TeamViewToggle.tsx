@@ -12,13 +12,14 @@ import type { TeamViewMode } from '../hooks/useTeamViewMode';
 type Props = {
   value: TeamViewMode;
   onChange: (mode: TeamViewMode) => void;
+  compact?: boolean;
 };
 
 /**
  * 并行 / 单聊视图切换 —— 放在标题行右侧的分段控件。
  * 并行：所有成员并排；单聊：全屏当前选中成员。
  */
-const TeamViewToggle: React.FC<Props> = ({ value, onChange }) => {
+const TeamViewToggle: React.FC<Props> = ({ value, onChange, compact = false }) => {
   const { t } = useTranslation();
   const options: Array<{ mode: TeamViewMode; icon: React.ReactNode; label: string }> = [
     {
@@ -40,9 +41,11 @@ const TeamViewToggle: React.FC<Props> = ({ value, onChange }) => {
 
   return (
     <div className='flex items-center gap-6px' data-testid='team-view-toggle'>
-      <span className='text-12px text-[color:var(--color-text-3)] whitespace-nowrap select-none'>
-        {t('team.view.label', { defaultValue: 'View' })}
-      </span>
+      {!compact && (
+        <span className='text-12px text-[color:var(--color-text-3)] whitespace-nowrap select-none'>
+          {t('team.view.label', { defaultValue: 'View' })}
+        </span>
+      )}
       <div className='flex items-center gap-2px p-2px rounded-8px bg-2'>
         {options.map((opt) => {
           const selected = value === opt.mode;

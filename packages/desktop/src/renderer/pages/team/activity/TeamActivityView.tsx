@@ -28,13 +28,14 @@ import { useTeamActivityControls } from '../hooks/useTeamActivityControls';
 
 type Props = {
   team: TTeam;
+  isMobile?: boolean;
 };
 
 /**
  * Read-only "message & task" board view for a team. Composes the lazy activity
  * feed, the control bar, and the board layout (one column per member lane).
  */
-const TeamActivityView: React.FC<Props> = ({ team }) => {
+const TeamActivityView: React.FC<Props> = ({ team, isMobile = false }) => {
   const { t } = useTranslation();
   const { assistants, colorOf } = useTeamTabs();
   const validLaneIds = useMemo(() => assistants.map((a) => a.slot_id), [assistants]);
@@ -155,6 +156,7 @@ const TeamActivityView: React.FC<Props> = ({ team }) => {
               items={filteredItems}
               lanes={lanes}
               identity={identity}
+              isMobile={isMobile}
               hasMore={hasMore}
               isLoadingMore={isLoadingMore}
               onLoadMore={loadMore}

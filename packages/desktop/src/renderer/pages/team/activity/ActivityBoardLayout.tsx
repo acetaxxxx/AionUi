@@ -20,6 +20,7 @@ type Props = {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  isMobile?: boolean;
 };
 
 /** Bottom-of-column sentinel: fires `onLoadMore` when scrolled into view. */
@@ -51,13 +52,15 @@ const BoardColumn: React.FC<{
   isLoadingMore: boolean;
   onLoadMore?: () => void;
   emptyLabel: string;
-}> = ({ lane, laneItems, identity, hasMore, isLoadingMore, onLoadMore, emptyLabel }) => {
+  isMobile: boolean;
+}> = ({ lane, laneItems, identity, hasMore, isLoadingMore, onLoadMore, emptyLabel, isMobile }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const showSentinel = hasMore && laneItems.length > 0 && !!onLoadMore;
 
   return (
     <div
-      className='flex flex-col shrink-0 w-288px h-full rounded-8px bg-2 border border-solid border-[color:var(--border-base)]'
+      className={`flex flex-col shrink-0 ${isMobile ? 'w-full' : 'w-288px h-full'} rounded-8px bg-2 border border-solid border-[color:var(--border-base)]`}
+      style={isMobile ? { height: 'min(72vh, 640px)', minHeight: 320 } : undefined}
       data-testid='activity-board-column'
       data-lane-id={lane.slotId}
     >
@@ -110,11 +113,10 @@ const BoardColumn: React.FC<{
 };
 
 /**
- * Board layout: one column per lane (members + fallback). Items are stacked in
- * the incoming sort order (already applied upstream). Each non-empty column
- * carries a bottom sentinel that drives the shared `onLoadMore` (observer root
- * is that column's own vertical scroll container), so scrolling any populated
- * column to its end pages the whole feed.
+ * Board layout: one lane per member (plus fallback), horizontal on desktop and
+ * stacked on mobile. Items are stacked in the incoming sort order (already
+ * applied upstream). Each non-empty column carries a bottom sentinel that
+ * drives the shared `onLoadMore` from that column's own vertical scroller.
  */
 const ActivityBoardLayout: React.FC<Props> = ({
   items,
@@ -123,6 +125,7 @@ const ActivityBoardLayout: React.FC<Props> = ({
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
+  isMobile = false,
 }) => {
   const { t } = useTranslation();
 
@@ -141,7 +144,11 @@ const ActivityBoardLayout: React.FC<Props> = ({
   const emptyLabel = t('team.activity.empty', { defaultValue: 'No activity yet' });
 
   return (
-    <div className='flex h-full gap-8px overflow-auto p-8px' data-testid='activity-board'>
+    <div
+      className={`flex h-full gap-8px overflow-auto p-8px ${isMobile ? 'flex-col' : ''}`}
+      data-testid='activity-board'
+      data-layout={isMobile ? 'mobile-single-column' : 'lanes'}
+    >
       {lanes.map((lane) => (
         <BoardColumn
           key={lane.slotId}
@@ -152,6 +159,7 @@ const ActivityBoardLayout: React.FC<Props> = ({
           isLoadingMore={isLoadingMore}
           onLoadMore={onLoadMore}
           emptyLabel={emptyLabel}
+          isMobile={isMobile}
         />
       ))}
     </div>

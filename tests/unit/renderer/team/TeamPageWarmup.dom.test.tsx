@@ -43,7 +43,7 @@ const {
     messageWarningMock: vi.fn(),
     messageErrorMock: vi.fn(),
     modalConfirmMock: vi.fn(),
-    layoutState: { isMobile: false },
+    layoutState: { isMobile: false, setSiderCollapsed: vi.fn() },
   };
 });
 
@@ -142,8 +142,19 @@ vi.mock('@/renderer/hooks/agent/usePresetAssistantInfo', () => ({
 
 vi.mock('@/renderer/pages/conversation/components/ChatLayout', () => ({
   __esModule: true,
-  default: ({ children, tabsSlot }: { children: React.ReactNode; tabsSlot?: React.ReactNode }) => (
+  default: ({
+    children,
+    tabsSlot,
+    headerExtra,
+    mobileHeaderExtraInline,
+  }: {
+    children: React.ReactNode;
+    tabsSlot?: React.ReactNode;
+    headerExtra?: React.ReactNode;
+    mobileHeaderExtraInline?: boolean;
+  }) => (
     <div>
+      {mobileHeaderExtraInline && <div data-testid='mobile-header-extra-inline'>{headerExtra}</div>}
       <div data-testid='team-tabs-slot'>{tabsSlot}</div>
       <div data-testid='team-chat-layout'>{children}</div>
     </div>
@@ -228,6 +239,7 @@ describe('TeamPage teammate warmup wiring', () => {
     messageErrorMock.mockReset();
     modalConfirmMock.mockReset();
     layoutState.isMobile = false;
+    layoutState.setSiderCollapsed.mockClear();
     for (const key of Object.keys(teamEventHandlers)) delete teamEventHandlers[key];
     getConversationOrNullMock.mockImplementation(async (a: string, b?: string) => {
       const id = b ?? a;
@@ -500,6 +512,13 @@ describe('TeamPage teammate warmup wiring', () => {
     expect(await screen.findByRole('button', { name: 'team.agentActions.label' })).toBeInTheDocument();
     expect(screen.getByTestId('runtime-restart-leader-conv')).toBeInTheDocument();
     expect(screen.queryByTestId('acp-model-selector-member-conv')).not.toBeInTheDocument();
+    expect(screen.getByTestId('mobile-header-extra-inline')).toBeInTheDocument();
+    expect(screen.getByTestId('team-header-actions')).toHaveClass('w-full', 'flex-nowrap');
+    expect(screen.getByTestId('team-tab-add-member')).toBeInTheDocument();
+    expect(screen.getByTestId('team-view-toggle-board')).toBeInTheDocument();
+    expect(screen.getByTestId('team-assistant-column-list')).toHaveAttribute('data-layout', 'mobile-single-column');
+    await userEvent.setup().click(screen.getByTestId('team-mobile-sidebar-toggle'));
+    expect(layoutState.setSiderCollapsed).toHaveBeenCalledWith(false);
   });
 
   it('mounts collaborator Lead composer via team conversation metadata and renders worker inaccessible pane', async () => {

@@ -91,11 +91,25 @@ afterEach(() => cleanup());
 describe('ActivityBoardLayout', () => {
   it('renders one column per lane with its items', () => {
     render(<ActivityBoardLayout items={items} lanes={lanes} identity={identity} />);
+    expect(screen.getByTestId('activity-board')).toHaveAttribute('data-layout', 'lanes');
     const columns = screen.getAllByTestId('activity-board-column');
     expect(columns).toHaveLength(2);
     // Both items belong to the a1 lane.
     expect(screen.getByTestId('activity-message-card')).toBeInTheDocument();
     expect(screen.getByTestId('activity-task-card')).toBeInTheDocument();
+  });
+
+  it('stacks full-width activity lanes on mobile instead of clipping a horizontal board', () => {
+    render(<ActivityBoardLayout items={items} lanes={lanes} identity={identity} isMobile />);
+    const board = screen.getByTestId('activity-board');
+    expect(board).toHaveAttribute('data-layout', 'mobile-single-column');
+    expect(board).toHaveClass('flex-col');
+    const columns = screen.getAllByTestId('activity-board-column');
+    expect(columns).toHaveLength(2);
+    for (const column of columns) {
+      expect(column).toHaveClass('w-full');
+      expect(column).toHaveStyle({ minHeight: '320px' });
+    }
   });
 
   it('renders an assistant identity in member column headers', () => {
