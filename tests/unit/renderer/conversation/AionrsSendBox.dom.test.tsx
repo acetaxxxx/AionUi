@@ -186,6 +186,7 @@ vi.mock('@/renderer/hooks/chat/useSendBoxFiles', () => ({
     handleFilesAdded: vi.fn(),
     clearFiles: clearFilesMock,
   }),
+  createSetAtPath: () => vi.fn(),
   createSetUploadFile: () => vi.fn(),
 }));
 vi.mock('@/renderer/hooks/chat/useSlashCommands', () => ({
