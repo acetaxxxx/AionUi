@@ -577,6 +577,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
   const { t } = useTranslation();
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
+  const mobileHeaderActionsClassName = isMobile ? 'w-full min-w-0 flex-wrap' : '';
   useActiveLease({ type: 'team', id: team.id });
   const { assistants, activeSlotId, switchTab, colorOf, colorOfConversation } = useTeamTabs();
   const [, messageContext] = Message.useMessage({ maxCount: 1 });
@@ -870,11 +871,7 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
           onRenameTitle={onRenameTeam}
           headerExtra={
             <div
-              className={
-                isMobile
-                  ? 'flex w-full min-w-0 flex-wrap items-center gap-8px'
-                  : 'flex items-center gap-8px'
-              }
+              className={`flex items-center gap-8px ${mobileHeaderActionsClassName}`}
               data-testid='team-header-actions'
             >
               {isMobile && layout?.setSiderCollapsed && (
