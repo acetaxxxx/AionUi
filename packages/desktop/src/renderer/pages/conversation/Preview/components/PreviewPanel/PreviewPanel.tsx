@@ -108,6 +108,7 @@ const PreviewPanel: React.FC = () => {
     persistQuotaExceededAt,
   } = usePreviewContext();
   const layout = useLayoutContext();
+  const canUseBuiltinBrowser = isElectronDesktop();
 
   // 视图状态 / View states
   const [viewMode, setViewMode] = useState<'source' | 'preview'>('preview');
@@ -1220,13 +1221,12 @@ const PreviewPanel: React.FC = () => {
           // On mobile the preview is already a full overlay, so maximizing is
           // meaningless; omitting the callback hides the button.
           onToggleMaximize={layout?.isMobile ? undefined : toggleMaximized}
-          // 只要面板里已经有任意 tab（文件或浏览器），就露出「新建浏览器 tab」的加号，
-          // 不必等用户先手动开过一次浏览器。面板本身为空时才隐藏，避免出现一个没有
-          // 上下文的孤立加号。
+          // 只要面板里已经有任意 tab（文件或浏览器），桌面版就露出「新建浏览器 tab」
+          // 的加号；WebUI/PWA 没有 Electron webview，因此不显示这个入口。
           // Show the "new browser tab" plus as soon as the panel holds any tab (file or
-          // browser) instead of requiring the user to open a browser first. It stays
-          // hidden only while the panel is empty, so the plus never appears alone.
-          onNewBrowserTab={previewTabs.length > 0 ? handleNewBrowserTab : undefined}
+          // browser) on desktop instead of requiring the user to open a browser first.
+          // WebUI/PWA omits it because it has no Electron webview.
+          onNewBrowserTab={canUseBuiltinBrowser && previewTabs.length > 0 ? handleNewBrowserTab : undefined}
         />
 
         {/* 工具栏（URL / 浏览器 类型不显示工具栏，因为不需要下载/编辑等功能）
